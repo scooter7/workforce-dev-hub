@@ -3,7 +3,19 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
-export async function GET(_req: NextRequest) { // CHANGED: req to _req
+// Define an interface for the structure of a log entry from the database
+interface PointLogRow {
+  id: string;
+  points_awarded: number;
+  reason_code: string;
+  reason_message: string | null;
+  created_at: string;
+  related_entity_type: string | null;
+  related_entity_id: string | null;
+  // Add any other fields you select from point_logs
+}
+
+export async function GET(_req: NextRequest) {
   const supabase = createSupabaseServerClient();
 
   try {
@@ -14,7 +26,7 @@ export async function GET(_req: NextRequest) { // CHANGED: req to _req
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const LOG_LIMIT = 10; // Number of recent activities to fetch
+    const LOG_LIMIT = 10;
 
     const { data: pointLogs, error: logError } = await supabase
       .from('point_logs')
@@ -28,11 +40,15 @@ export async function GET(_req: NextRequest) { // CHANGED: req to _req
       return NextResponse.json({ error: 'Failed to fetch point activity.', details: logError.message }, { status: 500 });
     }
 
-    const formattedLogs = pointLogs?.map(log => ({
+    const formattedLogs = pointLogs?.map((log: PointLogRow) => ({ // Typed 'log' parameter
         ...log,
         // Use reason_message if available, otherwise format reason_code
-        reason: log.reason_message || log.reason_code.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
+        reason: log.reason_message || 
+                log.reason_code.replace(/_/g, ' ')
+                               .toLowerCase()
+                               .replace(/\b\w/g, (char: string) => char.toUpperCase()) // Typed 'char' parameter
     })) || [];
+
 
     return NextResponse.json(formattedLogs, { status: 200 });
 
