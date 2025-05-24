@@ -1,23 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server'; // For read operations
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data for quiz list
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) { // CHANGED: req to _req
   const supabase = createSupabaseServerClient();
 
-  // Optional: Authenticate user. Usually, listing quizzes is fine for any authenticated user.
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
-    // Depending on policy, you might allow public viewing or restrict.
-    // For now, let's assume it's for authenticated users but doesn't strictly fail if no session.
-    // The page calling this is auth-protected anyway.
-    // console.warn('GET /api/quizzes - Access attempt without user session (or error).');
+    // Optional: Depending on policy, could restrict or allow.
+    // Page calling this should be authenticated.
   }
-
-  // Future enhancement: Allow filtering by topic_id via searchParams
-  // const { searchParams } = new URL(req.url);
-  // const topicId = searchParams.get('topicId');
 
   try {
     let query = supabase
@@ -33,10 +26,6 @@ export async function GET(req: NextRequest) {
         quiz_questions ( count )
       `)
       .order('created_at', { ascending: false });
-
-    // if (topicId) {
-    //   query = query.eq('topic_id', topicId);
-    // }
 
     const { data: quizzes, error } = await query;
 
