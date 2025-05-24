@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAIStream, StreamingTextResponse, Message as VercelAIMessage } from 'ai';
-import OpenAI from 'openai'; // Ensure this is 'openai' and not an Azure-specific import
+import OpenAI from 'openai';
 import { createSupabaseAdminClient } from '@/lib/supabase/server';
 import { POINTS_FOR_CHAT_MESSAGE } from '@/lib/constants';
 
 if (!process.env.OPENAI_API_KEY) {
   console.error("FATAL ERROR: Missing environment variable OPENAI_API_KEY.");
-  // In a real production build, you might want to throw an error to halt startup
-  // if this key is absolutely essential and not just for one feature.
 }
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -42,7 +40,6 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    // Ensure messages conform to what OpenAI SDK expects for the 'messages' array
     const incomingMessages: VercelAIMessage[] = body.messages || [];
     const knowledgeBaseScope: { topicId: string; subtopicId?: string } = body.knowledgeBaseScope;
     const userId: string | undefined = body.userId;
@@ -57,7 +54,6 @@ export async function POST(req: NextRequest) {
     
     let contextText = '';
     if (knowledgeBaseScope?.topicId && currentMessage.role === 'user' && currentMessage.content && currentMessage.content.trim() !== '') {
-        // ... (RAG logic for contextText remains the same)
         try {
             const queryEmbedding = await getEmbedding(currentMessage.content);
             console.log("Query Embedding for SQL Test (copy this array if needed):", JSON.stringify(queryEmbedding));
@@ -100,33 +96,36 @@ export async function POST(req: NextRequest) {
 ${contextText ? `${contextText}\n\nPlease use this information to answer the user's question. If the information isn't sufficient or the question is outside this scope, use your general knowledge but clearly state if you are doing so.` : "Answer the user's questions. If a specific topic is mentioned, focus on that. Be concise, helpful, and encouraging."}
 Format responses clearly. Use markdown for lists, bolding, and italics where appropriate.`;
 
-    // Prepare messages for OpenAI, ensuring compatibility.
-    // VercelAIMessage roles 'system', 'user', 'assistant' are compatible with OpenAI's.
-    // We only take 'content' and 'role'.
-    const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    // Construct messages for OpenAI API
+    const messagesForOpenAI: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
-      // Map last 10 incoming messages to the format OpenAI expects if necessary
-      // (VercelAIMessage is usually compatible enough for role & content)
-      ...incomingMessages.slice(-10).map(msg => ({ role: msg.role as 'user' | 'assistant' | 'system' | 'tool', content: msg.content }))
     ];
-    // Filter out any roles not supported by OpenAI if they exist in VercelAIMessage and are passed by client
-    const validOpenAIRoles: Set<string> = new Set(['system', 'user', 'assistant', 'tool', 'function']);
-    const filteredOpenAIMessages = openAIMessages.filter(msg => validOpenAIRoles.has(msg.role));
 
+    // Add last 10 user/assistant messages from history
+    incomingMessages.slice(-10).forEach(msg => {
+      if (msg.role === 'user') {
+        messagesForOpenAI.push({ role: 'user', content: msg.content });
+      } else if (msg.role === 'assistant') {
+        // Assistant message content can be null if it involves tool calls,
+        // but our VercelAIMessage.content is string.
+        // If tool_calls were involved, mapping would be more complex.
+        messagesForOpenAI.push({ role: 'assistant', content: msg.content || "" });
+      }
+      // We are not currently handling 'tool' or 'function' roles from incomingMessages here.
+      // If the Vercel AI SDK sends them, this mapping would need to be expanded.
+    });
 
     console.log("---------------- FINAL PROCESSED MESSAGES SENT TO LLM ----------------");
-    console.log(JSON.stringify(filteredOpenAIMessages, null, 2)); 
+    console.log(JSON.stringify(messagesForOpenAI, null, 2)); 
     console.log("-----------------------------------------------------------------------");
 
     const openaiResponse = await openai.chat.completions.create({
       model: LLM_MODEL,
       stream: true,
-      messages: filteredOpenAIMessages, // Use the correctly typed messages
+      messages: messagesForOpenAI, // Use the carefully constructed array
       temperature: 0.7,
     });
 
-    // If the type error persists on the line below, try casting openaiResponse as 'any' as a last resort for build
-    // const stream = OpenAIStream(openaiResponse as any, { ... });
     const stream = OpenAIStream(openaiResponse, {
       onCompletion: async (completion: string) => {
         // ... (onCompletion logic remains the same)
