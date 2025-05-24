@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic'; // Ensure fresh data
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) { // CHANGED: req to _req
   const supabase = createSupabaseServerClient();
 
   try {
@@ -28,12 +28,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch point activity.', details: logError.message }, { status: 500 });
     }
 
-    // Transform reason_code to a more user-friendly message if reason_message is null
     const formattedLogs = pointLogs?.map(log => ({
         ...log,
-        reason: log.reason_message || log.reason_code.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) // Basic formatting
+        // Use reason_message if available, otherwise format reason_code
+        reason: log.reason_message || log.reason_code.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())
     })) || [];
-
 
     return NextResponse.json(formattedLogs, { status: 200 });
 
