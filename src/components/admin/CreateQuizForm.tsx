@@ -3,8 +3,8 @@
 import { useState, FormEvent } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { Topic } from '@/lib/constants'; // Your Topic type
-import { useRouter } from 'next/navigation';
+import { Topic } from '@/lib/constants';
+import { useRouter } from 'next/navigation'; // Ensure this is imported
 
 interface CreateQuizFormProps {
   topics: Topic[];
@@ -13,7 +13,7 @@ interface CreateQuizFormProps {
 type DifficultyLevel = 'easy' | 'medium' | 'hard';
 
 export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
-  const router = useRouter();
+  const router = useRouter(); // This will now be used
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [topicId, setTopicId] = useState<string>(topics[0]?.id || '');
@@ -52,7 +52,7 @@ export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
     };
 
     try {
-      const response = await fetch('/api/admin/quizzes', { // New API endpoint
+      const response = await fetch('/api/admin/quizzes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -64,16 +64,16 @@ export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
         throw new Error(result.error || `Failed to create quiz (Status: ${response.status})`);
       }
 
-      setMessage(`Quiz "${result.quiz.title}" created successfully! You can now add questions to it.`);
-      // Optionally redirect to the quiz management page for the new quiz
-      // router.push(`/admin/quizzes/${result.quiz.id}/manage`);
-      
-      // Clear form
-      setTitle('');
-      setDescription('');
-      setTopicId(topics[0]?.id || '');
-      setSubtopicId('');
-      setDifficulty('medium');
+      // setMessage(`Quiz "${result.quiz.title}" created successfully! Redirecting to add questions...`);
+      // Clear form (optional if redirecting immediately)
+      // setTitle('');
+      // setDescription('');
+      // setTopicId(topics[0]?.id || '');
+      // setSubtopicId('');
+      // setDifficulty('medium');
+
+      // Redirect to the quiz management page for the new quiz
+      router.push(`/admin/quizzes/${result.quiz.id}/manage`);
 
     } catch (err: any) {
       console.error('Create quiz error:', err);
@@ -125,7 +125,7 @@ export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
             value={topicId}
             onChange={(e) => {
               setTopicId(e.target.value);
-              setSubtopicId(''); // Reset subtopic when main topic changes
+              setSubtopicId('');
             }}
             required
             disabled={isLoading}
@@ -176,7 +176,7 @@ export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
         </select>
       </div>
 
-      {message && (
+      {message && ( // Display success message before redirect, or remove if redirect is immediate
         <p className="text-sm text-green-600 bg-green-100 p-3 rounded-md text-center">
           {message}
         </p>
@@ -189,7 +189,7 @@ export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
 
       <div className="pt-2 flex justify-end">
         <Button type="submit" disabled={isLoading}>
-          {isLoading ? 'Creating Quiz...' : 'Create Quiz'}
+          {isLoading ? 'Creating Quiz...' : 'Create Quiz & Add Questions'}
         </Button>
       </div>
     </form>
