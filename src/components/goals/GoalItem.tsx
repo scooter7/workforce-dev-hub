@@ -1,0 +1,153 @@
+'use client';
+
+import { useState } from 'react';
+import { UserGoal, GoalStatus, GoalType } from '@/app/(dashboard)/goals/page';
+import Button from '@/components/ui/Button';
+import { CalendarDaysIcon, TrashIcon, PencilSquareIcon, CheckCircleIcon, PlayCircleIcon, StopCircleIcon } from '@heroicons/react/24/outline';
+
+interface GoalItemProps {
+  goal: UserGoal;
+  onUpdateGoal: (updatedGoal: UserGoal) => void;
+  onDeleteGoal: (goalId: string) => void;
+  onEditGoal: (goal: UserGoal) => void;
+}
+
+const getStatusIcon = (status: GoalStatus) => {
+  switch (status) {
+    case 'not_started': return <StopCircleIcon className="h-5 w-5 text-gray-400 mr-1" />;
+    case 'in_progress': return <PlayCircleIcon className="h-5 w-5 text-blue-500 mr-1" />;
+    case 'completed': return <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />;
+    default: return null;
+  }
+};
+
+const getTypeIcon = (type: GoalType) => {
+  switch (type) {
+    case 'academic': return <span title="Academic" className="text-lg">🎓</span>;
+    case 'professional': return <span title="Professional" className="text-lg">💼</span>;
+    case 'personal': return <span title="Personal" className="text-lg">🧘</span>;
+    case 'other': return <span title="Other" className="text-lg">📋</span>;
+    default: return null;
+  }
+};
+
+const formatDisplayDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'N/A';
+  const parts = dateString.split('-');
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const localDate = new Date(year, month, day); 
+    if (isNaN(localDate.getTime())) return 'Invalid Date';
+    return localDate.toLocaleDateString(undefined, {});
+  }
+  return dateString;
+};
+
+const validStatuses: GoalStatus[] = ['not_started', 'in_progress', 'completed'];
+
+export default function GoalItem({ goal, onUpdateGoal, onDeleteGoal, onEditGoal }: GoalItemProps) {
+  const [currentStatus, setCurrentStatus] = useState<GoalStatus>(
+    validStatuses.includes(goal.status as GoalStatus) 
+      ? goal.status as GoalStatus 
+      : 'not_started'
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleStatusChange = async (newStatus: GoalStatus) => {
+    if (newStatus === currentStatus) return;
+    setIsLoading(true); setError(null);
+    try {
+      const response = await fetch(`/api/goals/${goal.id}/status`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
+        throw new Error(errData.error || 'Failed to update goal status.');
+      }
+      const updatedGoalFromServer = await response.json();
+      setCurrentStatus(updatedGoalFromServer.status);
+      if (onUpdateGoal) onUpdateGoal(updatedGoalFromServer);
+    } catch (err: any) { setError(err.message); }
+    finally { setIsLoading(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Are you sure you want to delete the goal: "${goal.title}"?`)) return;
+    setIsLoading(true); setError(null);
+    try {
+      const response = await fetch(`/api/goals/${goal.id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
+        throw new Error(errData.error || 'Failed to delete goal.');
+      }
+      if (onDeleteGoal) onDeleteGoal(goal.id);
+    } catch (err: any) { setError(err.message); }
+    finally { setIsLoading(false); }
+  };
+
+  const cardBorderColor = () => {
+    switch (currentStatus) {
+      case 'not_started': return 'border-gray-300';
+      case 'in_progress': return 'border-blue-500';
+      case 'completed': return 'border-green-500';
+      default: return 'border-gray-300';
+    }
+  };
+
+  return (
+    <div className={`bg-white shadow-lg rounded-xl p-5 border-l-4 ${cardBorderColor()} flex flex-col justify-between transition-all hover:shadow-xl min-h-[200px]`}>
+      <div>
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold text-neutral-text break-words mr-2">{goal.title}</h3>
+          <div className="flex-shrink-0 ml-2">{getTypeIcon(goal.type)}</div>
+        </div>
+        {goal.description && <p className="text-sm text-gray-600 mb-3 break-words whitespace-pre-wrap">{goal.description}</p>}
+        {goal.target_date && (
+          <div className="flex items-center text-xs text-gray-500 mb-3">
+            <CalendarDaysIcon className="h-4 w-4 mr-1.5 text-gray-400" />
+            Target: {formatDisplayDate(goal.target_date)}
+          </div>
+        )}
+      </div>
+      <div className="mt-auto pt-4">
+        {error && <p className="text-xs text-red-500 mb-2 text-center">{error}</p>}
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
+          <div className="w-full sm:w-auto">
+            <label htmlFor={`status-${goal.id}`} className="sr-only">Status</label>
+            <select
+              id={`status-${goal.id}`}
+              value={currentStatus}
+              onChange={(e) => handleStatusChange(e.target.value as GoalStatus)}
+              disabled={isLoading}
+              className={`w-full text-sm p-2 border rounded-md focus:ring-2 focus:ring-brand-primary transition-colors ${
+                currentStatus === 'not_started' ? 'bg-gray-100 border-gray-300 text-gray-700' : // Added text-gray-700 for visibility
+                currentStatus === 'in_progress' ? 'bg-blue-50 border-blue-400 text-blue-700' :
+                currentStatus === 'completed' ? 'bg-green-50 border-green-400 text-green-700 font-medium' :
+                'bg-gray-100 border-gray-300 text-gray-700' // Default fallback style
+              }`}
+            >
+              <option value="not_started">Not Started</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+          <div className="flex space-x-2 items-center flex-shrink-0">
+            <Button variant="ghost" size="sm" onClick={() => onEditGoal(goal)} disabled={isLoading} aria-label="Edit goal" className="p-1.5">
+              <PencilSquareIcon className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDelete} disabled={isLoading} aria-label="Delete goal" className="p-1.5 text-red-500 hover:bg-red-100">
+              <TrashIcon className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Last updated: {new Date(goal.updated_at).toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+  );
+}

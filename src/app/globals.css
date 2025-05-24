@@ -1,0 +1,82 @@
+/* Import Tailwind CSS layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* :root variables can be useful for theming or if you need to access colors from JavaScript,
+   though often you'll use Tailwind's color classes directly.
+   These are examples; adjust or remove if not needed. */
+:root {
+  --foreground-rgb: 0, 0, 0; /* Default dark text */
+  --background-start-rgb: 243, 244, 246; /* Light gray, e.g., Tailwind's gray-100 */
+  --background-end-rgb: 255, 255, 255;   /* White */
+
+  /* Example of using your brand colors as CSS variables (optional) */
+  --brand-primary: theme('colors.brand-primary.DEFAULT');
+  --brand-primary-dark: theme('colors.brand-primary.dark');
+
+  /* Define a default font stack if not fully handled by Tailwind's theme.fontFamily */
+  /* --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; */
+}
+
+/* Example for dark mode if you plan to implement a toggle.
+   You'd typically control this with a class on the <html> or <body> tag.
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 229, 231, 235; // gray-200
+    --background-start-rgb: 31, 41, 55; // gray-800
+    --background-end-rgb: 17, 24, 39;   // gray-900
+  }
+}
+*/
+
+body {
+  @apply text-neutral-text bg-neutral-bg; /* Using colors defined in tailwind.config.ts */
+  /* color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb)); */
+  font-family: theme('fontFamily.sans', 'sans-serif'); /* Use default sans-serif from Tailwind config or a fallback */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make images responsive by default */
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Basic link styling - customize as needed */
+a {
+  @apply text-brand-primary hover:text-brand-primary-dark transition-colors;
+}
+
+/* Utility class for visually hidden elements (accessibility) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Add any other global base styles or component layer customizations here */
+/* For example, default styling for h1, h2, etc. if not using a typography plugin */
+/*
+h1 {
+  @apply text-4xl font-bold my-4;
+}
+h2 {
+  @apply text-3xl font-semibold my-3;
+}
+*/
