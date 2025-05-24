@@ -2,15 +2,16 @@
 
 import { useChat, type Message as VercelAIMessage } from 'ai/react';
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { Topic, SubTopic } from '@/lib/constants';
+import { Topic, SubTopic } from '@/lib/constants'; // Correct: types are imported
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+// For rich text responses:
 // import ReactMarkdown from 'react-markdown';
 // import remarkGfm from 'remark-gfm';
 
 interface ChatInterfaceProps {
-  topic: Topic;
-  subtopic?: SubTopic;
+  topic: Topic; // Correct: Topic type is used
+  subtopic?: SubTopic; // Correct: SubTopic type is used
   initialSystemMessage: string;
   knowledgeBaseScope: { topicId: string; subtopicId?: string };
   userId: string;
@@ -24,7 +25,7 @@ export default function ChatInterface({
   userId,
 }: ChatInterfaceProps) {
   const [isMounted, setIsMounted] = useState(false);
-  const initialLoadDoneRef = useRef(false); // To ensure initial prompt is sent only once per topic load
+  const initialLoadDoneRef = useRef(false);
 
   const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages, append } =
     useChat({
@@ -41,11 +42,13 @@ export default function ChatInterface({
         },
       ],
       onFinish: (message) => {
-        console.log('AI finished responding:', message);
-        // Example: fetch('/api/points/add', { method: 'POST', body: JSON.stringify({ userId, action: 'chat_message' }) });
+        // This callback is useful for actions after AI response, e.g., analytics
+        console.log('AI finished responding. Message ID:', message.id);
+        // Points are awarded server-side in the API route's onCompletion for chat
       },
       onError: (err) => {
-        console.error("Chat error:", err);
+        console.error("Chat error in useChat hook:", err);
+        // You could set a user-facing error message here if desired
       }
     });
 
@@ -61,41 +64,40 @@ export default function ChatInterface({
 
   useEffect(() => {
     setIsMounted(true);
-    // Reset initial load flag when topic changes, so new topic gets intro message
-    initialLoadDoneRef.current = false;
-  }, [topic.id, subtopic?.id]); // Depend on topic/subtopic ID
+    initialLoadDoneRef.current = false; // Reset for new topic/subtopic
+  }, [topic.id, subtopic?.id]);
 
-  // Effect to send an initial prompt when the chat for a new topic loads
   useEffect(() => {
     if (isMounted && !initialLoadDoneRef.current && topic?.title) {
-      // Check if the only message is the system message, or if there are no assistant/user messages yet
       const nonSystemMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
       if (nonSystemMessages.length === 0) {
         append({
-          role: 'user', // This will appear as a user message, initiating the AI's response
+          role: 'user',
           content: `Hi! I'm interested in learning about ${subtopic?.title ? `${subtopic.title} within ${topic.title}` : topic.title}. Can you give me a brief introduction or some key points to start with?`
         });
-        initialLoadDoneRef.current = true; // Mark that initial prompt has been sent
+        initialLoadDoneRef.current = true;
       }
     }
-  }, [isMounted, messages, append, topic, subtopic, initialSystemMessage]); // Add initialSystemMessage to re-trigger if it changes based on topic
+    // Adding `append` to dependency array as it's used in the effect.
+    // `messages` is also a dependency because we check its length/content.
+  }, [isMounted, messages, append, topic, subtopic, initialSystemMessage]);
 
 
   const customHandleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
-    handleSubmit(e); // This sends the user's typed message
+    handleSubmit(e); // This sends the user's typed message via useChat
   };
 
+  // Filter out system messages for UI display
   const displayedMessages = messages.filter(m => m.role !== 'system');
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg shadow-inner overflow-hidden">
       <div className="flex-grow p-4 md:p-6 space-y-4 overflow-y-auto">
-        {/* Display only user and assistant messages */}
         {displayedMessages.map((m: VercelAIMessage) => (
           <div
-            key={m.id}
+            key={m.id} // `useChat` provides unique IDs
             className={`flex ${
               m.role === 'user' ? 'justify-end' : 'justify-start'
             }`}
@@ -107,6 +109,8 @@ export default function ChatInterface({
                   : 'bg-gray-100 text-gray-800'
               }`}
             >
+              {/* To render markdown, uncomment below and install react-markdown, remark-gfm */}
+              {/* <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown> */}
               <p className="whitespace-pre-wrap">{m.content}</p>
             </div>
           </div>
@@ -114,14 +118,14 @@ export default function ChatInterface({
         <div ref={messagesEndRef} />
       </div>
 
-      {isLoading && ( // Show loading indicator when AI is thinking OR when the initial message is being sent
+      {isLoading && (
         <div className="p-4 text-center text-sm text-gray-500 border-t">
           AI is thinking...
         </div>
       )}
       {error && (
         <div className="p-4 text-center text-sm text-red-500 border-t">
-          Error: {error.message || 'An error occurred.'} Please try again.
+          Error: {error.message || 'An error occurred.'} Please try again or refresh.
         </div>
       )}
 
@@ -133,11 +137,11 @@ export default function ChatInterface({
             onChange={handleInputChange}
             placeholder="Type your message..."
             className="flex-grow !shadow-none !border-gray-300 focus:!border-brand-primary focus:!ring-brand-primary"
-            disabled={isLoading} // Disable input while AI is processing or initial message is sending
+            disabled={isLoading}
             autoFocus
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading && messages.length > displayedMessages.length ? 'Sending...' : 'Send'} {/* More specific loading for user input */}
+            {isLoading ? 'Sending...' : 'Send'}
           </Button>
         </form>
       </div>

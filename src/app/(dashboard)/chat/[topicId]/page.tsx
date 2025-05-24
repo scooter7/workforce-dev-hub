@@ -1,12 +1,13 @@
-import { workforceTopics, Topic, SubTopic } from '@/lib/constants';
-import ChatInterface from '@/components/chat/ChatInterface'; // We'll create this client component
+import { workforceTopics, SubTopic } from '@/lib/constants'; // Removed 'Topic'
+import ChatInterface from '@/components/chat/ChatInterface';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeftIcon } from '@heroicons/react/24/solid'; // Using Heroicons for a back button icon
-
-// Opt-in for dynamic rendering if not automatically inferred
-// export const dynamic = 'force-dynamic';
+import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+// Ensure ChatInterfaceProps in ChatInterface.tsx correctly imports Topic if needed
+// For example, in src/components/chat/ChatInterface.tsx:
+// import { Topic as TopicTypeDefinition, SubTopic } from '@/lib/constants';
+// interface ChatInterfaceProps { topic: TopicTypeDefinition; ... }
 
 interface ChatPageProps {
   params: {
