@@ -80,3 +80,51 @@ h2 {
   @apply text-3xl font-semibold my-3;
 }
 */
+/* Flashcard Flip Animation */
+.flashcard-container {
+  perspective: 1000px;
+  width: 100%; /* Or a fixed width */
+  min-height: 250px; /* Adjust as needed */
+}
+
+.flashcard {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); /* Smooth transition */
+  border-radius: 0.5rem; /* Match your card's border-radius */
+}
+
+.flashcard.is-flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden; /* Safari */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* To push actions to bottom */
+  border-radius: 0.5rem; /* Match your card's border-radius */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* Tailwind shadow-lg equivalent */
+  overflow: hidden; /* Prevent content overflow issues during flip */
+}
+
+.flashcard-front {
+  background-color: white; /* Or your card's front background */
+  /* padding: 1.5rem; Remove padding here, apply to inner content if needed */
+}
+
+.flashcard-back {
+  background-color: #f9fafb; /* Or your card's back background (e.g., gray-50) */
+  transform: rotateY(180deg);
+  /* padding: 1.5rem; Remove padding here */
+  display: flex; /* To center content or layout */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}

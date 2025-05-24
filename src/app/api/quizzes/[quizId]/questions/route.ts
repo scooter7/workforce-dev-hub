@@ -53,22 +53,22 @@ export async function GET(
     const fetchedQuestions: QuizQuestion[] = [];
     if (questionsRaw) {
       for (const q of questionsRaw) {
-        let optionsForQuestion: QuestionOption[] = []; // Explicitly type this array
+        let optionsForQuestion: QuestionOption[] = [];
         if (q.question_type === 'multiple-choice') {
           const { data: optsData, error: optsError } = await supabase
             .from('question_options')
-            .select('id, question_id, option_text') // Still NOT selecting is_correct
+            .select('id, question_id, option_text, is_correct') // <<< NOW SELECTING is_correct
             .eq('question_id', q.id)
             .order('id');
 
           if (optsError) {
             console.error(`Error fetching options for question ${q.id}:`, optsError);
           } else if (optsData) {
-            optionsForQuestion = optsData.map(opt => ({
+            optionsForQuestion = optsData.map(opt => ({ // Ensure all fields of QuestionOption are mapped
               id: opt.id,
-              question_id: opt.question_id, // or q.id
+              question_id: opt.question_id,
               option_text: opt.option_text,
-              is_correct: false, // Add a default value to satisfy the type, client won't use it
+              is_correct: opt.is_correct, // is_correct is now included
             }));
           }
         }
@@ -80,7 +80,7 @@ export async function GET(
             explanation: q.explanation,
             points: q.points,
             order_num: q.order_num,
-            options: optionsForQuestion, // Assign the correctly typed array
+            options: optionsForQuestion,
         });
       }
     }
