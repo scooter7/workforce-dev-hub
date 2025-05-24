@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
 import QuestionManager from '@/components/admin/QuestionManager'; // We'll create this
-import { QuizQuestion, QuestionOption } from '@/app/(dashboard)/quizzes/[quizId]/page'; // Reuse types
+import { QuizQuestion, QuestionOption } from '@/types/quiz'; // Corrected import
 
 interface ManageQuizPageProps {
   params: {

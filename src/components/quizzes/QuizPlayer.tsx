@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, FormEvent } from 'react';
-import { QuizData, QuizQuestion, QuestionOption } from '@/app/(dashboard)/quizzes/[quizId]/page'; // Re-use types
+import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 

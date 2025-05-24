@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server'; // For user-session-based or public data access
 import { z } from 'zod';
-import { QuizData, QuizQuestion, QuestionOption } from '@/app/(dashboard)/quizzes/[quizId]/page'; // Re-use types defined for the page
+import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz';
 
 // Schema for validating route parameters
 const paramsSchema = z.object({

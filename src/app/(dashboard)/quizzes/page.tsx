@@ -1,31 +1,18 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation'; // This is used
 import Link from 'next/link';
 import { workforceTopics, Topic } from '@/lib/constants';
 import { PuzzlePieceIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import { QuizTeaser } from '@/types/quiz'; // <<< UPDATED: Import QuizTeaser
 
 export const metadata = {
   title: 'Quizzes',
 };
 
-// This type should match what your API returns and what the page needs
-export interface QuizTeaser {
-  id: string;
-  topic_id: string;
-  subtopic_id?: string | null;
-  title: string;
-  description?: string | null;
-  difficulty?: string | null;
-  question_count?: number;
-}
+// The local QuizTeaser interface definition has been removed.
 
 // Fetch quizzes directly in the Server Component
 async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
-  // This function now simulates what would be a direct fetch from the API
-  // if this page were a client component, or direct DB access for server component.
-  // For a Server Component, direct DB access is fine.
-  // The API GET /api/quizzes exists for other client-side needs or as a dedicated resource.
-
   const { data: quizzes, error } = await supabaseClient
     .from('quizzes')
     .select(`
@@ -35,6 +22,7 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       title,
       description,
       difficulty,
+      created_at, /* Added created_at for potential sorting or display */
       quiz_questions ( count )
     `)
     .order('created_at', { ascending: false });
@@ -44,13 +32,16 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     return [];
   }
 
-  return quizzes?.map((q: any) => ({ // Add 'any' for q to handle Supabase's dynamic structure here
+  // Ensure the mapping matches the QuizTeaser interface from '@/types/quiz'
+  return quizzes?.map((q: any) => ({
     id: q.id,
     topic_id: q.topic_id,
     subtopic_id: q.subtopic_id,
     title: q.title,
     description: q.description,
     difficulty: q.difficulty,
+    created_at: q.created_at, // Ensure this is part of QuizTeaser if you want to use it
+    // @ts-ignore
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
@@ -64,15 +55,21 @@ export default async function QuizzesPage() {
     return redirect('/login?message=Please log in to view quizzes.');
   }
 
-  // Fetch real quizzes directly since this is a Server Component
   const allQuizzes = await getQuizzesFromAPI(supabase);
 
   const quizzesByTopic: Record<string, QuizTeaser[]> = {};
   allQuizzes.forEach(quiz => {
-    if (!quizzesByTopic[quiz.topic_id]) {
-      quizzesByTopic[quiz.topic_id] = [];
+    // Ensure quiz.topic_id is not null or undefined before using it as a key
+    if (quiz.topic_id) {
+        if (!quizzesByTopic[quiz.topic_id]) {
+            quizzesByTopic[quiz.topic_id] = [];
+        }
+        quizzesByTopic[quiz.topic_id].push(quiz);
+    } else {
+        // Handle quizzes with no topic_id if that's possible, e.g., group them under "General"
+        // For now, we assume topic_id will be present for grouping.
+        console.warn(`Quiz with ID ${quiz.id} has no topic_id and won't be grouped.`);
     }
-    quizzesByTopic[quiz.topic_id].push(quiz);
   });
 
   return (
@@ -88,11 +85,7 @@ export default async function QuizzesPage() {
 
       {workforceTopics.map((topic: Topic) => {
         const topicQuizzes = quizzesByTopic[topic.id] || [];
-        // Decide if you want to show topics even if they have no quizzes yet
-        // if (topicQuizzes.length === 0) {
-        //     return null;
-        // }
-
+        
         return (
           <section key={topic.id} className="mb-10">
             <h2 className="text-2xl font-semibold text-neutral-text mb-2 border-b-2 pb-2" style={{borderColor: topic.color || '#cbd5e1'}}>
@@ -102,17 +95,19 @@ export default async function QuizzesPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
                 {topicQuizzes.map((quiz) => (
                   <Link href={`/quizzes/${quiz.id}`} key={quiz.id} className="group">
-                    <div className="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ease-in-out h-full transform hover:-translate-y-1">
-                      <div className="flex items-center mb-3">
-                        <PuzzlePieceIcon className="h-8 w-8 text-brand-primary mr-3" />
-                        <h3 className="text-lg font-semibold text-brand-primary group-hover:text-brand-primary-dark">
-                          {quiz.title}
-                        </h3>
+                    <div className="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ease-in-out h-full transform hover:-translate-y-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center mb-3">
+                          <PuzzlePieceIcon className="h-8 w-8 text-brand-primary mr-3 flex-shrink-0" />
+                          <h3 className="text-lg font-semibold text-brand-primary group-hover:text-brand-primary-dark">
+                            {quiz.title}
+                          </h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-3 min-h-[40px]">
+                          {quiz.description || 'A quiz to test your knowledge on this topic.'}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3 min-h-[40px]"> {/* Min height for description */}
-                        {quiz.description || 'A quiz to test your knowledge on this topic.'}
-                      </p>
-                      <div className="mt-auto flex justify-between items-center text-xs text-gray-500">
+                      <div className="mt-auto flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
                         <span className="capitalize">{quiz.difficulty || 'General'} | {quiz.question_count || 'N/A'} Questions</span>
                         <span className="inline-flex items-center font-medium text-brand-primary group-hover:text-brand-primary-dark">
                           Start Quiz <ChevronRightIcon className="h-4 w-4 ml-1" />
