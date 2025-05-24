@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz'; // Ensure this path is correct
+import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz';
 
-// Schema for validating route parameters
 const paramsSchema = z.object({
   quizId: z.string().uuid({ message: "Invalid Quiz ID format." }),
 });
 
 export async function GET(
-  _req: NextRequest, // CHANGED: req to _req
+  _req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
   const supabase = createSupabaseServerClient();
 
   try {
-    // Optional: User authentication check.
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       // console.warn('GET /api/quizzes/[quizId]/questions - User not authenticated or error.');
-      // return NextResponse.json({ error: 'Unauthorized to fetch quiz questions.' }, { status: 401 });
     }
 
     const paramsValidation = paramsSchema.safeParse(params);
@@ -30,7 +27,7 @@ export async function GET(
 
     const { data: quizInfo, error: quizInfoError } = await supabase
       .from('quizzes')
-      .select('id, title, description, topic_id, subtopic_id, difficulty') // Added subtopic_id and difficulty
+      .select('id, title, description, topic_id, subtopic_id, difficulty')
       .eq('id', quizId)
       .single();
 
@@ -56,30 +53,34 @@ export async function GET(
     const fetchedQuestions: QuizQuestion[] = [];
     if (questionsRaw) {
       for (const q of questionsRaw) {
-        let options: QuestionOption[] = [];
+        let optionsForQuestion: QuestionOption[] = []; // Explicitly type this array
         if (q.question_type === 'multiple-choice') {
-          const { data: opts, error: optsError } = await supabase
+          const { data: optsData, error: optsError } = await supabase
             .from('question_options')
-            .select('id, question_id, option_text')
+            .select('id, question_id, option_text') // Still NOT selecting is_correct
             .eq('question_id', q.id)
             .order('id');
 
           if (optsError) {
             console.error(`Error fetching options for question ${q.id}:`, optsError);
-          } else {
-            options = opts?.map(opt => ({...opt, question_id: q.id})) || []; // ensure question_id is present if type expects it
+          } else if (optsData) {
+            optionsForQuestion = optsData.map(opt => ({
+              id: opt.id,
+              question_id: opt.question_id, // or q.id
+              option_text: opt.option_text,
+              is_correct: false, // Add a default value to satisfy the type, client won't use it
+            }));
           }
         }
-        // Ensure the pushed object matches QuizQuestion structure from types/quiz.ts
         fetchedQuestions.push({ 
             id: q.id,
-            quiz_id: q.quiz_id, // ensure this is present
+            quiz_id: q.quiz_id,
             question_text: q.question_text,
             question_type: q.question_type as 'multiple-choice' | 'true-false',
             explanation: q.explanation,
             points: q.points,
             order_num: q.order_num,
-            options 
+            options: optionsForQuestion, // Assign the correctly typed array
         });
       }
     }
@@ -89,8 +90,8 @@ export async function GET(
         title: quizInfo.title,
         description: quizInfo.description,
         topic_id: quizInfo.topic_id,
-        subtopic_id: quizInfo.subtopic_id,     // Added to QuizData type if needed
-        difficulty: quizInfo.difficulty,     // Added to QuizData type if needed
+        subtopic_id: quizInfo.subtopic_id,
+        difficulty: quizInfo.difficulty,
         questions: fetchedQuestions,
     };
 
