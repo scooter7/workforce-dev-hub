@@ -4,13 +4,12 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import { usePathname } from 'next/navigation';
 import {
-  // HomeIcon, // Removed as it's no longer used
   ClipboardDocumentListIcon,
   UserCircleIcon,
   QuestionMarkCircleIcon,
   TrophyIcon,
   WrenchScrewdriverIcon,
-  ChatBubbleLeftEllipsisIcon, // Used for "Explore and Chat"
+  ChatBubbleLeftEllipsisIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -30,11 +29,13 @@ const navigationItems = [
 const adminLinks = [
     { name: 'Ingest Documents', href: '/ingest', icon: WrenchScrewdriverIcon },
     { name: 'Create Quiz', href: '/quizzes/new', icon: WrenchScrewdriverIcon },
-    // Example: { name: 'Manage Quizzes', href: '/admin/manage-quizzes', icon: WrenchScrewdriverIcon },
+    // Add more admin links as needed, e.g., to a page that lists quizzes for management
+    // { name: 'Manage Quizzes', href: '/admin/manage-quizzes', icon: WrenchScrewdriverIcon },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
+  // Ensure NEXT_PUBLIC_ADMIN_USER_ID is set in .env.local and available client-side
   const showAdminLinks = user && user.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   return (
@@ -47,10 +48,13 @@ export default function Sidebar({ user }: SidebarProps) {
 
       <nav className="flex-grow p-3 space-y-1.5 overflow-y-auto">
         {navigationItems.map((item) => {
-          const isActiveBase = pathname === item.href;
-          // Ensure root link '/' is only active for exact match, others can match start for nested routes
-          const finalIsActive = item.href === '/' ? isExactlyRoot : (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)));
-          const isExactlyRoot = item.href === '/' && pathname === '/'; // Re-calculate here for clarity
+          let isActive: boolean;
+          if (item.href === '/') {
+            isActive = pathname === '/'; // Root path must be an exact match
+          } else {
+            // Other paths are active if current path is an exact match or starts with the item's href followed by a '/' (for nested routes)
+            isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          }
 
           return (
             <Link
@@ -60,14 +64,14 @@ export default function Sidebar({ user }: SidebarProps) {
                 flex items-center px-3 py-2.5 rounded-md text-sm font-medium
                 transition-colors duration-150 group
                 ${
-                  (item.href === '/' ? isExactlyRoot : isActiveBase) // Corrected active logic here
-                    ? 'bg-sky-700 text-white shadow-inner'
+                  isActive
+                    ? 'bg-sky-700 text-white shadow-inner' // Active link style
                     : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white'
                 }
               `}
             >
               <item.icon 
-                className={`${commonIconClass} ${(item.href === '/' ? isExactlyRoot : isActiveBase) ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
+                className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
                 aria-hidden="true" />
               {item.name}
             </Link>
@@ -79,11 +83,12 @@ export default function Sidebar({ user }: SidebarProps) {
                 <hr className="my-3 border-blue-500" />
                 <div className="px-3 py-1 text-xs font-semibold text-blue-200 uppercase tracking-wider">Admin Tools</div>
                 {adminLinks.map(adminItem => {
+                    // For admin links, usually an exact match is sufficient unless they also have nested pages
                     const isActive = pathname === adminItem.href;
                     return (
                          <Link
                             key={adminItem.name}
-                            href={adminItem.href}
+                            href={adminItem.href} // These paths are based on the (admin) route group
                             className={`
                                 flex items-center px-3 py-2.5 rounded-md text-sm font-medium
                                 transition-colors duration-150 group
