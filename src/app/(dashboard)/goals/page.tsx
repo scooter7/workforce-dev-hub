@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 //import { User } from '@supabase/supabase-js';
-import Link from 'next/link';
+//import Link from 'next/link';
 // We'll create these client components later:
 import GoalList from '@/components/goals/GoalList';
 import AddGoalButton from '@/components/goals/AddGoalButton'; // For triggering a modal/form
