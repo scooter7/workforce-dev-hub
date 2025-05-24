@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { User } from '@supabase/supabase-js';
+//import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
 // We'll create these client components later:
 import GoalList from '@/components/goals/GoalList';
