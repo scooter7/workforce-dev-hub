@@ -2,8 +2,8 @@
 
 import { useState, FormEvent, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase/client'; // Client-side Supabase instance
-import { UserProfile } from '@/app/(dashboard)/profile/page'; // Import the UserProfile type
+import { supabase } from '@/lib/supabase/client';
+import { UserProfile } from '@/app/(dashboard)/profile/page';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -16,13 +16,11 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
   const [fullName, setFullName] = useState(initialProfileData.full_name || '');
   const [company, setCompany] = useState(initialProfileData.company || '');
   const [role, setRole] = useState(initialProfileData.role || '');
-  // Add more fields here if your UserProfile interface expands
 
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Effect to update form fields if initialProfileData changes (e.g., after a server refresh)
   useEffect(() => {
     setFullName(initialProfileData.full_name || '');
     setCompany(initialProfileData.company || '');
@@ -36,22 +34,21 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
     setError(null);
 
     const profileUpdate = {
-      id: user.id, // Crucial for Supabase to know which row to update/insert
+      id: user.id,
       full_name: fullName,
       company: company,
       role: role,
-      updated_at: new Date().toISOString(), // Keep track of the last update
+      updated_at: new Date().toISOString(),
     };
 
     // Using upsert: updates if profile exists, inserts if it doesn't (based on 'id').
-    // Ensure 'id' is the primary key and onConflict target.
-    const { data, error: updateError } = await supabase
+    const { data: _data, error: updateError } = await supabase // CHANGED: data to _data
       .from('profiles')
       .upsert(profileUpdate, {
-        onConflict: 'id', // Specify the column to check for conflicts (your primary key)
+        onConflict: 'id', 
       })
-      .select() // Optionally select the data back
-      .single(); // If you expect one row back
+      .select() 
+      .single(); 
 
     setIsLoading(false);
 
@@ -60,9 +57,8 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
       setError(updateError.message || 'Failed to update profile. Please try again.');
     } else {
       setMessage('Profile updated successfully!');
-      // Optionally, you could refresh router to ensure parent page re-fetches if needed,
-      // but for simple form updates, just a message might be enough.
-      // router.refresh();
+      // _data contains the updated profile if you needed to use it, e.g., to update local state more precisely
+      // console.log('Updated profile data:', _data); 
     }
   };
 
