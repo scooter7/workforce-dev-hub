@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz';
+import { QuizData, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid'; // For correctness indication
