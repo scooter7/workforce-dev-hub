@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { QuizQuestion, QuestionOption } from '@/types/quiz';
 import AddQuestionForm from './AddQuestionForm';
 import Button from '@/components/ui/Button';
-import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 // Define the expected structure for initialQuestions prop more precisely
 // This should match the structure returned by `getQuizForAdmin` in the admin page
