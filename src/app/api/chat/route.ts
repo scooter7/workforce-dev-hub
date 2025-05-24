@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAIStream, StreamingTextResponse, Message as VercelAIMessage } from 'ai';
-import OpenAI from 'openai';
+import OpenAI from 'openai'; // Ensure this is 'openai' and not an Azure-specific import
 import { createSupabaseAdminClient } from '@/lib/supabase/server';
 import { POINTS_FOR_CHAT_MESSAGE } from '@/lib/constants';
 
 if (!process.env.OPENAI_API_KEY) {
-  console.error("FATAL ERROR: Missing environment variable OPENAI_API_KEY for ingestion.");
+  console.error("FATAL ERROR: Missing environment variable OPENAI_API_KEY.");
+  // In a real production build, you might want to throw an error to halt startup
+  // if this key is absolutely essential and not just for one feature.
 }
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -40,20 +42,22 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const messages: VercelAIMessage[] = body.messages || [];
+    // Ensure messages conform to what OpenAI SDK expects for the 'messages' array
+    const incomingMessages: VercelAIMessage[] = body.messages || [];
     const knowledgeBaseScope: { topicId: string; subtopicId?: string } = body.knowledgeBaseScope;
     const userId: string | undefined = body.userId;
 
     console.log('API received knowledgeBaseScope:', knowledgeBaseScope);
 
-    if (!messages.length) {
+    if (!incomingMessages.length) {
       return NextResponse.json({ error: 'No messages provided' }, { status: 400 });
     }
 
-    const currentMessage = messages[messages.length - 1];
+    const currentMessage = incomingMessages[incomingMessages.length - 1];
     
     let contextText = '';
     if (knowledgeBaseScope?.topicId && currentMessage.role === 'user' && currentMessage.content && currentMessage.content.trim() !== '') {
+        // ... (RAG logic for contextText remains the same)
         try {
             const queryEmbedding = await getEmbedding(currentMessage.content);
             console.log("Query Embedding for SQL Test (copy this array if needed):", JSON.stringify(queryEmbedding));
@@ -63,23 +67,19 @@ export async function POST(req: NextRequest) {
                   query_embedding: queryEmbedding,
                   match_topic_id: knowledgeBaseScope.topicId,
                   match_subtopic_id: knowledgeBaseScope.subtopicId || null,
-                  match_threshold: 0.3, // Keep your test value (e.g., 0.3)
-                  match_count: 1,       // Keep your test value (e.g., 1)
+                  match_threshold: 0.3, // Your test value
+                  match_count: 1,       // Your test value
                 };
                 console.log("Calling match_knowledge_chunks with params:", JSON.stringify(rpcParams, null, 2));
-
                 const { data: chunks, error: dbError } = await supabaseAdmin.rpc('match_knowledge_chunks', rpcParams);
-
                 console.log("RPC response - dbError:", JSON.stringify(dbError, null, 2));
                 console.log("RPC response - chunks:", JSON.stringify(chunks, null, 2));
 
                 if (dbError) {
                     console.error('Supabase DB error fetching chunks:', dbError);
                 } else if (chunks && chunks.length > 0) {
-                    // --- THIS IS THE CORRECTED LINE ---
                     contextText = "Relevant information from the knowledge base:\n" +
                                 chunks.map((chunk: { chunk_text: string; }) => `- ${chunk.chunk_text}`).join("\n\n");
-                    // --- END CORRECTION ---
                     console.log(`Retrieved ${chunks.length} relevant chunks for topic: ${knowledgeBaseScope.topicId}`);
                 } else {
                     console.log(`No specific knowledge base chunks found for query on topic: ${knowledgeBaseScope.topicId}. (Query: "${currentMessage.content}")`);
@@ -100,24 +100,36 @@ export async function POST(req: NextRequest) {
 ${contextText ? `${contextText}\n\nPlease use this information to answer the user's question. If the information isn't sufficient or the question is outside this scope, use your general knowledge but clearly state if you are doing so.` : "Answer the user's questions. If a specific topic is mentioned, focus on that. Be concise, helpful, and encouraging."}
 Format responses clearly. Use markdown for lists, bolding, and italics where appropriate.`;
 
-    const processedMessages = [
+    // Prepare messages for OpenAI, ensuring compatibility.
+    // VercelAIMessage roles 'system', 'user', 'assistant' are compatible with OpenAI's.
+    // We only take 'content' and 'role'.
+    const openAIMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
-      ...messages.slice(-10)
+      // Map last 10 incoming messages to the format OpenAI expects if necessary
+      // (VercelAIMessage is usually compatible enough for role & content)
+      ...incomingMessages.slice(-10).map(msg => ({ role: msg.role as 'user' | 'assistant' | 'system' | 'tool', content: msg.content }))
     ];
+    // Filter out any roles not supported by OpenAI if they exist in VercelAIMessage and are passed by client
+    const validOpenAIRoles: Set<string> = new Set(['system', 'user', 'assistant', 'tool', 'function']);
+    const filteredOpenAIMessages = openAIMessages.filter(msg => validOpenAIRoles.has(msg.role));
+
 
     console.log("---------------- FINAL PROCESSED MESSAGES SENT TO LLM ----------------");
-    console.log(JSON.stringify(processedMessages, null, 2)); 
+    console.log(JSON.stringify(filteredOpenAIMessages, null, 2)); 
     console.log("-----------------------------------------------------------------------");
 
     const openaiResponse = await openai.chat.completions.create({
       model: LLM_MODEL,
       stream: true,
-      messages: processedMessages as any,
+      messages: filteredOpenAIMessages, // Use the correctly typed messages
       temperature: 0.7,
     });
 
+    // If the type error persists on the line below, try casting openaiResponse as 'any' as a last resort for build
+    // const stream = OpenAIStream(openaiResponse as any, { ... });
     const stream = OpenAIStream(openaiResponse, {
       onCompletion: async (completion: string) => {
+        // ... (onCompletion logic remains the same)
         console.log(`AI response completed. UserID: ${userId}, Completion length: ${completion.length}`);
         if (userId && POINTS_FOR_CHAT_MESSAGE > 0) {
           const { error: pointsError } = await supabaseAdmin
