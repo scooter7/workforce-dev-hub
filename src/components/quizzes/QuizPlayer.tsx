@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react'; // Removed FormEvent
 import { useState, useEffect, useRef } from 'react';
 import { QuizData, QuizQuestion } from '@/types/quiz'; // Corrected import
 import Button from '@/components/ui/Button';
