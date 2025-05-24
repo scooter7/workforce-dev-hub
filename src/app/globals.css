@@ -1,63 +1,54 @@
+/* src/app/globals.css */
+
 /* Import Tailwind CSS layers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* :root variables can be useful for theming or if you need to access colors from JavaScript,
-   though often you'll use Tailwind's color classes directly.
-   These are examples; adjust or remove if not needed. */
-:root {
-  --foreground-rgb: 0, 0, 0; /* Default dark text */
-  --background-start-rgb: 243, 244, 246; /* Light gray, e.g., Tailwind's gray-100 */
-  --background-end-rgb: 255, 255, 255;   /* White */
-
-  /* Example of using your brand colors as CSS variables (optional) */
-  --brand-primary: theme('colors.brand-primary.DEFAULT');
-  --brand-primary-dark: theme('colors.brand-primary.dark');
-
-  /* Define a default font stack if not fully handled by Tailwind's theme.fontFamily */
-  /* --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; */
-}
-
-/* Example for dark mode if you plan to implement a toggle.
-   You'd typically control this with a class on the <html> or <body> tag.
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 229, 231, 235; // gray-200
-    --background-start-rgb: 31, 41, 55; // gray-800
-    --background-end-rgb: 17, 24, 39;   // gray-900
-  }
-}
+/* CSS Variables:
+  These are useful if you need to access your theme colors from JavaScript 
+  or for CSS properties that don't easily accept Tailwind classes.
+  The `theme()` function requires your CSS to be processed by Tailwind.
+  Ensure 'brand-primary' and 'neutral-text'/'neutral-bg' are defined in your tailwind.config.js.
 */
+:root {
+  --foreground-rgb: 0, 0, 0; /* Default dark text for non-Tailwind contexts if needed */
+  --background-start-rgb: 243, 244, 246; /* Default light gray for non-Tailwind contexts */
+  --background-end-rgb: 255, 255, 255;   /* Default white for non-Tailwind contexts */
 
+  /* Accessing Tailwind theme colors as CSS variables (optional, but can be handy) */
+  /* Make sure these color names match your tailwind.config.js theme extension */
+  /* Example: if you have colors: { 'brand-primary': { DEFAULT: '#HEX', dark: '#HEX' } } */
+  /* If brand-primary is just a single color string, theme('colors.brand-primary') is enough */
+  --brand-primary-color: theme('colors.brand-primary.DEFAULT', #007bff); /* Fallback color */
+  --brand-primary-dark-color: theme('colors.brand-primary.dark', #0056b3); /* Fallback color */
+
+  --neutral-text-color: theme('colors.neutral-text', #1f2937); /* Fallback to gray-800 */
+  --neutral-bg-color: theme('colors.neutral-bg', #f9fafb);   /* Fallback to gray-50 */
+}
+
+/* Basic body styling using Tailwind utility classes via @apply */
 body {
-  @apply text-neutral-text bg-neutral-bg; /* Using colors defined in tailwind.config.ts */
-  /* color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb)); */
-  font-family: theme('fontFamily.sans', 'sans-serif'); /* Use default sans-serif from Tailwind config or a fallback */
+  @apply text-neutral-text bg-neutral-bg antialiased; /* antialiased for smoother fonts */
+  font-family: theme('fontFamily.sans', 'sans-serif'); /* Use default sans-serif from Tailwind config */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Make images responsive by default */
+/* Make images and videos responsive by default */
 img,
 video {
   max-width: 100%;
   height: auto;
 }
 
-/* Basic link styling - customize as needed */
+/* Basic link styling - can be customized further or handled by component-specific styles */
 a {
-  @apply text-brand-primary hover:text-brand-primary-dark transition-colors;
+  @apply text-brand-primary hover:text-brand-primary-dark transition-colors duration-150;
 }
 
-/* Utility class for visually hidden elements (accessibility) */
+/* Utility class for visually hidden elements (important for accessibility) */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -70,30 +61,21 @@ a {
   border-width: 0;
 }
 
-/* Add any other global base styles or component layer customizations here */
-/* For example, default styling for h1, h2, etc. if not using a typography plugin */
-/*
-h1 {
-  @apply text-4xl font-bold my-4;
-}
-h2 {
-  @apply text-3xl font-semibold my-3;
-}
-*/
-/* Flashcard Flip Animation */
+/* === REVISED FLASHCARD FLIP ANIMATION STYLES === */
 .flashcard-container {
-  perspective: 1000px;
-  width: 100%; /* Or a fixed width */
-  min-height: 250px; /* Adjust as needed */
+  perspective: 1000px; /* Enables the 3D effect for children */
+  width: 100%;
+  min-height: 350px; /* Ensure it has some min height for content, adjust as needed */
+  /* If QuizPlayer's parent is flex, this can be flex-grow: 1; (QuizPlayer sets flex-grow on this itself) */
 }
 
 .flashcard {
   width: 100%;
-  height: 100%;
+  height: 100%; /* Will try to fill flashcard-container's height if defined or grown */
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1); /* Smooth transition */
-  border-radius: 0.5rem; /* Match your card's border-radius */
+  transition: transform 0.7s cubic-bezier(0.3, 0, 0.2, 1); /* Smooth flip transition */
+  border-radius: 0.75rem; /* e.g., Tailwind's rounded-xl */
 }
 
 .flashcard.is-flipped {
@@ -105,26 +87,45 @@ h2 {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  -webkit-backface-visibility: hidden; /* Safari */
+  -webkit-backface-visibility: hidden; /* For Safari compatibility */
+  
   display: flex;
-  flex-direction: column;
-  justify-content: space-between; /* To push actions to bottom */
-  border-radius: 0.5rem; /* Match your card's border-radius */
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); /* Tailwind shadow-lg equivalent */
-  overflow: hidden; /* Prevent content overflow issues during flip */
+  flex-direction: column; /* Children will stack vertically */
+  
+  border-radius: 0.75rem; /* Match .flashcard's rounding */
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Tailwind's shadow-xl */
+  padding: 1.5rem; /* Equivalent to p-6 for consistent padding on faces */
+  overflow: hidden; /* Content scrolling inside is handled by .flashcard-content-scrollable */
 }
 
 .flashcard-front {
-  background-color: white; /* Or your card's front background */
-  /* padding: 1.5rem; Remove padding here, apply to inner content if needed */
+  background-color: white;
 }
 
 .flashcard-back {
-  background-color: #f9fafb; /* Or your card's back background (e.g., gray-50) */
-  transform: rotateY(180deg);
-  /* padding: 1.5rem; Remove padding here */
-  display: flex; /* To center content or layout */
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  background-color: #f9fafb; /* Tailwind's gray-50, for a slightly different back */
+  transform: rotateY(180deg); /* Pre-rotate the back face */
+  align-items: center;     /* Center content on the back */
+  justify-content: center; /* Center content on the back */
+  text-align: center;
 }
+
+/* This class is for the main content area within a flashcard face 
+  (e.g., the list of options on the front, or explanation on the back)
+  that might need to scroll if content is too long.
+*/
+.flashcard-content-scrollable {
+  flex-grow: 1; /* Allows this area to take up available vertical space within the flex column of .flashcard-face */
+  overflow-y: auto; /* Makes this area scrollable if its content exceeds its height */
+  min-height: 0; /* Important for flex-grow to work correctly with overflow in some flex scenarios */
+  /* Add a little padding if scrollbars appear to avoid touching edge, or handle via inner elements */
+  /* e.g., padding-right: 0.25rem; but usually not needed if content has its own margins/padding */
+}
+/* === END OF REVISED FLASHCARD STYLES === */
+
+/* Add any other global base styles or component layer customizations here */
+/* For example:
+html {
+  scroll-behavior: smooth;
+}
+*/
