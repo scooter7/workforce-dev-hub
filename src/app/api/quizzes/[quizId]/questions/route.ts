@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server'; // For user-session-based or public data access
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz';
+import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz'; // Ensure this path is correct
 
 // Schema for validating route parameters
 const paramsSchema = z.object({
@@ -9,22 +9,17 @@ const paramsSchema = z.object({
 });
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest, // CHANGED: req to _req
   { params }: { params: { quizId: string } }
 ) {
-  // Use the server client that respects RLS based on the user's session
-  // or public read policies on your tables.
   const supabase = createSupabaseServerClient();
 
   try {
     // Optional: User authentication check.
-    // If quizzes are only for logged-in users, this is good.
-    // The page calling this is already auth-protected by DashboardLayout.
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       // console.warn('GET /api/quizzes/[quizId]/questions - User not authenticated or error.');
       // return NextResponse.json({ error: 'Unauthorized to fetch quiz questions.' }, { status: 401 });
-      // For now, we'll proceed, assuming quiz data RLS handles visibility.
     }
 
     const paramsValidation = paramsSchema.safeParse(params);
@@ -35,7 +30,7 @@ export async function GET(
 
     const { data: quizInfo, error: quizInfoError } = await supabase
       .from('quizzes')
-      .select('id, title, description, topic_id')
+      .select('id, title, description, topic_id, subtopic_id, difficulty') // Added subtopic_id and difficulty
       .eq('id', quizId)
       .single();
 
@@ -65,17 +60,27 @@ export async function GET(
         if (q.question_type === 'multiple-choice') {
           const { data: opts, error: optsError } = await supabase
             .from('question_options')
-            .select('id, question_id, option_text') // Importantly, DO NOT send `is_correct`
+            .select('id, question_id, option_text')
             .eq('question_id', q.id)
             .order('id');
 
           if (optsError) {
             console.error(`Error fetching options for question ${q.id}:`, optsError);
           } else {
-            options = opts || [];
+            options = opts?.map(opt => ({...opt, question_id: q.id})) || []; // ensure question_id is present if type expects it
           }
         }
-        fetchedQuestions.push({ ...q, options });
+        // Ensure the pushed object matches QuizQuestion structure from types/quiz.ts
+        fetchedQuestions.push({ 
+            id: q.id,
+            quiz_id: q.quiz_id, // ensure this is present
+            question_text: q.question_text,
+            question_type: q.question_type as 'multiple-choice' | 'true-false',
+            explanation: q.explanation,
+            points: q.points,
+            order_num: q.order_num,
+            options 
+        });
       }
     }
 
@@ -84,6 +89,8 @@ export async function GET(
         title: quizInfo.title,
         description: quizInfo.description,
         topic_id: quizInfo.topic_id,
+        subtopic_id: quizInfo.subtopic_id,     // Added to QuizData type if needed
+        difficulty: quizInfo.difficulty,     // Added to QuizData type if needed
         questions: fetchedQuestions,
     };
 
