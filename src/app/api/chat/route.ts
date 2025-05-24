@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
                 const rpcParams = {
                   query_embedding: JSON.stringify(queryEmbeddingArray), // <<< CORRECTED HERE
                   match_topic_id: knowledgeBaseScope.topicId,
-                  match_subtopic_id: knowledgeBaseScope.subtopicId || null,
+                  match_subtopic_id: knowledgeBaseScope.subtopicId || undefined,
                   match_threshold: 0.3, // Your test value
                   match_count: 1,       // Your test value
                 };
