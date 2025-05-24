@@ -55,19 +55,21 @@ export async function POST(req: NextRequest) {
     let contextText = '';
     if (knowledgeBaseScope?.topicId && currentMessage.role === 'user' && currentMessage.content && currentMessage.content.trim() !== '') {
         try {
-            const queryEmbedding = await getEmbedding(currentMessage.content);
-            console.log("Query Embedding for SQL Test (copy this array if needed):", JSON.stringify(queryEmbedding));
+            const queryEmbeddingArray = await getEmbedding(currentMessage.content); // Renamed to avoid confusion
+            console.log("Query Embedding for SQL Test (copy this array if needed):", JSON.stringify(queryEmbeddingArray));
 
-            if (queryEmbedding.length > 0) {
+            if (queryEmbeddingArray.length > 0) {
                 const rpcParams = {
-                  query_embedding: queryEmbedding,
+                  query_embedding: JSON.stringify(queryEmbeddingArray), // <<< CORRECTED HERE
                   match_topic_id: knowledgeBaseScope.topicId,
                   match_subtopic_id: knowledgeBaseScope.subtopicId || null,
                   match_threshold: 0.3, // Your test value
                   match_count: 1,       // Your test value
                 };
                 console.log("Calling match_knowledge_chunks with params:", JSON.stringify(rpcParams, null, 2));
+
                 const { data: chunks, error: dbError } = await supabaseAdmin.rpc('match_knowledge_chunks', rpcParams);
+
                 console.log("RPC response - dbError:", JSON.stringify(dbError, null, 2));
                 console.log("RPC response - chunks:", JSON.stringify(chunks, null, 2));
 
@@ -119,9 +121,7 @@ Format responses clearly. Use markdown for lists, bolding, and italics where app
       temperature: 0.7,
     });
 
-    // --- INTEGRATED FIX: Using 'as any' for openaiResponse ---
     const stream = OpenAIStream(openaiResponse as any, { 
-    // --- END FIX ---
       onCompletion: async (completion: string) => {
         console.log(`AI response completed. UserID: ${userId}, Completion length: ${completion.length}`);
         if (userId && POINTS_FOR_CHAT_MESSAGE > 0) {
