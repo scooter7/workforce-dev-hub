@@ -27,7 +27,7 @@ export default function ChatInterface({
   const [isMounted, setIsMounted] = useState(false);
   const initialLoadDoneRef = useRef(false);
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, setMessages, append } =
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error, append } =
     useChat({
       api: '/api/chat',
       body: {
