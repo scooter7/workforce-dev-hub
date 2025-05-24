@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { QuizData, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -45,7 +45,6 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
 
   const scrollToTop = useCallback(() => {
     contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    // Or window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   useEffect(() => {
@@ -54,7 +53,6 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       setIsLoadingQuiz(false);
       return;
     }
-
     setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
     setCurrentQuestionIndex(0); setUserAnswers({}); setQuizCompleted(false);
     setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
@@ -87,17 +85,14 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     }
   }, [currentQuestionIndex, isLoadingQuiz, quizData, scrollToTop]);
 
+  // This variable holds the current question object for the entire component
   const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
 
   const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
     if (isFlipped || quizCompleted) return;
+    setUserAnswers((prevAnswers) => ({ ...prevAnswers, [questionId]: selectedOptionId }));
 
-    setUserAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [questionId]: selectedOptionId,
-    }));
-
-    const question = quizData?.questions.find(q => q.id === questionId);
+    const question = quizData?.questions.find(q => q.id === questionId); // Use local 'question'
     if (question && question.question_type === 'multiple-choice' && question.options) {
       const selectedOpt = question.options.find(opt => opt.id === selectedOptionId);
       const correctOpt = question.options.find(opt => opt.is_correct);
@@ -117,113 +112,64 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     setIsFlipped(true);
   }, [quizData, isFlipped, quizCompleted]);
 
+  const handleSubmitQuiz = useCallback(async () => {
+    if (!quizData || !quizData.questions) return;
+    setIsSubmitting(true); setQuizCompleted(true); 
+    const submission = {
+      quizId: quizData.id, userId, attemptId,
+      answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
+    };
+    try {
+      const response = await fetch(`/api/quizzes/${quizData.id}/submit`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(submission),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
+        throw new Error(errData.error || 'Failed to submit quiz.');
+      }
+      const resultData = await response.json();
+      setResults(resultData); scrollToTop();
+    } catch (error: any) {
+      console.error('Error submitting quiz:', error);
+      setResults({ score: 0, totalQuestions: quizData.questions.length, pointsAwarded: 0 });
+    } finally { setIsSubmitting(false); }
+  }, [quizData, userId, attemptId, userAnswers, scrollToTop]);
+
+  const proceedToNextQuestion = useCallback(() => {
+    setIsFlipped(false); setCurrentAnswerFeedback(null);
+    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else if (quizData && currentQuestionIndex === quizData.questions.length -1 && !results) {
+      handleSubmitQuiz();
+    }
+  }, [quizData, currentQuestionIndex, results, handleSubmitQuiz]); // Added handleSubmitQuiz
+
   const goToNextQuestion = useCallback(() => {
     if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setIsFlipped(false); 
-      setCurrentAnswerFeedback(null);
+      setIsFlipped(false); setCurrentAnswerFeedback(null);
     }
   }, [quizData, currentQuestionIndex]);
 
   const goToPreviousQuestion = useCallback(() => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setIsFlipped(false);
-      setCurrentAnswerFeedback(null);
+      setIsFlipped(false); setCurrentAnswerFeedback(null);
     }
   }, [currentQuestionIndex]);
-  
-  const proceedToNextQuestion = useCallback(() => {
-    setIsFlipped(false);
-    setCurrentAnswerFeedback(null);
-    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-    } else if (quizData && currentQuestionIndex === quizData.questions.length -1 && !results) {
-      handleSubmitQuiz(); // Automatically submit if it's the last question's feedback
-    }
-  }, [quizData, currentQuestionIndex, results]); // Added handleSubmitQuiz to dependencies later
 
+  if (isLoadingQuiz) return <div className="text-center p-8 animate-pulse">Loading quiz questions...</div>;
+  if (quizFetchError) return <div className="text-center p-8 text-red-600">Error loading quiz: {quizFetchError}</div>;
+  if (!quizData || quizData.questions.length === 0) return <div className="text-center p-8 text-gray-500">This quiz is currently unavailable or has no questions.</div>;
 
-  const handleSubmitQuiz = useCallback(async () => {
-    if (!quizData || !quizData.questions) return;
-
-    setIsSubmitting(true);
-    setQuizCompleted(true); 
-
-    const submission = {
-      quizId: quizData.id,
-      userId,
-      attemptId,
-      answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({
-        questionId,
-        selectedOptionId,
-      })),
-    };
-
-    try {
-      const response = await fetch(`/api/quizzes/${quizData.id}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submission),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
-        throw new Error(errData.error || 'Failed to submit quiz.');
-      }
-
-      const resultData = await response.json();
-      setResults(resultData);
-      scrollToTop();
-
-    } catch (error: any) {
-      console.error('Error submitting quiz:', error);
-      setResults({
-        score: 0,
-        totalQuestions: quizData.questions.length,
-        pointsAwarded: 0,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [quizData, userId, attemptId, userAnswers, scrollToTop]); // Added scrollToTop to dependencies
-
-  // Now add handleSubmitQuiz to proceedToNextQuestion dependencies
-  useEffect(() => {
-    if (quizData && currentQuestionIndex === quizData.questions.length - 1 && isFlipped && !results && !isSubmitting) {
-      // If on the last question, card is flipped (feedback shown), and not yet submitted/results shown,
-      // then the "Next Question / View Results" button on the card back should trigger submission.
-      // This effect is tricky; direct call in proceedToNextQuestion is better if it's the final action.
-    }
-  }, [quizData, currentQuestionIndex, isFlipped, results, isSubmitting, handleSubmitQuiz]);
-
-
-  if (isLoadingQuiz) {
-    return <div className="text-center p-8 animate-pulse">Loading quiz questions...</div>;
-  }
-
-  if (quizFetchError) {
-    return <div className="text-center p-8 text-red-600">Error loading quiz: {quizFetchError}</div>;
-  }
-
-  if (!quizData || quizData.questions.length === 0) {
-    return <div className="text-center p-8 text-gray-500">This quiz is currently unavailable or has no questions.</div>;
-  }
-
-  if (isSubmitting) { 
-    return <div className="text-center p-8">Submitting and grading your quiz... Please wait.</div>;
-  }
+  if (isSubmitting) return <div className="text-center p-8">Submitting and grading your quiz... Please wait.</div>;
 
   if (quizCompleted && results) {
-    return (
+    return ( /* ... Results JSX from previous version (no changes needed here for this specific error) ... */ 
       <div className="p-4 md:p-6 bg-white rounded-lg shadow-xl" ref={contentRef}>
         <h2 className="text-2xl font-bold mb-4 text-center text-brand-primary">Quiz Completed!</h2>
-        <p className="text-xl text-center mb-2">
-          Your Score: <span className="font-bold">{results.score}</span> / {results.totalQuestions}
-        </p>
-        <p className="text-lg text-center mb-6">
-          Points Awarded: <span className="font-bold text-green-600">+{results.pointsAwarded}</span>
-        </p>
+        <p className="text-xl text-center mb-2">Your Score: <span className="font-bold">{results.score}</span> / {results.totalQuestions}</p>
+        <p className="text-lg text-center mb-6">Points Awarded: <span className="font-bold text-green-600">+{results.pointsAwarded}</span></p>
         <div className="my-6 space-y-4 max-h-[50vh] overflow-y-auto pr-2">
           <h3 className="text-lg font-semibold text-neutral-text">Review Your Answers:</h3>
           {quizData.questions.map((q, idx) => {
@@ -233,31 +179,23 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
             if (q.question_type === 'true-false' && (choiceInfo?.selected === 'true' || choiceInfo?.selected === 'false')) {
                 selectedOptionText = choiceInfo.selected.charAt(0).toUpperCase() + choiceInfo.selected.slice(1);
             }
-            
             return (
               <div key={q.id} className={`p-3 rounded-md ${choiceInfo?.correct ? 'bg-green-100 border-l-4 border-green-500' : 'bg-red-100 border-l-4 border-red-500'}`}>
                 <p className="font-medium text-gray-800">{idx + 1}. {q.question_text}</p>
                 <p className="text-sm text-gray-700">Your answer: <span className={choiceInfo?.correct ? "font-semibold text-green-700" : "font-semibold text-red-700"}>{selectedOptionText || (choiceInfo?.selected ? 'N/A - Invalid Option' : 'Not answered')}</span></p>
-                {!choiceInfo?.correct && choiceInfo?.selected && (
-                   <p className="text-sm text-green-600">Correct Answer: (Detailed correct answer display can be enhanced)</p>
-                )}
+                {!choiceInfo?.correct && choiceInfo?.selected && (<p className="text-sm text-green-600">Correct Answer: (Detailed correct answer display can be enhanced)</p>)}
                 {q.explanation && <p className="text-xs mt-1 italic text-gray-600">{q.explanation}</p>}
               </div>
             );
           })}
         </div>
-        <div className="text-center mt-8">
-          <Button onClick={() => router.push('/quizzes')} variant="primary">
-            Back to Quizzes
-          </Button>
-        </div>
+        <div className="text-center mt-8"><Button onClick={() => router.push('/quizzes')} variant="primary">Back to Quizzes</Button></div>
       </div>
     );
   }
   
-  const currentDisplayQuestion: QuizQuestion | undefined = quizData.questions[currentQuestionIndex];
-
-  if (!currentDisplayQuestion) {
+  // currentQuestion variable is defined at the top of the component scope
+  if (!currentQuestion) { // This check should cover if quizData or questions array is not ready
     return <div className="text-center p-8">Preparing question...</div>;
   }
 
@@ -265,7 +203,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     <div className="p-4 md:p-6 bg-white rounded-lg shadow-xl flex flex-col min-h-[calc(100vh-200px)] md:min-h-[60vh]" ref={contentRef}>
       <div className="mb-4 text-sm text-gray-600">
         Question {currentQuestionIndex + 1} of {quizData.questions.length}
-        {currentDisplayQuestion.points > 0 && ` (${currentDisplayQuestion.points} pts)`}
+        {currentQuestion.points > 0 && ` (${currentQuestion.points} pts)`}
       </div>
 
       <div className="flashcard-container flex-grow">
@@ -273,50 +211,35 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
           <div className="flashcard-face flashcard-front p-6 bg-white flex flex-col">
             <div className="flex-grow">
               <h2 className="text-xl font-semibold text-neutral-text mb-4 leading-tight">
-                {currentDisplayQuestion.question_text}
+                {currentQuestion.question_text}
               </h2>
-              {currentDisplayQuestion.question_type === 'multiple-choice' && currentDisplayQuestion.options && (
+              {currentQuestion.question_type === 'multiple-choice' && currentQuestion.options && (
                 <div className="space-y-3">
-                  {currentDisplayQuestion.options.map((option) => (
-                    <label
-                      key={option.id}
-                      className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all
-                        ${ userAnswers[currentDisplayQuestion.id] === option.id
-                            ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400'
-                            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                        }`}
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${currentDisplayQuestion.id}`}
-                        value={option.id}
-                        checked={userAnswers[currentDisplayQuestion.id] === option.id}
-                        onChange={() => handleOptionSelect(currentDisplayQuestion.id, option.id)}
-                        className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3"
-                        disabled={isFlipped}
-                      />
+                  {currentQuestion.options.map((option) => (
+                    <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
+                      <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
                       <span>{option.option_text}</span>
                     </label>
                   ))}
                 </div>
               )}
-              {currentDisplayQuestion.question_type === 'true-false' && (
+              {currentQuestion.question_type === 'true-false' && (
                  <div className="space-y-3">
-                    {(currentDisplayQuestion.options && currentDisplayQuestion.options.length >= 2 ? 
-                        currentDisplayQuestion.options.map(option => (
-                            <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentDisplayQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentDisplayQuestion.id}`} value={option.id} checked={userAnswers[currentDisplayQuestion.id] === option.id} onChange={() => handleOptionSelect(currentDisplayQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
+                    {(currentQuestion.options && currentQuestion.options.length >= 2 ? 
+                        currentQuestion.options.map(option => (
+                            <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
+                                <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
                                 <span>{option.option_text}</span>
                             </label>
                         ))
-                    : // Fallback rendering if T/F options aren't structured with IDs
+                    : 
                         <>
-                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentDisplayQuestion.id] === 'true' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentDisplayQuestion.id}`} value="true" checked={userAnswers[currentDisplayQuestion.id] === 'true'} onChange={() => handleOptionSelect(currentDisplayQuestion.id, 'true')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
+                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentQuestion.id] === 'true' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
+                                <input type="radio" name={`question-${currentQuestion.id}`} value="true" checked={userAnswers[currentQuestion.id] === 'true'} onChange={() => handleOptionSelect(currentQuestion.id, 'true')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
                                 <span>True</span>
                             </label>
-                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentDisplayQuestion.id] === 'false' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentDisplayQuestion.id}`} value="false" checked={userAnswers[currentDisplayQuestion.id] === 'false'} onChange={() => handleOptionSelect(currentDisplayQuestion.id, 'false')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
+                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${userAnswers[currentQuestion.id] === 'false' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'}`}>
+                                <input type="radio" name={`question-${currentQuestion.id}`} value="false" checked={userAnswers[currentQuestion.id] === 'false'} onChange={() => handleOptionSelect(currentQuestion.id, 'false')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
                                 <span>False</span>
                             </label>
                         </>
@@ -324,12 +247,10 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
                  </div>
               )}
             </div>
-             <div className="mt-auto pt-4"> 
-                {/* This space ensures content pushes actions to bottom, used by main nav buttons if card not flipped */}
-             </div>
+             <div className="mt-auto pt-4"></div>
           </div>
 
-          <div className="flashcard-face flashcard-back p-6 items-center justify-center">
+          <div className="flashcard-face flashcard-back p-6 items-center justify-center flex flex-col"> {/* Added flex flex-col */}
             {currentAnswerFeedback && (
               <div className="text-center">
                 {currentAnswerFeedback.isCorrect ? (
@@ -344,13 +265,14 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
                 {!currentAnswerFeedback.isCorrect && currentAnswerFeedback.correctOptionText && (
                   <p className="text-sm text-gray-600">Correct answer: {currentAnswerFeedback.correctOptionText}</p>
                 )}
-                {currentQuestion.explanation && (
+                {/* --- CORRECTED LINE BELOW --- */}
+                {currentQuestion && currentQuestion.explanation && (
                   <p className="text-sm text-gray-700 mt-3 pt-3 border-t">{currentQuestion.explanation}</p>
                 )}
               </div>
             )}
             <Button 
-              onClick={currentQuestionIndex < quizData.questions.length - 1 ? proceedToNextQuestion : handleSubmitQuiz} 
+              onClick={proceedToNextQuestion} 
               variant="primary" 
               className="mt-6"
             >
@@ -372,7 +294,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
             currentQuestionIndex < quizData.questions.length - 1 ? (
             <Button
                 onClick={goToNextQuestion}
-                disabled={quizCompleted || !userAnswers[currentDisplayQuestion.id]}
+                disabled={quizCompleted || !userAnswers[currentQuestion.id]} // Use currentQuestion here
                 variant="primary"
             >
                 Next Question
@@ -388,7 +310,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
             </Button>
             )
         )}
-        {isFlipped && <div style={{ minWidth: '100px' }}>&nbsp;</div>} {/* Placeholder to maintain layout if next/finish is hidden */}
+        {isFlipped && <div style={{ minWidth: '100px' }}>&nbsp;</div>}
       </div>
     </div>
   );
