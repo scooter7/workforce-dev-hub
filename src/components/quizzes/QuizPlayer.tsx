@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react'; // Removed FormEvent
-import { QuizData, QuizQuestion, QuestionOption } from '@/types/quiz'; // Ensure this path is correct
+import { useState, useEffect, useRef } from 'react';
+import { QuizData, QuizQuestion } from '@/types/quiz'; // Corrected import
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input'; // Input is not used in this version, can be removed if truly not needed
+// Input import was previously removed as unused in this file
 import { useRouter } from 'next/navigation';
+// ... rest of the component
 
 interface QuizPlayerProps {
   quizId: string;
