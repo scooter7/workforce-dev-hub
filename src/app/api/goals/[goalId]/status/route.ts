@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // --- CORRECTED IMPORT FOR BOTH CLIENTS ---
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 // --- END CORRECTION ---
-import { GoalStatus } from '@/app/(dashboard)/goals/page'; // Import GoalStatus type
+//import { GoalStatus } from '@/app/(dashboard)/goals/page'; // Import GoalStatus type
 import { POINTS_FOR_GOAL_STATUS_CHANGE, POINTS_FOR_COMPLETING_GOAL } from '@/lib/constants';
 import { z } from 'zod';
 
