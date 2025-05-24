@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server'; // For admin user check via session
-// CORRECTED IMPORT PATH:
-import { createSupabaseAdminClient } from '@/lib/supabase/server'; // Was '@/lib/supabase/admin'
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import OpenAI from 'openai';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
-const KNOWLEDGE_BASE_BUCKET = 'knowledge-base-uploads'; // Ensure this uses hyphens if created that way
+const KNOWLEDGE_BASE_BUCKET = 'knowledge-base-uploads'; // Ensure this is hyphenated
 
 if (!process.env.OPENAI_API_KEY) {
-  console.error("FATAL ERROR: Missing environment variable OPENAI_API_KEY for ingestion.");
+  console.error("FATAL ERROR: Missing environment variable OPENAI_API_KEY.");
 }
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -29,7 +27,7 @@ function chunkText(text: string, chunkSize: number = 800, chunkOverlap: number =
 }
 
 export async function POST(req: NextRequest) {
-  const supabaseAuth = createSupabaseServerClient(); // For getting current user to check if admin
+  const supabaseAuth = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
 
   if (authError || !user) {
@@ -39,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden: Admin access required.' }, { status: 403 });
   }
 
-  const supabaseAdmin = createSupabaseAdminClient(); // This function is from '@/lib/supabase/server'
+  const supabaseAdmin = createSupabaseAdminClient();
 
   try {
     const formData = await req.formData();
@@ -70,6 +68,7 @@ export async function POST(req: NextRequest) {
       console.log(`Processing .txt/.md file synchronously: ${file.name}`);
       const fileContent = await file.text();
       const textChunks = chunkText(fileContent);
+
       if (textChunks.length === 0) {
         return NextResponse.json({ error: 'No processable text chunks found in the file.' }, { status: 400 });
       }
@@ -89,12 +88,13 @@ export async function POST(req: NextRequest) {
             dimensions: EMBEDDING_DIMENSIONS,
           });
           const embedding = embeddingResponse.data[0].embedding;
+
           chunksToInsert.push({
             topic_id: topicId,
             subtopic_id: subtopicId || null,
             source_document_name: sourceName,
             chunk_text: chunk,
-            embedding: embedding,
+            embedding: JSON.stringify(embedding), // <<< CORRECTED HERE
           });
           chunksProcessed++;
         } catch (embeddingError: any) {
@@ -120,11 +120,24 @@ export async function POST(req: NextRequest) {
         console.error('Error inserting chunks into Supabase:', insertError);
         return NextResponse.json({ error: 'Failed to store document chunks.', details: insertError.message }, { status: 500 });
       }
+
+      const numAttemptedToStore = chunksToInsert.length;
+      const numConfirmedByDbCount = insertedCount;
+      let successMessage = `TEST MODE: Synchronously processed ${textChunks.length} text chunks from "${sourceName}". `;
+      successMessage += `Attempted to embed and store ${numAttemptedToStore} chunks. `;
+      if (numConfirmedByDbCount !== null) {
+          successMessage += `${numConfirmedByDbCount} chunks confirmed stored by database count. `;
+      } else {
+          successMessage += `Database did not return an explicit count, but insert operation was attempted for ${numAttemptedToStore} chunks. `;
+      }
+      successMessage += "File also uploaded to storage.";
+
       return NextResponse.json({
-          message: `TEST MODE: Synchronously ingested ${insertedCount} chunks from TXT file "${sourceName}". File also uploaded to storage.`,
+          message: successMessage,
           fileName: file.name,
           chunksGenerated: textChunks.length,
-          chunksStored: insertedCount
+          chunksAttemptedToEmbedAndStore: numAttemptedToStore,
+          chunksConfirmedStoredByDbCount: numConfirmedByDbCount,
       }, { status: 201 });
 
     } else if (file.type === 'application/pdf') {
