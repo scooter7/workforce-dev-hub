@@ -136,7 +136,7 @@ CREATE POLICY "Users can view their own point logs."
 --------------------------------------------------------------------------------
 CREATE TABLE public.quizzes (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
-  topic_id TEXT,
+  topic_id TEXT NOT NULL, -- <<< CHANGED: Added NOT NULL
   subtopic_id TEXT,
   title TEXT NOT NULL CHECK (char_length(title) > 0 AND char_length(title) <= 255),
   description TEXT CHECK (char_length(description) <= 1000),

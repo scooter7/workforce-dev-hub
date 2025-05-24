@@ -261,7 +261,7 @@ export type Database = {
           id: string
           subtopic_id: string | null
           title: string
-          topic_id: string | null
+          topic_id: string
           updated_at: string
         }
         Insert: {
@@ -271,7 +271,7 @@ export type Database = {
           id?: string
           subtopic_id?: string | null
           title: string
-          topic_id?: string | null
+          topic_id: string
           updated_at?: string
         }
         Update: {
@@ -281,7 +281,7 @@ export type Database = {
           id?: string
           subtopic_id?: string | null
           title?: string
-          topic_id?: string | null
+          topic_id?: string
           updated_at?: string
         }
         Relationships: []
