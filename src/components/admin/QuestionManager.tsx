@@ -1,91 +1,142 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuizQuestion } from '@/app/(dashboard)/quizzes/[quizId]/page'; // Reuse types
-import AddQuestionForm from './AddQuestionForm'; // The form component
-import Button from '@/components/ui/Button'; // <<< ADD THIS IMPORT
+// UPDATED IMPORT: Get types from the centralized types file
+import { QuizQuestion, QuestionOption } from '@/types/quiz';
+import AddQuestionForm from './AddQuestionForm';
+import Button from '@/components/ui/Button';
 import { TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+
+// Define the expected structure for initialQuestions prop more precisely
+// This should match the structure returned by `getQuizForAdmin` in the admin page
+interface AdminQuizQuestionDisplay extends Omit<QuizQuestion, 'options' | 'quiz_id'> {
+  // quiz_id is already available as a prop to QuestionManager
+  // options array for admin display will include is_correct
+  options: Array<Omit<QuestionOption, 'question_id'>>; // question_id is implicit
+}
 
 interface QuestionManagerProps {
   quizId: string;
-  initialQuestions: Array<Omit<QuizQuestion, 'options'> & { options: Array<{id: string, option_text: string, is_correct: boolean}> }>;
+  initialQuestions: AdminQuizQuestionDisplay[];
 }
 
 export default function QuestionManager({ quizId, initialQuestions }: QuestionManagerProps) {
-  const [questions, setQuestions] = useState(initialQuestions);
+  const [questions, setQuestions] = useState<AdminQuizQuestionDisplay[]>(initialQuestions);
   const [showAddForm, setShowAddForm] = useState(false);
-  // TODO: Add state for editingQuestion if implementing edit functionality
+  // const [editingQuestion, setEditingQuestion] = useState<AdminQuizQuestionDisplay | null>(null); // For future edit
 
   useEffect(() => {
     setQuestions(initialQuestions);
   }, [initialQuestions]);
 
-  const handleQuestionAdded = (newQuestion: any) => { 
-    setQuestions(prev => [...prev, newQuestion]);
-    setShowAddForm(false); 
+  const handleQuestionAdded = (newQuestionFullData: QuizQuestion) => { // API returns full QuizQuestion
+    // Adapt the newQuestionFullData to AdminQuizQuestionDisplay if necessary before setting state
+    // For now, let's assume direct compatibility or simplify
+    const adaptedQuestion: AdminQuizQuestionDisplay = {
+        id: newQuestionFullData.id,
+        question_text: newQuestionFullData.question_text,
+        question_type: newQuestionFullData.question_type,
+        explanation: newQuestionFullData.explanation,
+        points: newQuestionFullData.points,
+        order_num: newQuestionFullData.order_num,
+        options: newQuestionFullData.options.map(opt => ({ // Ensure options match expected structure
+            id: opt.id,
+            option_text: opt.option_text,
+            is_correct: opt.is_correct === true // Ensure it's a boolean
+        }))
+    };
+    setQuestions(prev => [...prev, adaptedQuestion]);
+    setShowAddForm(false);
   };
 
   const handleDeleteQuestion = async (questionId: string) => {
-    if (!confirm('Are you sure you want to delete this question and its options?')) return;
-    console.log(`TODO: Delete question ${questionId} for quiz ${quizId}`);
-    // API call to DELETE /api/admin/quizzes/[quizId]/questions/[questionId]
-    // On success:
-    // setQuestions(prev => prev.filter(q => q.id !== questionId));
+    if (!confirm('Are you sure you want to delete this question and its options? This action cannot be undone.')) return;
+
+    try {
+      const response = await fetch(`/api/admin/quizzes/${quizId}/questions/${questionId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to delete question.');
+      }
+      setQuestions(prev => prev.filter(q => q.id !== questionId));
+      // Add a success message/toast
+      alert('Question deleted successfully.');
+    } catch (error: any) {
+      console.error("Delete question error:", error);
+      alert(`Error deleting question: ${error.message}`);
+    }
   };
+  
+  // const handleEditQuestion = (question: AdminQuizQuestionDisplay) => {
+  //   setEditingQuestion(question);
+  //   setShowAddForm(true); // Or a dedicated edit form/modal
+  // };
+
 
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold mb-4">Existing Questions ({questions.length})</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-semibold">Existing Questions ({questions.length})</h2>
+          {!showAddForm && (
+            <Button onClick={() => { /*setEditingQuestion(null);*/ setShowAddForm(true); }} variant="secondary">
+              Add New Question
+            </Button>
+          )}
+        </div>
         {questions.length > 0 ? (
           <ul className="space-y-3">
             {questions.map((q, index) => (
               <li key={q.id} className="p-4 bg-gray-50 rounded-md shadow-sm border">
                 <div className="flex justify-between items-start">
                     <div>
-                        <p className="font-medium">Q{q.order_num || index + 1}: {q.question_text}</p>
-                        <p className="text-xs text-gray-500">Type: {q.question_type} | Points: {q.points}</p>
-                        {q.question_type === 'multiple-choice' && q.options && (
-                        <ul className="list-disc list-inside pl-4 mt-1 text-sm">
+                        <p className="font-medium text-gray-800">Q{q.order_num || index + 1}: {q.question_text}</p>
+                        <p className="text-xs text-gray-500 capitalize">Type: {q.question_type.replace('_', '-')} | Points: {q.points}</p>
+                        {q.question_type === 'multiple-choice' && q.options && q.options.length > 0 && (
+                        <ul className="list-disc list-inside pl-5 mt-1 text-sm space-y-0.5">
                             {q.options.map(opt => (
-                            <li key={opt.id} className={opt.is_correct ? 'font-semibold text-green-600' : ''}>
-                                {opt.option_text} {opt.is_correct ? '(Correct)' : ''}
+                            <li key={opt.id} className={opt.is_correct ? 'font-semibold text-green-700' : 'text-gray-600'}>
+                                {opt.option_text} {opt.is_correct ? <span className="text-green-500">(Correct)</span> : ''}
                             </li>
                             ))}
                         </ul>
                         )}
-                        {q.explanation && <p className="text-xs italic text-gray-600 mt-1">Explanation: {q.explanation}</p>}
+                        {q.explanation && <p className="text-xs italic text-gray-600 mt-2">Explanation: {q.explanation}</p>}
                     </div>
-                    <div className="flex space-x-2 flex-shrink-0">
-                        {/* <button className="text-blue-500 hover:text-blue-700 p-1"><PencilIcon className="h-5 w-5"/></button> */}
-                        <button onClick={() => handleDeleteQuestion(q.id)} className="text-red-500 hover:text-red-700 p-1"><TrashIcon className="h-5 w-5"/></button>
+                    <div className="flex space-x-1 flex-shrink-0">
+                        {/* <Button variant="ghost" size="sm" onClick={() => handleEditQuestion(q)} className="p-1.5 text-blue-600 hover:text-blue-800" title="Edit Question">
+                            <PencilIcon className="h-5 w-5"/>
+                        </Button> */}
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteQuestion(q.id)} className="p-1.5 text-red-500 hover:text-red-700" title="Delete Question">
+                            <TrashIcon className="h-5 w-5"/>
+                        </Button>
                     </div>
                 </div>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-gray-500">No questions added to this quiz yet.</p>
+          !showAddForm && <p className="text-gray-500 py-4">No questions added to this quiz yet.</p>
         )}
       </div>
 
-      <div className="mt-8">
-        {!showAddForm ? (
-          <Button onClick={() => setShowAddForm(true)} variant="secondary">
-            Add New Question
-          </Button>
-        ) : (
-          <div>
-            <h2 className="text-2xl font-semibold mb-4">Add New Question</h2>
+      {showAddForm && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-semibold mb-4">
+              {/* {editingQuestion ? 'Edit Question' : 'Add New Question'} */}
+              Add New Question
+            </h2>
             <AddQuestionForm
               quizId={quizId}
+              // initialData={editingQuestion} // For future edit form
               onQuestionAdded={handleQuestionAdded}
-              onCancel={() => setShowAddForm(false)}
+              onCancel={() => { setShowAddForm(false); /*setEditingQuestion(null);*/ }}
               nextOrderNum={questions.length > 0 ? Math.max(...questions.map(q => q.order_num || 0)) + 1 : 1}
             />
           </div>
         )}
-      </div>
     </div>
   );
 }
