@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { GoalStatus, GoalType } from '@/app/(dashboard)/goals/page'; // Import types
+//import { GoalStatus, GoalType } from '@/app/(dashboard)/goals/page'; // Import types
 import { z } from 'zod';
 
 // Schema for validating route parameters (goalId) - used by both PATCH and DELETE
