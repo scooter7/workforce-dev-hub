@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { UserGoal, GoalStatus, GoalType } from '@/app/(dashboard)/goals/page';
 import Button from '@/components/ui/Button';
-import { CalendarDaysIcon, TrashIcon, PencilSquareIcon, CheckCircleIcon, PlayCircleIcon, StopCircleIcon } from '@heroicons/react/24/outline';
+import { CalendarDaysIcon, TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+// Removed StopCircleIcon, PlayCircleIcon, CheckCircleIcon as getStatusIcon is removed
 
 interface GoalItemProps {
   goal: UserGoal;
@@ -12,14 +13,7 @@ interface GoalItemProps {
   onEditGoal: (goal: UserGoal) => void;
 }
 
-const getStatusIcon = (status: GoalStatus) => {
-  switch (status) {
-    case 'not_started': return <StopCircleIcon className="h-5 w-5 text-gray-400 mr-1" />;
-    case 'in_progress': return <PlayCircleIcon className="h-5 w-5 text-blue-500 mr-1" />;
-    case 'completed': return <CheckCircleIcon className="h-5 w-5 text-green-500 mr-1" />;
-    default: return null;
-  }
-};
+// getStatusIcon function removed as it was unused
 
 const getTypeIcon = (type: GoalType) => {
   switch (type) {
@@ -124,10 +118,10 @@ export default function GoalItem({ goal, onUpdateGoal, onDeleteGoal, onEditGoal 
               onChange={(e) => handleStatusChange(e.target.value as GoalStatus)}
               disabled={isLoading}
               className={`w-full text-sm p-2 border rounded-md focus:ring-2 focus:ring-brand-primary transition-colors ${
-                currentStatus === 'not_started' ? 'bg-gray-100 border-gray-300 text-gray-700' : // Added text-gray-700 for visibility
+                currentStatus === 'not_started' ? 'bg-gray-100 border-gray-300 text-gray-700' :
                 currentStatus === 'in_progress' ? 'bg-blue-50 border-blue-400 text-blue-700' :
                 currentStatus === 'completed' ? 'bg-green-50 border-green-400 text-green-700 font-medium' :
-                'bg-gray-100 border-gray-300 text-gray-700' // Default fallback style
+                'bg-gray-100 border-gray-300 text-gray-700'
               }`}
             >
               <option value="not_started">Not Started</option>
