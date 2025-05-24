@@ -1,17 +1,14 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation'; // This is used
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { workforceTopics, Topic } from '@/lib/constants';
 import { PuzzlePieceIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
-import { QuizTeaser } from '@/types/quiz'; // <<< UPDATED: Import QuizTeaser
+import { QuizTeaser } from '@/types/quiz';
 
 export const metadata = {
   title: 'Quizzes',
 };
 
-// The local QuizTeaser interface definition has been removed.
-
-// Fetch quizzes directly in the Server Component
 async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
   const { data: quizzes, error } = await supabaseClient
     .from('quizzes')
@@ -22,9 +19,9 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       title,
       description,
       difficulty,
-      created_at, /* Added created_at for potential sorting or display */
+      created_at, 
       quiz_questions ( count )
-    `)
+    `) // <<< COMMENT REMOVED HERE
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -32,7 +29,6 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     return [];
   }
 
-  // Ensure the mapping matches the QuizTeaser interface from '@/types/quiz'
   return quizzes?.map((q: any) => ({
     id: q.id,
     topic_id: q.topic_id,
@@ -40,12 +36,11 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     title: q.title,
     description: q.description,
     difficulty: q.difficulty,
-    created_at: q.created_at, // Ensure this is part of QuizTeaser if you want to use it
-    // @ts-ignore
+    created_at: q.created_at,
+    // @ts-ignore Supabase TS might struggle with related table count in this simple select
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
-
 
 export default async function QuizzesPage() {
   const supabase = createSupabaseServerClient();
@@ -59,15 +54,12 @@ export default async function QuizzesPage() {
 
   const quizzesByTopic: Record<string, QuizTeaser[]> = {};
   allQuizzes.forEach(quiz => {
-    // Ensure quiz.topic_id is not null or undefined before using it as a key
     if (quiz.topic_id) {
         if (!quizzesByTopic[quiz.topic_id]) {
             quizzesByTopic[quiz.topic_id] = [];
         }
         quizzesByTopic[quiz.topic_id].push(quiz);
     } else {
-        // Handle quizzes with no topic_id if that's possible, e.g., group them under "General"
-        // For now, we assume topic_id will be present for grouping.
         console.warn(`Quiz with ID ${quiz.id} has no topic_id and won't be grouped.`);
     }
   });
