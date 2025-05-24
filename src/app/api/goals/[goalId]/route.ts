@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-//import { GoalStatus, GoalType } from '@/app/(dashboard)/goals/page'; // Import types
 import { z } from 'zod';
 
 // Schema for validating route parameters (goalId) - used by both PATCH and DELETE
@@ -14,7 +13,7 @@ const goalUpdateSchema = z.object({
   description: z.string().max(1000).nullable().optional(),
   type: z.enum(['personal', 'academic', 'professional', 'other'] as const).optional(),
   status: z.enum(['not_started', 'in_progress', 'completed'] as const).optional(),
-  target_date: z.string().date().nullable().optional(), // Validates if string is 'YYYY-MM-DD'
+  target_date: z.string().date().nullable().optional(),
 }).refine(data => Object.keys(data).length > 0, {
   message: "At least one field must be provided for an update."
 });
@@ -28,14 +27,12 @@ export async function PATCH(
   const supabase = createSupabaseServerClient();
 
   try {
-    // 1. Authenticate user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       console.error('PATCH /api/goals/[goalId] - Auth Error:', authError);
       return NextResponse.json({ error: 'Unauthorized: User not authenticated.' }, { status: 401 });
     }
 
-    // 2. Validate route parameter (goalId)
     const paramsValidation = paramsSchema.safeParse(params);
     if (!paramsValidation.success) {
       console.error('PATCH /api/goals/[goalId] - Params Validation Error:', paramsValidation.error.flatten().fieldErrors);
@@ -43,8 +40,12 @@ export async function PATCH(
     }
     const { goalId } = paramsValidation.data;
 
-    // 3. Validate request body (fields to update)
-    const body = await req.json();
+    let body;
+    try {
+        body = await req.json();
+    } catch (e) {
+        return NextResponse.json({ error: 'Invalid JSON in request body.' }, { status: 400 });
+    }
     const bodyValidation = goalUpdateSchema.safeParse(body);
 
     if (!bodyValidation.success) {
@@ -52,29 +53,24 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid update data provided.', details: bodyValidation.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const updatePayload = { ...bodyValidation.data };
+    const updatePayload: { [key: string]: any } = { ...bodyValidation.data }; // Use an index signature for flexibility
 
-    // Handle specific field transformations for DB
     if (Object.prototype.hasOwnProperty.call(updatePayload, 'target_date')) {
         updatePayload.target_date = updatePayload.target_date ? new Date(updatePayload.target_date).toISOString() : null;
     }
-
-    // Add updated_at timestamp
-    // @ts-ignore - We are adding updated_at to a validated structure
+    
     updatePayload.updated_at = new Date().toISOString();
 
-
-    // 4. Update the goal
     const { data: updatedGoal, error: updateError } = await supabase
       .from('user_goals')
-      .update(updatePayload) // Pass only validated and transformed fields
+      .update(updatePayload)
       .eq('id', goalId)
-      .eq('user_id', user.id) // Crucial: ensure user owns the goal
+      .eq('user_id', user.id)
       .select()
       .single();
 
     if (updateError) {
-      if (updateError.code === 'PGRST116') { // No rows found or RLS violation
+      if (updateError.code === 'PGRST116') {
         console.warn(`PATCH /api/goals/[goalId] - Goal not found or not owned by user: ${goalId}`);
         return NextResponse.json({ error: 'Goal not found or access denied.' }, { status: 404 });
       }
@@ -86,13 +82,11 @@ export async function PATCH(
         return NextResponse.json({ error: 'Goal not found after update attempt or access denied.' }, { status: 404 });
     }
 
-    // Points for general update are omitted for now, assuming specific actions handle points.
-
     return NextResponse.json(updatedGoal, { status: 200 });
 
   } catch (error: any) {
     console.error('PATCH /api/goals/[goalId] - Generic Error:', error);
-    if (error.name === 'SyntaxError') { // JSON parsing error
+    if (error.name === 'SyntaxError') {
         return NextResponse.json({ error: 'Invalid JSON in request body.' }, { status: 400 });
     }
     return NextResponse.json({ error: 'An unexpected error occurred.', details: error.message }, { status: 500 });
@@ -102,33 +96,30 @@ export async function PATCH(
 
 // --- DELETE Handler for Deleting a Goal ---
 export async function DELETE(
-  req: NextRequest, // req might not be used directly but is part of the signature
+  _req: NextRequest, // CHANGED: req to _req to indicate it's unused
   { params }: { params: { goalId: string } }
 ) {
   const supabase = createSupabaseServerClient();
 
   try {
-    // 1. Authenticate user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       console.error('DELETE /api/goals/[goalId] - Auth Error:', authError);
       return NextResponse.json({ error: 'Unauthorized: User not authenticated.' }, { status: 401 });
     }
 
-    // 2. Validate route parameter (goalId)
-    const paramsValidation = paramsSchema.safeParse(params); // paramsSchema is already defined above
+    const paramsValidation = paramsSchema.safeParse(params);
     if (!paramsValidation.success) {
       console.error('DELETE /api/goals/[goalId] - Params Validation Error:', paramsValidation.error.flatten().fieldErrors);
       return NextResponse.json({ error: 'Invalid Goal ID.', details: paramsValidation.error.flatten().fieldErrors }, { status: 400 });
     }
     const { goalId } = paramsValidation.data;
 
-    // 3. Delete the goal
     const { error: deleteError, count } = await supabase
       .from('user_goals')
       .delete()
       .eq('id', goalId)
-      .eq('user_id', user.id); // Crucial: ensure user owns the goal
+      .eq('user_id', user.id);
 
     if (deleteError) {
       console.error('DELETE /api/goals/[goalId] - Delete Error:', deleteError);
@@ -141,7 +132,6 @@ export async function DELETE(
     }
 
     return NextResponse.json({ message: 'Goal deleted successfully.' }, { status: 200 });
-    // Or: return new NextResponse(null, { status: 204 });
 
   } catch (error: any) {
     console.error('DELETE /api/goals/[goalId] - Generic Error:', error);
