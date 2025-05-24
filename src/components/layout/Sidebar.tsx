@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import { usePathname } from 'next/navigation';
 import {
-  HomeIcon, // Can still be used for Explore and Chat, or choose another
+  // HomeIcon, // Removed as it's no longer used
   ClipboardDocumentListIcon,
   UserCircleIcon,
   QuestionMarkCircleIcon,
   TrophyIcon,
   WrenchScrewdriverIcon,
-  ChatBubbleLeftEllipsisIcon, // Alternative icon for "Explore and Chat"
+  ChatBubbleLeftEllipsisIcon, // Used for "Explore and Chat"
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
@@ -19,27 +19,22 @@ interface SidebarProps {
 
 const commonIconClass = "h-6 w-6 mr-3 flex-shrink-0";
 
-// Updated navigation items
 const navigationItems = [
-  // MODIFIED HERE: Changed name from 'Dashboard' to 'Explore and Chat'
-  { name: 'Explore and Chat', href: '/', icon: ChatBubbleLeftEllipsisIcon }, // Using ChatBubbleLeftEllipsisIcon, or keep HomeIcon
+  { name: 'Explore and Chat', href: '/', icon: ChatBubbleLeftEllipsisIcon },
   { name: 'My Goals', href: '/goals', icon: ClipboardDocumentListIcon },
   { name: 'Quizzes', href: '/quizzes', icon: QuestionMarkCircleIcon },
   { name: 'My Points', href: '/points', icon: TrophyIcon },
   { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
-const adminLinks = [ // Simplified admin links from previous version
+const adminLinks = [
     { name: 'Ingest Documents', href: '/ingest', icon: WrenchScrewdriverIcon },
     { name: 'Create Quiz', href: '/quizzes/new', icon: WrenchScrewdriverIcon },
-    // Add more admin links here, e.g., to a page that lists quizzes for management
-    // { name: 'Manage Quizzes', href: '/admin/manage-quizzes', icon: WrenchScrewdriverIcon },
+    // Example: { name: 'Manage Quizzes', href: '/admin/manage-quizzes', icon: WrenchScrewdriverIcon },
 ];
-
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
-  // Client-side check for admin user. Ensure NEXT_PUBLIC_ADMIN_USER_ID is set in .env.local
   const showAdminLinks = user && user.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   return (
@@ -52,10 +47,10 @@ export default function Sidebar({ user }: SidebarProps) {
 
       <nav className="flex-grow p-3 space-y-1.5 overflow-y-auto">
         {navigationItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href) && item.href.length > 1);
-          // Special handling for root path '/' to only be active if pathname is exactly '/'
-          const isExactlyRoot = item.href === '/' && pathname === '/';
-          const finalIsActive = item.href === '/' ? isExactlyRoot : isActive;
+          const isActiveBase = pathname === item.href;
+          // Ensure root link '/' is only active for exact match, others can match start for nested routes
+          const finalIsActive = item.href === '/' ? isExactlyRoot : (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href)));
+          const isExactlyRoot = item.href === '/' && pathname === '/'; // Re-calculate here for clarity
 
           return (
             <Link
@@ -65,13 +60,15 @@ export default function Sidebar({ user }: SidebarProps) {
                 flex items-center px-3 py-2.5 rounded-md text-sm font-medium
                 transition-colors duration-150 group
                 ${
-                  finalIsActive
+                  (item.href === '/' ? isExactlyRoot : isActiveBase) // Corrected active logic here
                     ? 'bg-sky-700 text-white shadow-inner'
                     : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white'
                 }
               `}
             >
-              <item.icon className={`${commonIconClass} ${finalIsActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} aria-hidden="true" />
+              <item.icon 
+                className={`${commonIconClass} ${(item.href === '/' ? isExactlyRoot : isActiveBase) ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
+                aria-hidden="true" />
               {item.name}
             </Link>
           );
@@ -97,7 +94,9 @@ export default function Sidebar({ user }: SidebarProps) {
                                 }
                             `}
                             >
-                            <adminItem.icon className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} aria-hidden="true" />
+                            <adminItem.icon 
+                                className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
+                                aria-hidden="true" />
                             {adminItem.name}
                         </Link>
                     );
