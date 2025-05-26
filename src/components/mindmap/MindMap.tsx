@@ -11,10 +11,10 @@ import ReactFlow, {
   OnNodesChange,
   OnEdgesChange,
   MarkerType,
-  // Position, // Removed as unused in this file
   NodeOrigin,
   useReactFlow,
   ReactFlowProvider,
+  BackgroundVariant, // <<< IMPORTED BackgroundVariant
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -42,7 +42,6 @@ const elkLayoutOptions: LayoutOptions = {
 interface MindMapProps {
   topics: TopicType[];
 }
-// interface MindMapContentProps extends MindMapProps {} // Not strictly needed if props are passed through
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
 const ESTIMATED_MAIN_NODE_WIDTH = 250;
@@ -58,7 +57,7 @@ const nodeTypes = {
 const getLayoutedElements = async (
   topicsData: TopicType[],
   expandedTopics: Set<string>,
-  onToggleExpandForNode: (topicId: string) => void, // Callback for the node to trigger
+  onToggleExpandForNode: (topicId: string) => void,
   layoutOptionsToUse: LayoutOptions
 ): Promise<{ layoutedNodes: Node[]; layoutedEdges: Edge[] }> => {
   const elkNodes: ElkNode[] = [];
@@ -163,7 +162,7 @@ const getLayoutedElements = async (
   }
 };
 
-function MindMapContent({ topics }: MindMapProps) { // Changed MindMapContentProps to MindMapProps for simplicity
+function MindMapContent({ topics }: MindMapProps) {
   const router = useRouter();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -211,14 +210,11 @@ function MindMapContent({ topics }: MindMapProps) { // Changed MindMapContentPro
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   const onNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => { // CHANGED: event to _event
-      // Navigation is triggered by clicking the main body of the node.
-      // The expand/collapse button within ModernTopicNode calls its own data.onToggleExpand directly and stops propagation.
-      const { topicId, subtopic } = node.data as any; // Using 'any' for simplicity here, ensure data types in nodes
-
-      if (topicId && subtopic?.id) { // Clicked on a subtopic node
+    (_event: React.MouseEvent, node: Node) => {
+      const { topicId, subtopic } = node.data as any;
+      if (topicId && subtopic?.id) {
         router.push(`/chat/${topicId}?subtopic=${subtopic.id}`);
-      } else if (topicId) { // Clicked on a main topic node (not the expand button)
+      } else if (topicId) {
         router.push(`/chat/${topicId}`);
       }
     },
@@ -250,7 +246,8 @@ function MindMapContent({ topics }: MindMapProps) { // Changed MindMapContentPro
         maxZoom={2}
       >
         <Controls showInteractive={false} />
-        <Background variant="dots" gap={20} size={0.7} color="#d1d5db" />
+        {/* CORRECTED Background variant prop */}
+        <Background variant={BackgroundVariant.Dots} gap={20} size={0.7} color="#d1d5db" />
       </ReactFlow>
     </div>
   );
