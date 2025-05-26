@@ -11,6 +11,7 @@ import ReactFlow, {
   OnNodesChange,
   OnEdgesChange,
   MarkerType,
+  // Position, // Removed as unused in this file
   NodeOrigin,
   useReactFlow,
   ReactFlowProvider,
@@ -29,11 +30,11 @@ const elk = new ELK();
 const elkLayoutOptions: LayoutOptions = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '160', // Increased spacing for better visual separation
-  'elk.spacing.nodeNode': '100', // Spacing between subtopics or topics in same layer
-  'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF', // Different strategy, can look good
+  'elk.layered.spacing.nodeNodeBetweenLayers': '160',
+  'elk.spacing.nodeNode': '100',
+  'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
   'elk.layered.cycleBreaking.strategy': 'DEPTH_FIRST',
-  'elk.edgeRouting': 'SPLINES', // Smoother edges
+  'elk.edgeRouting': 'SPLINES',
   'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
   'elk.padding.node': '[top=25,left=25,bottom=25,right=25]',
 };
@@ -41,12 +42,13 @@ const elkLayoutOptions: LayoutOptions = {
 interface MindMapProps {
   topics: TopicType[];
 }
+// interface MindMapContentProps extends MindMapProps {} // Not strictly needed if props are passed through
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
-const ESTIMATED_MAIN_NODE_WIDTH = 250; // Adjust based on ModernTopicNode's typical rendered width
-const ESTIMATED_MAIN_NODE_HEIGHT = 90;  // Adjust
-const ESTIMATED_SUB_NODE_WIDTH = 220;  // Adjust based on ModernSubtopicNode
-const ESTIMATED_SUB_NODE_HEIGHT = 70; // Adjust
+const ESTIMATED_MAIN_NODE_WIDTH = 250;
+const ESTIMATED_MAIN_NODE_HEIGHT = 90;
+const ESTIMATED_SUB_NODE_WIDTH = 220;
+const ESTIMATED_SUB_NODE_HEIGHT = 70;
 
 const nodeTypes = {
   modernTopic: ModernTopicNode,
@@ -56,7 +58,7 @@ const nodeTypes = {
 const getLayoutedElements = async (
   topicsData: TopicType[],
   expandedTopics: Set<string>,
-  onToggleExpandForNode: (topicId: string) => void,
+  onToggleExpandForNode: (topicId: string) => void, // Callback for the node to trigger
   layoutOptionsToUse: LayoutOptions
 ): Promise<{ layoutedNodes: Node[]; layoutedEdges: Edge[] }> => {
   const elkNodes: ElkNode[] = [];
@@ -127,7 +129,7 @@ const getLayoutedElements = async (
         nodeTypeIdentifier = 'modernSubtopic';
         nodeData = {
           label: originalSubtopicInfo.subtopic.title,
-          topicId: originalSubtopicInfo.parentTopic.id, // For navigation
+          topicId: originalSubtopicInfo.parentTopic.id,
           subtopic: originalSubtopicInfo.subtopic,
           parentColor: originalSubtopicInfo.parentTopic.color,
         };
@@ -161,7 +163,7 @@ const getLayoutedElements = async (
   }
 };
 
-function MindMapContent({ topics }: MindMapProps) {
+function MindMapContent({ topics }: MindMapProps) { // Changed MindMapContentProps to MindMapProps for simplicity
   const router = useRouter();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -194,13 +196,13 @@ function MindMapContent({ topics }: MindMapProps) {
 
   useEffect(() => {
     updateLayout();
-  }, [updateLayout]); // updateLayout includes topics, expandedTopics, handleToggleExpand
+  }, [updateLayout]);
 
   useEffect(() => {
     if (isLaidOut && nodes.length > 0) {
       const timer = setTimeout(() => {
         fitView({ padding: 0.25, duration: 600 });
-      }, 150); // Increased delay slightly for complex renders
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [isLaidOut, nodes, fitView]);
@@ -209,14 +211,14 @@ function MindMapContent({ topics }: MindMapProps) {
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
 
   const onNodeClick = useCallback(
-    (event: React.MouseEvent, node: Node) => {
+    (_event: React.MouseEvent, node: Node) => { // CHANGED: event to _event
       // Navigation is triggered by clicking the main body of the node.
-      // The expand/collapse button within ModernTopicNode has its own onClick with stopPropagation.
+      // The expand/collapse button within ModernTopicNode calls its own data.onToggleExpand directly and stops propagation.
       const { topicId, subtopic } = node.data as any; // Using 'any' for simplicity here, ensure data types in nodes
 
       if (topicId && subtopic?.id) { // Clicked on a subtopic node
         router.push(`/chat/${topicId}?subtopic=${subtopic.id}`);
-      } else if (topicId) { // Clicked on a main topic node
+      } else if (topicId) { // Clicked on a main topic node (not the expand button)
         router.push(`/chat/${topicId}`);
       }
     },
@@ -228,7 +230,7 @@ function MindMapContent({ topics }: MindMapProps) {
   }
 
   return (
-    <div style={{ height: 'calc(100vh - 100px)', minHeight: '500px', width: '100%', borderRadius: '0.5rem', background: '#f8fafc' /* slate-50 */ }}>
+    <div style={{ height: 'calc(100vh - 100px)', minHeight: '500px', width: '100%', borderRadius: '0.5rem', background: '#f8fafc' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -247,8 +249,8 @@ function MindMapContent({ topics }: MindMapProps) {
         minZoom={0.3}
         maxZoom={2}
       >
-        <Controls showInteractive={false} /> {/* Hiding interactive control for cleaner look */}
-        <Background variant="dots" gap={20} size={0.7} color="#d1d5db" /> {/* gray-300 */}
+        <Controls showInteractive={false} />
+        <Background variant="dots" gap={20} size={0.7} color="#d1d5db" />
       </ReactFlow>
     </div>
   );
