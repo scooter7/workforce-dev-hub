@@ -11,7 +11,6 @@ import ReactFlow, {
   OnNodesChange,
   OnEdgesChange,
   MarkerType,
-  Position,
   NodeOrigin,
   useReactFlow,
   ReactFlowProvider,
