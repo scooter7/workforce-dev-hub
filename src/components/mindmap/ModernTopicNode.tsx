@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
+import { Handle, Position, NodeProps } from 'reactflow';
 import { Topic as TopicType } from '@/lib/constants';
 import { PlusCircleIcon, MinusCircleIcon } from '@heroicons/react/24/solid';
 
