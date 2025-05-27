@@ -26,16 +26,16 @@ const navigationItems = [
   { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
+// Corrected paths for admin links assuming your folder is src/app/admin/
 const adminLinks = [
-    { name: 'Ingest Documents', href: '/ingest', icon: WrenchScrewdriverIcon },
-    { name: 'Create Quiz', href: '/quizzes/new', icon: WrenchScrewdriverIcon },
-    // Add more admin links as needed, e.g., to a page that lists quizzes for management
-    // { name: 'Manage Quizzes', href: '/admin/manage-quizzes', icon: WrenchScrewdriverIcon },
+    { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
+    { name: 'Create Quiz', href: '/admin/quizzes/new', icon: WrenchScrewdriverIcon },
+    // You might add a link to an admin quiz listing page here later
+    // { name: 'Manage All Quizzes', href: '/admin/quizzes', icon: WrenchScrewdriverIcon },
 ];
 
 export default function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
-  // Ensure NEXT_PUBLIC_ADMIN_USER_ID is set in .env.local and available client-side
   const showAdminLinks = user && user.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   return (
@@ -50,29 +50,17 @@ export default function Sidebar({ user }: SidebarProps) {
         {navigationItems.map((item) => {
           let isActive: boolean;
           if (item.href === '/') {
-            isActive = pathname === '/'; // Root path must be an exact match
+            isActive = pathname === '/';
           } else {
-            // Other paths are active if current path is an exact match or starts with the item's href followed by a '/' (for nested routes)
             isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           }
-
           return (
             <Link
               key={item.name}
               href={item.href}
-              className={`
-                flex items-center px-3 py-2.5 rounded-md text-sm font-medium
-                transition-colors duration-150 group
-                ${
-                  isActive
-                    ? 'bg-sky-700 text-white shadow-inner' // Active link style
-                    : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white'
-                }
-              `}
+              className={`flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-150 group ${ isActive ? 'bg-sky-700 text-white shadow-inner' : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white' }`}
             >
-              <item.icon 
-                className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
-                aria-hidden="true" />
+              <item.icon className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} aria-hidden="true" />
               {item.name}
             </Link>
           );
@@ -83,25 +71,14 @@ export default function Sidebar({ user }: SidebarProps) {
                 <hr className="my-3 border-blue-500" />
                 <div className="px-3 py-1 text-xs font-semibold text-blue-200 uppercase tracking-wider">Admin Tools</div>
                 {adminLinks.map(adminItem => {
-                    // For admin links, usually an exact match is sufficient unless they also have nested pages
                     const isActive = pathname === adminItem.href;
                     return (
                          <Link
                             key={adminItem.name}
-                            href={adminItem.href} // These paths are based on the (admin) route group
-                            className={`
-                                flex items-center px-3 py-2.5 rounded-md text-sm font-medium
-                                transition-colors duration-150 group
-                                ${
-                                isActive
-                                    ? 'bg-sky-700 text-white shadow-inner'
-                                    : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white'
-                                }
-                            `}
+                            href={adminItem.href} // Uses updated href
+                            className={`flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors duration-150 group ${ isActive ? 'bg-sky-700 text-white shadow-inner' : 'text-blue-100 hover:bg-brand-primary-medium hover:text-white' }`}
                             >
-                            <adminItem.icon 
-                                className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} 
-                                aria-hidden="true" />
+                            <adminItem.icon className={`${commonIconClass} ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} aria-hidden="true" />
                             {adminItem.name}
                         </Link>
                     );
