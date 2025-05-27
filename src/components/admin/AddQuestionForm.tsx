@@ -1,21 +1,20 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react'; // <<< useEffect ADDED HERE
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input'; // Assuming Input handles text, url, number types
+import Input from '@/components/ui/Input';
 import { TrashIcon } from '@heroicons/react/24/outline';
-import { QuizQuestion, MediaPosition } from '@/types/quiz'; // Import MediaPosition
+import { QuizQuestion, MediaPosition } from '@/types/quiz';
 
 interface AddQuestionFormProps {
   quizId: string;
-  onQuestionAdded: (newQuestion: QuizQuestion) => void; // Expecting the full QuizQuestion type
+  onQuestionAdded: (newQuestion: QuizQuestion) => void;
   onCancel: () => void;
   nextOrderNum: number;
-  // initialData?: Partial<QuizQuestion>; // For future edit functionality
 }
 
 interface OptionState {
-  id: string; // Temporary client-side ID for list key
+  id: string;
   option_text: string;
   is_correct: boolean;
 }
@@ -23,7 +22,8 @@ interface OptionState {
 const mediaPositionOptions: { value: MediaPosition; label: string }[] = [
   { value: 'above_text', label: 'Above Question Text' },
   { value: 'below_text', label: 'Below Question Text' },
-  // Add 'left_of_text', 'right_of_text' when/if you implement more complex layouts in QuizPlayer
+  // Future: { value: 'left_of_text', label: 'Left of Text' },
+  // Future: { value: 'right_of_text', label: 'Right of Text' },
 ];
 
 export default function AddQuestionForm({
@@ -31,40 +31,29 @@ export default function AddQuestionForm({
   onQuestionAdded,
   onCancel,
   nextOrderNum,
-  // initialData // For future edit
 }: AddQuestionFormProps) {
-  // const isEditMode = Boolean(initialData?.id); // For future edit
-
   const [questionText, setQuestionText] = useState('');
   const [questionType, setQuestionType] = useState<'multiple-choice' | 'true-false'>('multiple-choice');
   const [explanation, setExplanation] = useState('');
   const [points, setPoints] = useState(2);
   const [orderNum, setOrderNum] = useState(nextOrderNum);
-
-  // New state for media fields
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [mediaPosition, setMediaPosition] = useState<MediaPosition>('above_text');
-
   const [options, setOptions] = useState<OptionState[]>([
     { id: crypto.randomUUID(), option_text: '', is_correct: false },
     { id: crypto.randomUUID(), option_text: '', is_correct: false },
   ]);
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Effect to reset form when nextOrderNum changes (e.g., after adding a question)
-  // or when initialData would change for an edit form
   useEffect(() => {
     setOrderNum(nextOrderNum);
-    // If implementing edit mode, you'd populate all fields from initialData here
   }, [nextOrderNum]);
-
 
   const handleOptionChange = (index: number, field: keyof OptionState, value: string | boolean) => {
     const newOptions = [...options];
-    // @ts-ignore TypeScript might struggle with assigning to a dynamic field here without more complex types
+    // @ts-ignore
     newOptions[index][field] = value;
     if (field === 'is_correct' && value === true && questionType === 'multiple-choice') {
         newOptions.forEach((opt, i) => {
@@ -89,13 +78,12 @@ export default function AddQuestionForm({
   const resetFormFields = () => {
     setQuestionText('');
     setExplanation('');
-    setPoints(2); // Reset to default
-    setOrderNum(prev => prev + 1); // Increment for next potential question
+    setPoints(2);
+    setOrderNum(prev => prev + 1);
     setOptions([{ id: crypto.randomUUID(), option_text: '', is_correct: false }, { id: crypto.randomUUID(), option_text: '', is_correct: false }]);
     setImageUrl('');
     setVideoUrl('');
     setMediaPosition('above_text');
-    // setQuestionType('multiple-choice'); // Optionally reset type or keep user's last selection
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -124,7 +112,7 @@ export default function AddQuestionForm({
       order_num: Number(orderNum),
       image_url: imageUrl.trim() || null,
       video_url: videoUrl.trim() || null,
-      media_position: (imageUrl.trim() || videoUrl.trim()) ? mediaPosition : null, // Only send position if media exists
+      media_position: (imageUrl.trim() || videoUrl.trim()) ? mediaPosition : null,
       options: questionType === 'multiple-choice'
         ? options.filter(opt => opt.option_text.trim()).map(({option_text, is_correct}) => ({option_text, is_correct}))
         : [],
@@ -136,11 +124,11 @@ export default function AddQuestionForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      const result = await response.json(); // Assuming result includes { message: string, question: QuizQuestion }
+      const result = await response.json();
       if (!response.ok) {
         throw new Error(result.error || `Failed to add question (Status: ${response.status})`);
       }
-      onQuestionAdded(result.question as QuizQuestion); // Pass the full question object back
+      onQuestionAdded(result.question as QuizQuestion);
       resetFormFields();
     } catch (err: any) {
       console.error('Add question error:', err);
@@ -171,7 +159,6 @@ export default function AddQuestionForm({
         </div>
       </div>
 
-      {/* Media Fields */}
       <div className="p-4 border border-gray-200 rounded-md space-y-4">
         <h3 className="text-md font-medium text-gray-700">Optional Media</h3>
         <div>
