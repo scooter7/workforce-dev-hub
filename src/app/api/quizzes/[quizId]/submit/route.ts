@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 // CORRECTED IMPORT: createSupabaseAdminClient is also from @/lib/supabase/server
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
-import { POINTS_PER_QUIZ_QUESTION_CORRECT } from '@/lib/constants';
+import { POINTS_FOR_QUIZ_QUESTION_CORRECT } from '@/lib/constants';
 import { z } from 'zod';
 
 // Schema for validating individual answers in the request body
