@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-// MediaPosition import was removed as it's not directly used for typing here.
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // <<< ADDED/RESTORED IMPORTS
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
@@ -17,9 +17,9 @@ const questionPayloadSchema = z.object({
   points: z.number().int().min(0, "Points cannot be negative"),
   order_num: z.number().int().min(1, "Order number must be at least 1"),
   image_url: z.string().url("Invalid image URL format.").nullable().optional().or(z.literal('')),
-  video_url: z.string().nullable().optional().or(z.literal('')), // Accepts iframe string
+  video_url: z.string().nullable().optional().or(z.literal('')),
   media_position: z.enum(['above_text', 'below_text', 'left_of_text', 'right_of_text'] as const).nullable().optional(),
-  options: z.array(optionSchema).min(2, "At least two options required for multiple-choice or true-false.").optional(), // Options are now expected for T/F too
+  options: z.array(optionSchema).min(2, "At least two options required.").optional(),
 });
 
 const paramsSchema = z.object({
@@ -27,7 +27,7 @@ const paramsSchema = z.object({
 });
 
 export async function POST(
-  req: NextRequest, // req is used for req.json()
+  req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
   const supabaseAuth = createSupabaseServerClient();
@@ -56,18 +56,12 @@ export async function POST(
   if (image_url && video_url) video_url = null; 
   if (!image_url && !video_url) media_position = null;
 
-  // Based on client-side form logic, 'options' should always be provided now for both types.
-  if (!options || options.length < 2) {
-    return NextResponse.json({ error: 'Questions require at least two options (e.g., True/False or multiple choices).' }, { status: 400 });
+  if ((question_type === 'multiple-choice' || question_type === 'true-false') && (!options || options.length < 2)) {
+    return NextResponse.json({ error: 'Multiple-choice and True/False questions require at least two options.' }, { status: 400 });
   }
-  if (!options.some(opt => opt.is_correct)) {
+  if ((question_type === 'multiple-choice' || question_type === 'true-false') && options && !options.some(opt => opt.is_correct)) {
     return NextResponse.json({ error: 'At least one option must be marked as correct.' }, { status: 400 });
   }
-  if (question_type === 'multiple-choice' && options.filter(opt => opt.is_correct).length > 1) {
-    // For simplicity, we'll only allow one correct answer for now, though DB supports multiple.
-    // The form UI also enforces single selection for 'is_correct' radio buttons.
-  }
-
 
   const supabaseAdmin = createSupabaseAdminClient();
 
@@ -82,16 +76,16 @@ export async function POST(
         video_url: video_url || null,
         media_position: media_position || (image_url || video_url ? 'above_text' : null),
       })
-      .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position') // Select all fields
+      .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position')
       .single();
 
-    if (questionInsertError || !newQuestion) { // Added !newQuestion check
+    if (questionInsertError || !newQuestion) {
       console.error("Error inserting question:", questionInsertError);
       return NextResponse.json({ error: 'Failed to create question.', details: questionInsertError?.message }, { status: 500 });
     }
 
-    let insertedOptionsData: any[] = [];
-    if (options && options.length > 0) { // Check options length here
+    let insertedOptionsData: QuestionOption[] = []; // Use QuestionOption type
+    if (options && options.length > 0 && newQuestion) { // Ensure options exist
       const optionsToInsert = options.map(opt => ({
         question_id: newQuestion.id, 
         option_text: opt.option_text, 
@@ -101,24 +95,22 @@ export async function POST(
       const { data: createdOptions, error: optionsInsertError } = await supabaseAdmin
         .from('question_options')
         .insert(optionsToInsert)
-        .select('id, question_id, option_text, is_correct'); // Select what QuizPlayer expects
+        .select('id, question_id, option_text, is_correct');
       
       if (optionsInsertError) {
-        console.error("Error inserting options, question was created but options failed:", optionsInsertError);
-        // Potentially delete the question here if options are critical, or return partial success
+        console.error("Error inserting options:", optionsInsertError);
         return NextResponse.json({ 
           message: 'Question created, but failed to save options.', 
           question: newQuestion, 
           options: [] 
-        }, { status: 207 }); // Multi-Status
+        }, { status: 207 });
       }
       insertedOptionsData = createdOptions || [];
     }
     
-    // Construct the full question data as expected by QuizQuestion type for onQuestionAdded
     const fullQuestionData: QuizQuestion = {
         id: newQuestion.id,
-        quiz_id: newQuestion.quiz_id,
+        quiz_id: newQuestion.quiz_id as string, // quiz_id from DB should be string if NOT NULL
         question_text: newQuestion.question_text,
         question_type: newQuestion.question_type as 'multiple-choice' | 'true-false',
         explanation: newQuestion.explanation,
@@ -127,12 +119,7 @@ export async function POST(
         image_url: newQuestion.image_url,
         video_url: newQuestion.video_url,
         media_position: newQuestion.media_position as MediaPosition | null,
-        options: insertedOptionsData.map(opt => ({ // Ensure options match QuestionOption type
-            id: opt.id,
-            question_id: opt.question_id,
-            option_text: opt.option_text,
-            is_correct: opt.is_correct,
-        })),
+        options: insertedOptionsData, // Already typed as QuestionOption[]
     };
 
     return NextResponse.json({ message: 'Question added successfully!', question: fullQuestionData }, { status: 201 });
