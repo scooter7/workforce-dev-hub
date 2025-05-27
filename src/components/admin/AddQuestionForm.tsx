@@ -109,7 +109,7 @@ export default function AddQuestionForm({
       points: Number(points),
       order_num: Number(orderNum),
       image_url: imageUrl.trim() || null,
-      video_url: videoEmbedCode.trim() || null, // video_url field now sends videoEmbedCode
+      video_url: videoEmbedCode.trim() || null,
       media_position: (imageUrl.trim() || videoEmbedCode.trim()) ? mediaPosition : null,
       options: questionType === 'multiple-choice'
         ? options.filter(opt => opt.option_text.trim()).map(({option_text, is_correct}) => ({option_text, is_correct}))
@@ -134,9 +134,8 @@ export default function AddQuestionForm({
     } finally {
       setIsLoading(false);
     }
-  }; // Make sure this function is properly closed
+  };
 
-  // Ensure no stray characters or unclosed blocks before this return
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-6 border rounded-lg bg-gray-50">
       <Input type="hidden" value={orderNum.toString()} name="orderNumInternal" />

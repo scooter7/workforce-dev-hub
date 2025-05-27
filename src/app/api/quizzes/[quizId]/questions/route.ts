@@ -16,7 +16,8 @@ export async function GET(
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      // console.warn('GET /api/quizzes/[quizId]/questions - User not authenticated or error.');
+      // Not strictly necessary to block here if quizzes are public,
+      // but page access is auth-protected.
     }
 
     const paramsValidation = paramsSchema.safeParse(params);
@@ -32,16 +33,15 @@ export async function GET(
       .single();
 
     if (quizInfoError || !quizInfo) {
-      if (quizInfoError?.code === 'PGRST116') {
-        return NextResponse.json({ error: 'Quiz not found.' }, { status: 404 });
-      }
+      // ... (error handling for quiz not found)
+      if (quizInfoError?.code === 'PGRST116') return NextResponse.json({ error: 'Quiz not found.' }, { status: 404 });
       console.error(`Error fetching quiz info for ${quizId}:`, quizInfoError);
       return NextResponse.json({ error: 'Could not load quiz details.' }, { status: 500 });
     }
 
     const { data: questionsRaw, error: questionsError } = await supabase
       .from('quiz_questions')
-      .select('id, quiz_id, question_text, question_type, explanation, points, order_num')
+      .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position') // Added media fields
       .eq('quiz_id', quizId)
       .order('order_num', { ascending: true });
 
@@ -54,21 +54,21 @@ export async function GET(
     if (questionsRaw) {
       for (const q of questionsRaw) {
         let optionsForQuestion: QuestionOption[] = [];
-        if (q.question_type === 'multiple-choice') {
+        if (q.question_type === 'multiple-choice' || q.question_type === 'true-false') { // Fetch options for both types
           const { data: optsData, error: optsError } = await supabase
             .from('question_options')
-            .select('id, question_id, option_text, is_correct') // <<< NOW SELECTING is_correct
+            .select('id, question_id, option_text, is_correct') // Fetch is_correct
             .eq('question_id', q.id)
-            .order('id');
+            .order('id'); // You might want a specific order for options
 
           if (optsError) {
             console.error(`Error fetching options for question ${q.id}:`, optsError);
           } else if (optsData) {
-            optionsForQuestion = optsData.map(opt => ({ // Ensure all fields of QuestionOption are mapped
+            optionsForQuestion = optsData.map(opt => ({
               id: opt.id,
-              question_id: opt.question_id,
+              question_id: opt.question_id || q.id, // Ensure question_id is present
               option_text: opt.option_text,
-              is_correct: opt.is_correct, // is_correct is now included
+              is_correct: opt.is_correct, // Pass the actual is_correct value
             }));
           }
         }
@@ -80,6 +80,9 @@ export async function GET(
             explanation: q.explanation,
             points: q.points,
             order_num: q.order_num,
+            image_url: q.image_url,         // Add media fields
+            video_url: q.video_url,         // Add media fields
+            media_position: q.media_position as any, // Add media fields (cast to any if MediaPosition type causes issues here)
             options: optionsForQuestion,
         });
       }
