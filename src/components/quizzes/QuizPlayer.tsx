@@ -37,14 +37,12 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     userChoices?: Record<string, { selected: string | null; correct: boolean; explanation?: string | null }>;
   } | null>(null);
   
-  const mainContentRef = useRef<HTMLDivElement>(null); // Ref for the main quiz playing area div
+  const mainContentRef = useRef<HTMLDivElement>(null);
 
   const scrollToTop = useCallback(() => {
-    mainContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    // Fallback or alternative if mainContentRef scrolling is not desired:
-    // if (typeof window !== "undefined") {
-    //     window.scrollTo({ top: 0, behavior: 'smooth' });
-    // }
+    if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, []);
 
   useEffect(() => {
@@ -150,7 +148,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   }, [currentQuestionIndex]);
 
   if (isLoadingQuiz) return <div className="text-center p-8 animate-pulse">Loading quiz...</div>;
-  if (quizFetchError) return <div className="text-center p-8 text-red-600">Error: {quizFetchError}</div>;
+  if (quizFetchError) return <div className="text-center p-8 text-red-600">Error loading quiz: {quizFetchError}</div>;
   if (!quizData || quizData.questions.length === 0) return <div className="text-center p-8 text-gray-500">Quiz unavailable or has no questions.</div>;
   
   if (isSubmitting && !results) return <div className="text-center p-8">Submitting and grading...</div>;
@@ -189,12 +187,12 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
 
   return (
     <div className="flex flex-col h-full" ref={mainContentRef}>
-      <div className="mb-4 text-sm text-gray-600 px-1 flex-shrink-0"> {/* Added flex-shrink-0 */}
+      <div className="mb-4 text-sm text-gray-600 px-1 flex-shrink-0">
         Question {currentQuestionIndex + 1} of {quizData.questions.length}
         {currentQuestion.points > 0 && ` (${currentQuestion.points} pts)`}
       </div>
 
-      <div className="flashcard-container flex-grow"> {/* This container takes up remaining space */}
+      <div className="flashcard-container flex-grow">
         <div className={`flashcard ${isFlipped ? 'is-flipped' : ''}`}>
           {/* Front of the Card: Question & Options */}
           <div className="flashcard-face flashcard-front bg-white"> {/* CSS handles padding & flex col */}
@@ -211,13 +209,13 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
                 ))}
                 {currentQuestion.question_type === 'true-false' && (
                     (currentQuestion.options && currentQuestion.options.length >= 2 ? 
-                        currentQuestion.options.map(option => (
+                        currentQuestion.options.map(option => ( // Assumes T/F options are provided via API like MCQs
                             <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                                 <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
                                 <span className="text-gray-700">{option.option_text}</span>
                             </label>
                         ))
-                    : 
+                    : // Fallback if options array for T/F isn't structured with distinct IDs (e.g. it's empty)
                         <>
                             <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === 'true' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                                 <input type="radio" name={`question-${currentQuestion.id}`} value="true" checked={userAnswers[currentQuestion.id] === 'true'} onChange={() => handleOptionSelect(currentQuestion.id, 'true')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
@@ -233,9 +231,9 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
           </div>
 
           {/* Back of the Card: Answer Feedback */}
-          <div className="flashcard-face flashcard-back bg-gray-50"> {/* CSS handles padding, centering */}
+          <div className="flashcard-face flashcard-back bg-gray-50">
             {currentAnswerFeedback && (
-              <div className="text-center w-full"> {/* Ensure feedback content can use width */}
+              <div className="text-center w-full p-2">
                 {currentAnswerFeedback.isCorrect ? <CheckCircleIcon className="h-12 w-12 md:h-16 md:w-16 text-green-500 mx-auto mb-2 md:mb-3" /> : <XCircleIcon className="h-12 w-12 md:h-16 md:w-16 text-red-500 mx-auto mb-2 md:mb-3" />}
                 <p className={`text-lg md:text-xl font-semibold ${currentAnswerFeedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}>{currentAnswerFeedback.isCorrect ? 'Correct!' : 'Not quite!'}</p>
                 <p className="text-sm text-gray-600 mt-1">Your answer: {currentAnswerFeedback.selectedOptionText}</p>
@@ -251,19 +249,18 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       </div>
 
       {/* Main Navigation buttons - only show if card is NOT flipped */}
-      <div className="mt-auto pt-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0"> {/* Added flex-shrink-0 */}
+      <div className="mt-auto pt-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
         <Button onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || quizCompleted || isFlipped} variant="outline">Previous</Button>
-        {!isFlipped && ( // Only show these if card is not flipped
+        {!isFlipped && (
             currentQuestionIndex < quizData.questions.length - 1 ? (
             <Button onClick={goToNextQuestion} disabled={quizCompleted || !currentQuestion || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>
             ) : (
-            <Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
+            <Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || !currentQuestion || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
               {isSubmitting ? 'Submitting...' : 'Finish Quiz'}
             </Button>
             )
         )}
-        {/* Placeholder to balance flex layout if Next/Finish button is hidden because card is flipped */}
-        {isFlipped && <div className="w-[100px] h-[38px]">&nbsp;</div>}
+        {isFlipped && <div className="w-[88px] h-[38px]">&nbsp;</div>} {/* Placeholder width matching a typical button to maintain layout */}
       </div>
     </div>
   );

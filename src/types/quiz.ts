@@ -1,6 +1,11 @@
 // src/types/quiz.ts
 
 /**
+ * Defines the possible positions for media (image/video) relative to the question text.
+ */
+export type MediaPosition = 'above_text' | 'below_text' | 'left_of_text' | 'right_of_text';
+
+/**
  * Represents a single answer option for a quiz question.
  */
 export interface QuestionOption {
@@ -22,6 +27,11 @@ export interface QuizQuestion {
   points: number; // Points for correctly answering this question
   order_num: number; // Sequence of the question within the quiz
   options: QuestionOption[]; // Array of answer options, especially for multiple-choice
+  
+  // Fields for media
+  image_url?: string | null;
+  video_url?: string | null;
+  media_position?: MediaPosition | null;
 }
 
 /**
@@ -35,7 +45,7 @@ export interface QuizData {
   topic_id: string; // Links to a topic (e.g., from constants.ts or a topics table)
   subtopic_id?: string | null; // Optional subtopic link
   difficulty?: string | null; // e.g., 'easy', 'medium', 'hard'
-  questions: QuizQuestion[]; // Array of all questions in the quiz
+  questions: QuizQuestion[]; // Array of all questions in the quiz (now with potential media fields)
 }
 
 /**
