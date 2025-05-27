@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { QuizData, QuizQuestion, MediaPosition } from '@/types/quiz'; // MediaPosition imported
+import { QuizData, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
