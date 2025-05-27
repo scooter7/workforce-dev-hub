@@ -5,10 +5,9 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { Topic, SubTopic } from '@/lib/constants';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import ReactMarkdown from 'react-markdown'; // <<< ADDED IMPORT
-import remarkGfm from 'remark-gfm';         // <<< ADDED IMPORT
-import DOMPurify from 'dompurify';          // <<< ADDED IMPORT FOR SANITIZATION (Good Practice)
-
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+// import DOMPurify from 'dompurify'; // <<< REMOVED if sanitizeHtml is removed
 
 interface ChatInterfaceProps {
   topic: Topic;
@@ -78,7 +77,6 @@ export default function ChatInterface({
     }
   }, [isMounted, messages, append, topic, subtopic, initialSystemMessage]);
 
-
   const customHandleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -87,14 +85,8 @@ export default function ChatInterface({
 
   const displayedMessages = messages.filter(m => m.role !== 'system');
 
-  // Sanitize HTML content before rendering (important if using ReactMarkdown with html passthrough or custom renderers)
-  const sanitizeHtml = (htmlContent: string) => {
-    if (typeof window !== 'undefined') { // DOMPurify only runs on the client
-        return DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
-    }
-    return htmlContent; // Return as is during SSR (ReactMarkdown should handle basic MD safely)
-  };
-
+  // SanitizeHtml function removed as it was unused
+  // const sanitizeHtml = (htmlContent: string) => { ... };
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg shadow-inner overflow-hidden">
@@ -107,28 +99,18 @@ export default function ChatInterface({
             }`}
           >
             <div
-              className={`px-4 py-2 rounded-xl shadow prose prose-sm max-w-full break-words ${ // Added prose classes, adjusted max-width
+              className={`px-4 py-2 rounded-xl shadow prose prose-sm max-w-full break-words ${
                 m.role === 'user'
-                  ? 'bg-brand-primary text-white prose-invert max-w-xs md:max-w-md lg:max-w-lg' // User messages can keep their max-width
-                  : 'bg-gray-100 text-gray-800 max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl' // AI messages wider
+                  ? 'bg-brand-primary text-white prose-invert max-w-xs md:max-w-md lg:max-w-lg'
+                  : 'bg-gray-100 text-gray-800 max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl'
               }`}
             >
-              {/* Render AI messages with ReactMarkdown, user messages as plain text */}
               {m.role === 'assistant' ? (
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  // For security with remarkGfm, ensure html is handled safely if you enable it.
-                  // By default, react-markdown sanitizes HTML.
-                  // If you use components prop to render HTML, ensure those are safe.
-                  // Example: to pass HTML through (less safe unless content is 100% trusted or sanitized before):
-                  // rehypePlugins={[rehypeRaw]}
-                  // children={m.content}
-                  // Using children prop directly is safer for standard markdown.
-                >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {m.content}
                 </ReactMarkdown>
               ) : (
-                <p className="whitespace-pre-wrap">{m.content}</p> // User messages as plain text
+                <p className="whitespace-pre-wrap">{m.content}</p>
               )}
             </div>
           </div>
