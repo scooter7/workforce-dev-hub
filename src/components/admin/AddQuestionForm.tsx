@@ -4,7 +4,7 @@ import { useState, FormEvent, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { TrashIcon } from '@heroicons/react/24/outline';
-import { QuizQuestion, MediaPosition } from '@/types/quiz'; // QuizQuestion type for onQuestionAdded
+import { QuizQuestion, MediaPosition } from '@/types/quiz';
 
 interface AddQuestionFormProps {
   quizId: string;
@@ -14,15 +14,20 @@ interface AddQuestionFormProps {
 }
 
 interface OptionState {
-  id: string; // Client-side temporary ID for list key
+  id: string;
   option_text: string;
   is_correct: boolean;
 }
 
+// Type for the options structure expected by the API payload
+type OptionForPayload = {
+  option_text: string;
+  is_correct: boolean;
+};
+
 const mediaPositionOptions: { value: MediaPosition; label: string }[] = [
   { value: 'above_text', label: 'Above Question Text' },
   { value: 'below_text', label: 'Below Question Text' },
-  // Add other positions if UI supports them
 ];
 
 export default function AddQuestionForm({
@@ -39,29 +44,21 @@ export default function AddQuestionForm({
   const [imageUrl, setImageUrl] = useState('');
   const [videoEmbedCode, setVideoEmbedCode] = useState('');
   const [mediaPosition, setMediaPosition] = useState<MediaPosition>('above_text');
-
   const [options, setOptions] = useState<OptionState[]>([
-    { id: crypto.randomUUID(), option_text: '', is_correct: true }, // Default first option to correct for UX
+    { id: crypto.randomUUID(), option_text: '', is_correct: true },
     { id: crypto.randomUUID(), option_text: '', is_correct: false },
   ]);
-
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setOrderNum(nextOrderNum);
-    // When question type changes to true-false, reset options if you have specific T/F handling
     if (questionType === 'true-false') {
-        // For T/F, options could be predefined or handled differently.
-        // If you want specific "True" and "False" options for T/F:
-        // setOptions([
-        //   { id: crypto.randomUUID(), option_text: 'True', is_correct: true },
-        //   { id: crypto.randomUUID(), option_text: 'False', is_correct: false },
-        // ]);
-        // For now, we allow admin to create any options for "multiple-choice" type.
-        // If it's "true-false", the admin should manually input "True" and "False" as options.
+        setOptions([
+            { id: crypto.randomUUID(), option_text: 'True', is_correct: true },
+            { id: crypto.randomUUID(), option_text: 'False', is_correct: false },
+        ]);
     } else {
-        // Ensure at least two blank options for multiple-choice if not T/F, and only one is correct
         if (options.filter(opt => opt.is_correct).length !== 1) {
             const newOptions = options.map((opt, idx) => ({ ...opt, is_correct: idx === 0 }));
             setOptions(newOptions.length >= 2 ? newOptions : [
@@ -70,43 +67,36 @@ export default function AddQuestionForm({
             ]);
         }
     }
-  }, [nextOrderNum, questionType]); // Removed options from deps to avoid loop, manage explicitly
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nextOrderNum, questionType]); // options removed to prevent loop, managed explicitly
 
   const handleOptionChange = (index: number, field: keyof OptionState, value: string | boolean) => {
     setOptions(currentOptions => {
-        const newOptions = currentOptions.map((opt, i) => {
+        let newOptions = currentOptions.map((opt, i) => {
             if (i === index) {
                 return { ...opt, [field]: value };
             }
-            // If marking this option as correct for multiple-choice, unmark others
-            if (questionType === 'multiple-choice' && field === 'is_correct' && value === true) {
-                return { ...opt, is_correct: false };
-            }
             return opt;
         });
-        // If it's multiple choice and no option is correct after a change, mark the first one (or handle error)
-        // This logic can be complex; usually, radio buttons handle single selection naturally.
-        // The current radio button name includes orderNum which might make groups distinct per question.
-        // Let's simplify: ensure only one is_correct if this one was set to true
         if (questionType === 'multiple-choice' && field === 'is_correct' && value === true) {
-            return newOptions.map((opt, i) => ({...opt, is_correct: i === index}));
+            newOptions = newOptions.map((opt, i) => ({...opt, is_correct: i === index}));
         }
         return newOptions;
     });
   };
 
   const addOption = () => {
-    if (options.length < 6) {
+    if (options.length < 6 && questionType === 'multiple-choice') { // Only add for multiple-choice
       setOptions(prevOptions => [...prevOptions, { id: crypto.randomUUID(), option_text: '', is_correct: false }]);
     }
   };
 
   const removeOption = (index: number) => {
-    if (options.length > 2) { // Keep at least 2 options for multiple-choice
+    // Allow removing options for multiple-choice down to 2
+    if (questionType === 'multiple-choice' && options.length > 2) { 
       setOptions(prevOptions => {
           const newOptions = prevOptions.filter((_, i) => i !== index);
-          // If the removed option was the only correct one, mark the first as correct
-          if (questionType === 'multiple-choice' && !newOptions.some(opt => opt.is_correct) && newOptions.length > 0) {
+          if (!newOptions.some(opt => opt.is_correct) && newOptions.length > 0) {
               newOptions[0].is_correct = true;
           }
           return newOptions;
@@ -115,15 +105,11 @@ export default function AddQuestionForm({
   };
 
   const resetFormFields = () => {
-    setQuestionText('');
-    setExplanation('');
-    setPoints(2);
+    setQuestionText(''); setExplanation(''); setPoints(2);
     setOrderNum(prev => prev + 1);
-    setImageUrl('');
-    setVideoEmbedCode('');
-    setMediaPosition('above_text');
-    setQuestionType('multiple-choice'); // Default back to multiple-choice
-    setOptions([ // Reset options carefully
+    setImageUrl(''); setVideoEmbedCode(''); setMediaPosition('above_text');
+    setQuestionType('multiple-choice');
+    setOptions([
         { id: crypto.randomUUID(), option_text: '', is_correct: true },
         { id: crypto.randomUUID(), option_text: '', is_correct: false },
     ]);
@@ -132,54 +118,35 @@ export default function AddQuestionForm({
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setIsLoading(true);
-    setError(null);
+    setIsLoading(true); setError(null);
 
     if (!questionText.trim()) { setError("Question text is required."); setIsLoading(false); return; }
-    if (questionType === 'multiple-choice' && options.filter(opt => opt.option_text.trim()).length < 2) {
-      setError("Multiple-choice questions require at least two options with text."); setIsLoading(false); return;
-    }
-    if (questionType === 'multiple-choice' && !options.some(opt => opt.is_correct)) {
-        setError("One option must be marked as correct for multiple-choice questions."); setIsLoading(false); return;
-    }
-    if (imageUrl && videoEmbedCode) {
-        setError("Please provide either an image URL or a video embed code, not both."); setIsLoading(false); return;
-    }
+    if (imageUrl && videoEmbedCode) { setError("Use either an image URL or video embed, not both."); setIsLoading(false); return; }
 
-    // Ensure options being sent are only those with text, if it's multiple choice
-    let finalOptionsPayload = [];
+    let finalOptionsPayload: OptionForPayload[] = []; // <<< EXPLICITLY TYPED HERE
+
     if (questionType === 'multiple-choice') {
         finalOptionsPayload = options
             .filter(opt => opt.option_text.trim() !== '')
             .map(({ option_text, is_correct }) => ({ option_text, is_correct }));
-        
-        if (finalOptionsPayload.length < 2) {
-             setError("Multiple-choice questions need at least two filled options."); setIsLoading(false); return;
-        }
-        if (!finalOptionsPayload.some(opt => opt.is_correct)) {
-             setError("For multiple choice, one option must be marked correct."); setIsLoading(false); return;
-        }
+        if (finalOptionsPayload.length < 2) { setError("Multiple-choice questions need at least two filled options."); setIsLoading(false); return; }
+        if (!finalOptionsPayload.some(opt => opt.is_correct)) { setError("For multiple choice, one option must be marked correct."); setIsLoading(false); return; }
     } else if (questionType === 'true-false') {
-        // For True/False, the admin MUST add "True" and "False" as options and mark one correct.
-        // The API will save these.
-        finalOptionsPayload = options
-            .filter(opt => opt.option_text.trim().toLowerCase() === 'true' || opt.option_text.trim().toLowerCase() === 'false')
-            .map(({ option_text, is_correct }) => ({ option_text, is_correct }));
-        if (finalOptionsPayload.length !== 2 || !finalOptionsPayload.some(opt => opt.is_correct)) {
+        // Ensure "True" and "False" options are what's being submitted from state
+        finalOptionsPayload = options.map(({ option_text, is_correct }) => ({ option_text, is_correct }));
+        if (finalOptionsPayload.length !== 2 || 
+            !finalOptionsPayload.find(o => o.option_text.toLowerCase() === 'true') ||
+            !finalOptionsPayload.find(o => o.option_text.toLowerCase() === 'false') ||
+            !finalOptionsPayload.some(opt => opt.is_correct)) {
             setError("True/False questions must have 'True' and 'False' options, with one marked correct.");
             setIsLoading(false); return;
         }
     }
 
-
     const payload = {
-      question_text: questionText.trim(),
-      question_type: questionType,
-      explanation: explanation.trim() || null,
-      points: Number(points),
-      order_num: Number(orderNum),
-      image_url: imageUrl.trim() || null,
-      video_url: videoEmbedCode.trim() || null,
+      question_text: questionText.trim(), question_type: questionType,
+      explanation: explanation.trim() || null, points: Number(points), order_num: Number(orderNum),
+      image_url: imageUrl.trim() || null, video_url: videoEmbedCode.trim() || null,
       media_position: (imageUrl.trim() || videoEmbedCode.trim()) ? mediaPosition : null,
       options: finalOptionsPayload,
     };
@@ -194,18 +161,13 @@ export default function AddQuestionForm({
       }
       onQuestionAdded(result.question as QuizQuestion);
       resetFormFields();
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred.');
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err: any) { setError(err.message || 'An unexpected error occurred.');
+    } finally { setIsLoading(false); }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 p-6 border rounded-lg bg-gray-50">
-      {/* Order Number (Hidden or for info) */}
       <p className="text-sm text-gray-500">Adding Question #{orderNum}</p>
-      
       <div>
         <label htmlFor="questionTextAdmin" className="block text-sm font-medium text-gray-700 mb-1">Question Text <span className="text-red-500">*</span></label>
         <textarea id="questionTextAdmin" value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={3} required className="block w-full px-3 py-2 border border-neutral-border rounded-md shadow-sm sm:text-sm" disabled={isLoading}/>
@@ -219,10 +181,10 @@ export default function AddQuestionForm({
                     setQuestionType(newType);
                     if (newType === 'true-false') {
                         setOptions([
-                            { id: crypto.randomUUID(), option_text: 'True', is_correct: true },
+                            { id: crypto.randomUUID(), option_text: 'True', is_correct: true }, // Default True to correct
                             { id: crypto.randomUUID(), option_text: 'False', is_correct: false },
                         ]);
-                    } else { // multiple-choice
+                    } else {
                         setOptions([
                             { id: crypto.randomUUID(), option_text: '', is_correct: true },
                             { id: crypto.randomUUID(), option_text: '', is_correct: false },
@@ -248,13 +210,11 @@ export default function AddQuestionForm({
             {!!videoEmbedCode && <p className="text-xs text-gray-500 mt-1">Clear video embed to use image URL.</p>}
         </div>
         <div>
-            <label htmlFor="videoEmbedAdmin" className="block text-sm font-medium text-gray-700 mb-1">Video Embed Code (e.g., YouTube iframe)</label>
-            <textarea 
-                id="videoEmbedAdmin" value={videoEmbedCode} onChange={(e) => setVideoEmbedCode(e.target.value)} rows={4}
-                placeholder='<iframe src="youtube.com/embed/VIDEO_ID1" ...></iframe>'
+            <label htmlFor="videoEmbedAdmin" className="block text-sm font-medium text-gray-700 mb-1">Video Embed Code</label>
+            <textarea id="videoEmbedAdmin" value={videoEmbedCode} onChange={(e) => setVideoEmbedCode(e.target.value)} rows={4}
+                placeholder='<iframe src="youtube.com/embed/VIDEO_ID2" ...></iframe>'
                 className="mt-1 block w-full px-3 py-2 border border-neutral-border rounded-md shadow-sm sm:text-sm placeholder-gray-400" 
-                disabled={isLoading || !!imageUrl}
-            />
+                disabled={isLoading || !!imageUrl}/>
             {!!imageUrl && <p className="text-xs text-gray-500 mt-1">Clear image URL to use video embed.</p>}
         </div>
         {(imageUrl || videoEmbedCode) && (
@@ -267,8 +227,6 @@ export default function AddQuestionForm({
         )}
       </div>
       
-      {/* Options only for multiple-choice; true-false options are handled by type or can be shown if desired */}
-      {/* For true-false, the options array will now contain "True" and "False" which will be submitted */}
       <fieldset className="border p-4 rounded-md">
         <legend className="text-sm font-medium text-gray-700 px-1">Answer Options ({questionType === 'true-false' ? 'Set Correct T/F' : 'Multiple Choice'})</legend>
         <div className="space-y-3 mt-2">
@@ -278,7 +236,7 @@ export default function AddQuestionForm({
                      value={option.option_text} 
                      onChange={(e) => handleOptionChange(index, 'option_text', e.target.value)} 
                      className="flex-grow" 
-                     disabled={isLoading || questionType === 'true-false'} // Disable text edit for T/F predefined options
+                     disabled={isLoading || (questionType === 'true-false')} // Also disable text edit for T/F
               />
               <input type="radio" id={`correctOption-${option.id}`} name={`correctOptionRadioGroup-${quizId}-${orderNum}`} 
                      checked={option.is_correct} 
