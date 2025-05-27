@@ -6,37 +6,8 @@ import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
-// Helper function to convert various YouTube URLs to an embeddable format
-function getYoutubeEmbedUrl(url: string): string | null {
-  if (!url || typeof url !== 'string') return null;
-  let videoId: string | null | undefined = null;
-  try {
-    const fullUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
-    const urlObj = new URL(fullUrl);
-    if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
-      if (urlObj.pathname === '/watch') videoId = urlObj.searchParams.get('v');
-      else if (urlObj.pathname.startsWith('/embed/')) videoId = urlObj.pathname.substring('/embed/'.length).split('/')[0];
-      else if (urlObj.pathname.startsWith('/live/')) videoId = urlObj.pathname.substring('/live/'.length).split('/')[0];
-      else if (urlObj.hostname.includes('youtu.be')) videoId = urlObj.pathname.substring(1).split('/')[0];
-    }
-  } catch (e) { /* Fallback to regex if URL constructor fails */ }
-
-  if (!videoId) {
-    const youtubeRegex = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(youtubeRegex);
-    if (match && match[1]) videoId = match[1];
-  }
-  
-  if (videoId) {
-    videoId = videoId.split('?')[0].split('&')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
-  }
-  
-  if (url.match(/\.(mp4|webm|ogg)$/i) || url.includes('/embed/')) return url;
-  
-  console.warn("[getYoutubeEmbedUrl] Could not determine valid embed URL from:", url);
-  return null;
-}
+// getYoutubeEmbedUrl helper is NO LONGER NEEDED if video_url stores full iframe code.
+// It's removed from this version.
 
 interface QuizPlayerProps {
   quizId: string;
@@ -96,7 +67,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       } finally { setIsLoadingQuiz(false); }
     }
     fetchQuizInternal();
-  }, [quizId]); // initialUserAnswers is stable
+  }, [quizId]);
 
   useEffect(() => {
     if (!isFlipped && !isLoadingQuiz && quizData) scrollToTop();
@@ -126,7 +97,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     setIsSubmitting(true); setQuizCompleted(true); 
     const submission = {
       quizId: quizData.id, 
-      userId, // userId is used here in the submission payload
+      userId, // userId is used here
       attemptId,
       answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
     };
@@ -143,9 +114,10 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       setIsFlipped(false); 
       scrollToTop();
     } catch (error: any) {
+      console.error('Error submitting quiz:', error);
       setResults({ score: 0, totalQuestions: quizData.questions.length, pointsAwarded: 0 });
     } finally { setIsSubmitting(false); }
-  }, [quizData, userId, attemptId, userAnswers, scrollToTop]); // userId is a dependency
+  }, [quizData, userId, attemptId, userAnswers, scrollToTop]);
 
   const proceedToNextQuestion = useCallback(() => {
     if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
@@ -211,26 +183,32 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   
   if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
 
+  // --- MODIFIED QuestionMedia Component ---
   const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
     if (!question) return null;
-    if (question.video_url) {
-      const embedUrl = getYoutubeEmbedUrl(question.video_url);
-      if (embedUrl) {
-        return (
-          <div className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg">
-            <iframe width="100%" height="100%" src={embedUrl} title={question.question_text || "Quiz Video Content"} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy"></iframe>
-          </div>
-        );
-      }
+
+    if (question.video_url && question.video_url.trim().toLowerCase().includes('<iframe')) {
+      // Basic responsive wrapper for iframe
+      return (
+        <div 
+          className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg [&_iframe]:w-full [&_iframe]:h-full"
+          dangerouslySetInnerHTML={{ __html: question.video_url }}
+        />
+      );
     } else if (question.image_url) {
       return (
         <div className="my-4 flex justify-center">
-          <img src={question.image_url} alt={question.question_text || "Question image"} className="max-w-full h-auto max-h-80 rounded-md shadow-lg" />
+          <img 
+            src={question.image_url} 
+            alt={question.question_text || "Question image"} 
+            className="max-w-full h-auto max-h-80 rounded-md shadow-lg object-contain" 
+          />
         </div>
       );
     }
     return null;
   };
+  // --- END QuestionMedia ---
 
   return (
     <div className="flex flex-col h-full" ref={mainContentRef}>
@@ -299,15 +277,15 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       <div className="mt-auto pt-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
         <Button onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || quizCompleted || isFlipped} variant="outline">Previous</Button>
         {!isFlipped && (
-            currentQuestionIndex < quizData.questions.length - 1 ? (
-            <Button onClick={goToNextQuestion} disabled={quizCompleted || !currentQuestion || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>
+            (currentQuestion && quizData && currentQuestionIndex < quizData.questions.length - 1) ? ( // Added checks
+            <Button onClick={goToNextQuestion} disabled={quizCompleted || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>
             ) : (
             <Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || !currentQuestion || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
               {isSubmitting ? 'Submitting...' : 'Finish Quiz'}
             </Button>
             )
         )}
-        {isFlipped && <div className="w-[88px] h-[38px]"> </div>}
+        {isFlipped && <div className="w-[88px] h-[38px]"> </div>} {/* Adjusted placeholder to match button size better */}
       </div>
     </div>
   );
