@@ -6,8 +6,59 @@ import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
-// getYoutubeEmbedUrl helper is NO LONGER NEEDED if video_url stores full iframe code.
-// It's removed from this version.
+// Function to handle YouTube embed codes or direct video URLs
+function getVideoEmbedSource(videoUrlOrEmbedCode: string): string | null {
+  if (!videoUrlOrEmbedCode || typeof videoUrlOrEmbedCode !== 'string') return null;
+  // console.log("[getVideoEmbedSource] Original video_url:", videoUrlOrEmbedCode);
+
+  // Check if it's an iframe embed code
+  if (videoUrlOrEmbedCode.trim().toLowerCase().startsWith('<iframe')) {
+    // Try to extract src from iframe
+    const srcMatch = videoUrlOrEmbedCode.match(/src="([^"]+)"/);
+    if (srcMatch && srcMatch[1]) {
+      // console.log("[getVideoEmbedSource] Extracted src from iframe:", srcMatch[1]);
+      return srcMatch[1]; // Return the src attribute of the iframe
+    }
+    // If src extraction fails from iframe code, we might not be able to play it simply
+    console.warn("[getVideoEmbedSource] Could not extract src from provided iframe code.");
+    return null; // Or, you could return a marker to render the full HTML with dangerouslySetInnerHTML
+  }
+
+  // If not an iframe, try parsing as a YouTube URL (like before)
+  let videoId: string | null | undefined = null;
+  try {
+    const fullUrl = videoUrlOrEmbedCode.startsWith('http://') || videoUrlOrEmbedCode.startsWith('https://') ? videoUrlOrEmbedCode : `https://${videoUrlOrEmbedCode}`;
+    const urlObj = new URL(fullUrl);
+    if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+      if (urlObj.pathname === '/watch') videoId = urlObj.searchParams.get('v');
+      else if (urlObj.pathname.startsWith('/embed/')) videoId = urlObj.pathname.substring('/embed/'.length).split('/')[0];
+      else if (urlObj.pathname.startsWith('/live/')) videoId = urlObj.pathname.substring('/live/'.length).split('/')[0];
+      else if (urlObj.hostname.includes('youtu.be')) videoId = urlObj.pathname.substring(1).split('/')[0];
+    }
+  } catch (e) { /* Will try regex next */ }
+
+  if (!videoId) {
+    const youtubeRegex = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = videoUrlOrEmbedCode.match(youtubeRegex);
+    if (match && match[1]) videoId = match[1];
+  }
+  
+  if (videoId) {
+    videoId = videoId.split('?')[0].split('&')[0];
+    const embedLink = `https://m.youtube.com/watch?v=kkFAu_ve5Q0{videoId}`;
+    // console.log("[getVideoEmbedSource] Generated YouTube embed URL:", embedLink);
+    return embedLink;
+  }
+  
+  if (videoUrlOrEmbedCode.match(/\.(mp4|webm|ogg)$/i)) {
+    // console.log("[getVideoEmbedSource] Returning URL as is (direct video):", videoUrlOrEmbedCode);
+    return videoUrlOrEmbedCode; 
+  }
+
+  console.warn("[getVideoEmbedSource] Could not determine valid embeddable URL or parse Video ID from:", videoUrlOrEmbedCode);
+  return null; // Return null if no valid source can be determined
+}
+
 
 interface QuizPlayerProps {
   quizId: string;
@@ -46,34 +97,49 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     if (!quizId) { 
       setQuizFetchError("Quiz ID is missing."); setIsLoadingQuiz(false); return;
     }
+    // console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`);
     setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
     setCurrentQuestionIndex(0); setUserAnswers(initialUserAnswers); setQuizCompleted(false);
     setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
 
     async function fetchQuizInternal() {
+      // console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`);
       try {
         const response = await fetch(`/api/quizzes/${quizId}/questions`);
+        // console.log(`QuizPlayer: API response status for /api/quizzes/${quizId}/questions: ${response.status}`);
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
+            const errData = await response.json().catch(() => ({ error: "Failed to parse error response as JSON" }));
             throw new Error(errData.error || `Failed to load quiz (Status: ${response.status})`);
         }
         const data: QuizData = await response.json();
+        // console.log("QuizPlayer: Received quizData from API:", JSON.stringify(data, null, 2));
         if (!data || !data.questions || !Array.isArray(data.questions)) {
             throw new Error("Quiz data or questions array missing/invalid in API response.");
         }
         setQuizData(data);
       } catch (error: any) {
+        console.error("QuizPlayer: Failed to load quiz data:", error);
         setQuizFetchError(error.message || "An unexpected error occurred.");
       } finally { setIsLoadingQuiz(false); }
     }
     fetchQuizInternal();
-  }, [quizId]);
+  }, [quizId, initialUserAnswers]); // Added initialUserAnswers to ensure reset
 
   useEffect(() => {
     if (!isFlipped && !isLoadingQuiz && quizData) scrollToTop();
   }, [currentQuestionIndex, isFlipped, isLoadingQuiz, quizData, scrollToTop]);
 
   const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
+
+  // --- DEBUGGING LOG FOR CURRENT QUESTION ---
+  useEffect(() => {
+    if (currentQuestion) {
+      console.log("QuizPlayer - Current Question for Render:", JSON.stringify(currentQuestion, null, 2));
+    } else if (quizData && quizData.questions && quizData.questions.length > 0) { // Added null check for quizData.questions
+      console.warn("QuizPlayer - currentQuestion is undefined, but quizData.questions exists. Index:", currentQuestionIndex);
+    }
+  }, [currentQuestion, quizData, currentQuestionIndex]);
+  // --- END DEBUGGING LOG ---
 
   const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
     if (isFlipped || quizCompleted) return;
@@ -97,7 +163,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     setIsSubmitting(true); setQuizCompleted(true); 
     const submission = {
       quizId: quizData.id, 
-      userId, // userId is used here
+      userId,
       attemptId,
       answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
     };
@@ -183,19 +249,23 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   
   if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
 
-  // --- MODIFIED QuestionMedia Component ---
+  // --- QuestionMedia Component to handle image or video embed code ---
   const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
     if (!question) return null;
 
+    // For video_url storing full iframe code
     if (question.video_url && question.video_url.trim().toLowerCase().includes('<iframe')) {
-      // Basic responsive wrapper for iframe
+      console.log("[QuestionMedia] Rendering video_url with dangerouslySetInnerHTML:", question.video_url);
       return (
         <div 
           className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg [&_iframe]:w-full [&_iframe]:h-full"
           dangerouslySetInnerHTML={{ __html: question.video_url }}
+          // SECURITY NOTE: Ensure video_url (embed code) is from a trusted source or sanitized
+          // if there's any chance of non-admin input.
         />
       );
-    } else if (question.image_url) {
+    } else if (question.image_url) { // For image_url
+      console.log("[QuestionMedia] Rendering image_url:", question.image_url);
       return (
         <div className="my-4 flex justify-center">
           <img 
@@ -206,9 +276,9 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
         </div>
       );
     }
+    // console.log("[QuestionMedia] No video_url (iframe) or image_url found for this question.");
     return null;
   };
-  // --- END QuestionMedia ---
 
   return (
     <div className="flex flex-col h-full" ref={mainContentRef}>
@@ -277,15 +347,14 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       <div className="mt-auto pt-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
         <Button onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || quizCompleted || isFlipped} variant="outline">Previous</Button>
         {!isFlipped && (
-            (currentQuestion && quizData && currentQuestionIndex < quizData.questions.length - 1) ? ( // Added checks
-            <Button onClick={goToNextQuestion} disabled={quizCompleted || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>
-            ) : (
-            <Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || !currentQuestion || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
+            (currentQuestion && quizData && currentQuestionIndex < quizData.questions.length - 1) ? 
+            (<Button onClick={goToNextQuestion} disabled={quizCompleted || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>)
+            : 
+            (<Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || !currentQuestion || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
               {isSubmitting ? 'Submitting...' : 'Finish Quiz'}
-            </Button>
-            )
+            </Button>)
         )}
-        {isFlipped && <div className="w-[88px] h-[38px]"> </div>} {/* Adjusted placeholder to match button size better */}
+        {isFlipped && <div className="w-[88px] h-[38px]"> </div>}
       </div>
     </div>
   );
