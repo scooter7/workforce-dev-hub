@@ -6,9 +6,6 @@ import Button from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
 
-// getYoutubeEmbedUrl helper is NO LONGER NEEDED if video_url stores full iframe code.
-// It's removed from this version.
-
 interface QuizPlayerProps {
   quizId: string;
   userId: string;
@@ -17,14 +14,16 @@ interface QuizPlayerProps {
 
 type UserAnswers = Record<string, string>;
 
+// Define stable empty object reference outside the component
+const EMPTY_USER_ANSWERS: UserAnswers = {};
+
 export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProps) {
   const router = useRouter();
   const [quizData, setQuizData] = useState<QuizData | null>(null);
   const [isLoadingQuiz, setIsLoadingQuiz] = useState(true);
   const [quizFetchError, setQuizFetchError] = useState<string | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const initialUserAnswers: UserAnswers = {};
-  const [userAnswers, setUserAnswers] = useState<UserAnswers>(initialUserAnswers);
+  const [userAnswers, setUserAnswers] = useState<UserAnswers>(EMPTY_USER_ANSWERS);
   const [isFlipped, setIsFlipped] = useState(false);
   const [currentAnswerFeedback, setCurrentAnswerFeedback] = useState<{
     isCorrect: boolean; selectedOptionText?: string; correctOptionText?: string;
@@ -46,22 +45,22 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     if (!quizId) { 
       setQuizFetchError("Quiz ID is missing."); setIsLoadingQuiz(false); return;
     }
-    console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`); // DEBUG LOG
+    console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`);
     setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
-    setCurrentQuestionIndex(0); setUserAnswers(initialUserAnswers); setQuizCompleted(false);
+    setCurrentQuestionIndex(0); setUserAnswers(EMPTY_USER_ANSWERS); setQuizCompleted(false); // Use stable ref
     setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
 
     async function fetchQuizInternal() {
-      console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`); // DEBUG LOG
+      console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`);
       try {
         const response = await fetch(`/api/quizzes/${quizId}/questions`);
-        console.log(`QuizPlayer: API response status for /api/quizzes/${quizId}/questions: ${response.status}`); // DEBUG LOG
+        console.log(`QuizPlayer: API response status for /api/quizzes/${quizId}/questions: ${response.status}`);
         if (!response.ok) {
             const errData = await response.json().catch(() => ({ error: "Failed to parse error response as JSON" }));
             throw new Error(errData.error || `Failed to load quiz (Status: ${response.status})`);
         }
         const data: QuizData = await response.json();
-        console.log("QuizPlayer: Received quizData from API:", JSON.stringify(data, null, 2)); // DEBUG LOG
+        console.log("QuizPlayer: Received quizData from API:", JSON.stringify(data, null, 2));
         if (!data || !data.questions || !Array.isArray(data.questions)) {
             throw new Error("Quiz data or questions array missing/invalid in API response.");
         }
@@ -72,7 +71,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       } finally { setIsLoadingQuiz(false); }
     }
     fetchQuizInternal();
-  }, [quizId, initialUserAnswers]);
+  }, [quizId]); // Removed EMPTY_USER_ANSWERS from here as it's stable
 
   useEffect(() => {
     if (!isFlipped && !isLoadingQuiz && quizData) scrollToTop();
@@ -80,7 +79,6 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
 
   const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
 
-  // --- DEBUGGING LOG FOR CURRENT QUESTION ---
   useEffect(() => {
     if (currentQuestion) {
       console.log("QuizPlayer - Current Question for Render (includes media URLs):", JSON.stringify(currentQuestion, null, 2));
@@ -88,24 +86,22 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       console.warn("QuizPlayer - currentQuestion is undefined, but quizData.questions exists. Index:", currentQuestionIndex);
     }
   }, [currentQuestion, quizData, currentQuestionIndex]);
-  // --- END DEBUGGING LOG ---
 
   const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
-    if (isFlipped || quizCompleted) return;
+    if (isFlipped || quizCompleted || !currentQuestion || !currentQuestion.options) return; // Added guard for currentQuestion.options
     setUserAnswers((prev) => ({ ...prev, [questionId]: selectedOptionId }));
 
-    const question = quizData?.questions.find(q => q.id === questionId);
-    if (question && question.options) {
-      const selectedOpt = question.options.find(opt => opt.id === selectedOptionId || opt.option_text.toLowerCase() === selectedOptionId.toLowerCase());
-      const correctOpt = question.options.find(opt => opt.is_correct);
-      setCurrentAnswerFeedback({
-        isCorrect: selectedOpt?.is_correct || false,
-        selectedOptionText: selectedOpt?.option_text || (selectedOptionId === 'true' || selectedOptionId === 'false' ? selectedOptionId.charAt(0).toUpperCase() + selectedOptionId.slice(1) : selectedOptionId),
-        correctOptionText: correctOpt?.option_text,
-      });
-    }
+    const question = currentQuestion; // Use the already available currentQuestion
+    const selectedOpt = question.options.find(opt => opt.id === selectedOptionId || opt.option_text.toLowerCase() === selectedOptionId.toLowerCase());
+    const correctOpt = question.options.find(opt => opt.is_correct);
+    
+    setCurrentAnswerFeedback({
+      isCorrect: selectedOpt?.is_correct || false,
+      selectedOptionText: selectedOpt?.option_text || (selectedOptionId === 'true' || selectedOptionId === 'false' ? selectedOptionId.charAt(0).toUpperCase() + selectedOptionId.slice(1) : selectedOptionId),
+      correctOptionText: correctOpt?.option_text,
+    });
     setIsFlipped(true);
-  }, [quizData, isFlipped, quizCompleted]);
+  }, [currentQuestion, isFlipped, quizCompleted]); // quizData removed, using currentQuestion
   
   const handleSubmitQuiz = useCallback(async () => {
     if (!quizData || !quizData.questions) return;
@@ -198,39 +194,25 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   
   if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
 
-  // QuestionMedia Component to handle image or video embed code
   const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
-    if (!question) {
-      // console.log("[QuestionMedia] No question prop provided.");
-      return null;
-    }
-
-    // Log the media properties of the question being processed by QuestionMedia
-    // console.log("[QuestionMedia] Processing question:", JSON.stringify({ id: question.id, image_url: question.image_url, video_url: question.video_url, media_position: question.media_position }, null, 2));
-
-    // For video_url storing full iframe code
+    if (!question) return null; 
     if (question.video_url && typeof question.video_url === 'string' && question.video_url.trim().toLowerCase().includes('<iframe')) {
-      // console.log("[QuestionMedia] Rendering video_url with dangerouslySetInnerHTML:", question.video_url);
+      console.log("[QuestionMedia] Rendering video_url with dangerouslySetInnerHTML:", question.video_url); // DEBUG LOG
       return (
         <div 
           className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg [&_iframe]:w-full [&_iframe]:h-full"
           dangerouslySetInnerHTML={{ __html: question.video_url }}
-          // SECURITY NOTE: Ensure video_url (embed code) is from a trusted source or sanitized.
         />
       );
-    } else if (question.image_url && typeof question.image_url === 'string') { // For image_url
-      // console.log("[QuestionMedia] Rendering image_url:", question.image_url);
+    } else if (question.image_url && typeof question.image_url === 'string') {
+      console.log("[QuestionMedia] Rendering image_url:", question.image_url); // DEBUG LOG
       return (
         <div className="my-4 flex justify-center">
-          <img 
-            src={question.image_url} 
-            alt={question.question_text || "Question image"} 
-            className="max-w-full h-auto max-h-80 rounded-md shadow-lg object-contain" 
-          />
+          <img src={question.image_url} alt={question.question_text || "Question image"} className="max-w-full h-auto max-h-80 rounded-md shadow-lg object-contain" />
         </div>
       );
     }
-    // console.log("[QuestionMedia] No video_url (iframe) or image_url found for this question.");
+    // console.log("[QuestionMedia] No video_url (iframe) or image_url found for this question.", question.video_url, question.image_url); // DEBUG LOG
     return null;
   };
 
