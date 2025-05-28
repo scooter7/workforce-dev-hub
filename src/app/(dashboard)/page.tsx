@@ -38,16 +38,16 @@ export default function DashboardPage() {
     setFilteredTopics([]);
   };
   
-  const handleBackToIntro = () => { // In case they want to "re-launch"
-    setShowIntroAnimation(true);
-    setStage('intro');
-    setSelectedCategoryKey(null);
-    setFilteredTopics([]);
+  //const handleBackToIntro = () => { // In case they want to "re-launch"
+    //setShowIntroAnimation(true);
+    //setStage('intro');
+    //setSelectedCategoryKey(null);
+    //setFilteredTopics([]);
     // Re-trigger intro animation
-    const timer = setTimeout(() => {
-      setShowIntroAnimation(false);
-      setStage('choice');
-    }, 2500);
+    //const timer = setTimeout(() => {
+      //setShowIntroAnimation(false);
+      //setStage('choice');
+    //}, 2500);
      // This might need a more robust way to re-trigger if it's a CSS animation
   };
 
