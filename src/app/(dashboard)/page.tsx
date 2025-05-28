@@ -2,7 +2,7 @@
 'use client'; // This will be a client component to manage state
 
 import { useState, useEffect } from 'react';
-import { highLevelCategories, workforceTopics, HighLevelCategory, HighLevelCategoryKey, Topic } from '@/lib/constants';
+import { highLevelCategories, workforceTopics, HighLevelCategoryKey, Topic } from '@/lib/constants';
 import MindMap from '@/components/mindmap/MindMap'; // Your React Flow mind map component
 import Image from 'next/image';
 
