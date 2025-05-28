@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { highLevelCategories, workforceTopics, HighLevelCategoryKey, Topic } from '@/lib/constants';
 import MindMap from '@/components/mindmap/MindMap'; // Your React Flow mind map component
-import Image from 'next/image';
+//import Image from 'next/image';
 
 // Define states for the user's journey
 type JourneyStage = 'intro' | 'choice' | 'map';
