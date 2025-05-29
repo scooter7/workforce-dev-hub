@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import Papa from 'papaparse';
 import { workforceTopics, Topic, SubTopic } from '@/lib/constants';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // Ensure all are used or remove
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
@@ -57,7 +57,6 @@ export async function POST(req: NextRequest) {
     const processingErrors: Array<{ row: number; error: string; details?: any }> = [];
     let successfulRows = 0;
     let quizzesCreatedCount = 0;
-    // let questionsCreatedCount = 0; // This was unused, removing
 
     try {
         const formData = await req.formData();
@@ -114,16 +113,36 @@ export async function POST(req: NextRequest) {
                 let quizIdToUse = quizIdCache[cacheKey];
 
                 if (!quizIdToUse) {
-                    const quizTitle = subtopicInfo ? `${subtopicInfo.title} Quiz (${topicInfo.title})` : `${topicInfo.title} Quiz`;
-                    let { data: existingQuiz } = await supabaseAdmin.from('quizzes').select('id').eq('topic_id', topicId)
-                        .$if(subtopicId, qb => qb.eq('subtopic_id', subtopicId)).$if(!subtopicId, qb => qb.is('subtopic_id', null))
-                        .eq('title', quizTitle).maybeSingle();
-                    if (existingQuiz) { quizIdToUse = existingQuiz.id; } 
-                    else {
-                        const { data: newQuiz, error: createQuizError } = await supabaseAdmin.from('quizzes')
+                    const quizTitle = subtopicInfo ? 
+                        `${subtopicInfo.title} Quiz (${topicInfo.title})` : 
+                        `${topicInfo.title} Quiz`;
+                    
+                    // Build query conditionally for finding existing quiz
+                    let query = supabaseAdmin
+                        .from('quizzes')
+                        .select('id')
+                        .eq('topic_id', topicId)
+                        .eq('title', quizTitle);
+
+                    if (subtopicId) {
+                        query = query.eq('subtopic_id', subtopicId);
+                    } else {
+                        query = query.is('subtopic_id', null);
+                    }
+                    const { data: existingQuiz, error: findError } = await query.maybeSingle();
+
+                    if (findError && findError.code !== 'PGRST116') {
+                        throw new Error(`Error finding quiz: ${findError.message}`);
+                    }
+
+                    if (existingQuiz) {
+                        quizIdToUse = existingQuiz.id;
+                    } else {
+                        const { data: newQuiz, error: createQuizError } = await supabaseAdmin
+                            .from('quizzes')
                             .insert({ title: quizTitle, topic_id: topicId, subtopic_id: subtopicId, difficulty: 'medium' })
                             .select('id').single();
-                        if (createQuizError || !newQuiz) throw new Error(`Create quiz err: ${createQuizError?.message}`);
+                        if (createQuizError || !newQuiz) throw new Error(`Failed to create quiz "${quizTitle}": ${createQuizError?.message}`);
                         quizIdToUse = newQuiz.id; quizzesCreatedCount++;
                     }
                     quizIdCache[cacheKey] = quizIdToUse; questionOrderNumMap[quizIdToUse] = 0;
@@ -132,15 +151,18 @@ export async function POST(req: NextRequest) {
 
                 let imageUrl = row['Image URL']?.trim() || null;
                 let videoUrl = row['Video Embed Code']?.trim() || null;
-                let mediaPositionFromCsv = row['Media Position']?.trim() as MediaPosition | undefined || null; // Use MediaPosition
+                let mediaPositionFromCsv = row['Media Position']?.trim() as MediaPosition | undefined || null;
                 if (imageUrl && videoUrl) videoUrl = null; 
                 if (!imageUrl && !videoUrl) mediaPositionFromCsv = null;
 
-                const questionDataForDb = {
-                    quiz_id: quizIdToUse, question_text: questionText,
+                const questionDataForDb: Omit<QuizQuestion, 'id' | 'options'> = { // Use Omit for insert type
+                    quiz_id: quizIdToUse,
+                    question_text: questionText,
                     question_type: questionTypeStr as 'multiple-choice' | 'true-false',
-                    points: parseInt(row['Points'], 10) || 2, explanation: row['Explanation']?.trim() || null,
-                    image_url: imageUrl, video_url: videoUrl,
+                    points: parseInt(row['Points'], 10) || 2,
+                    explanation: row['Explanation']?.trim() || null,
+                    image_url: imageUrl,
+                    video_url: videoUrl,
                     media_position: mediaPositionFromCsv || (imageUrl || videoUrl ? 'above_text' : null),
                     order_num: questionOrderNumMap[quizIdToUse],
                 };
@@ -149,10 +171,12 @@ export async function POST(req: NextRequest) {
                 }
 
                 const { data: insertedQuestion, error: qInsertError } = await supabaseAdmin
-                    .from('quiz_questions').insert(questionDataForDb).select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position').single();
+                    .from('quiz_questions').insert(questionDataForDb as any) // Cast to any if Omit type causes issue with Supabase client, or define specific Insert type
+                    .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position')
+                    .single();
                 if (qInsertError || !insertedQuestion) throw new Error(`Ins Q err: ${qInsertError?.message}`);
                 
-                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = []; // Uses QuestionOption
+                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = [];
                 for (let optIdx = 1; optIdx <= 4; optIdx++) {
                     const optText = row[`Option ${optIdx} Text` as keyof CsvRow]?.trim();
                     const optIsCorrectStr = row[`Option ${optIdx} IsCorrect` as keyof CsvRow]?.trim().toUpperCase();
@@ -166,7 +190,7 @@ export async function POST(req: NextRequest) {
                     processingErrors.push({ row: rowIndexForUser, error: `No correct option marked.` }); continue;
                 }
 
-                let insertedOptionsData: QuestionOption[] = []; // Uses QuestionOption
+                let insertedOptionsData: QuestionOption[] = [];
                 if (questionOptionsFromCsv.length > 0) {
                     const optionsToInsertDb = questionOptionsFromCsv.map(opt => ({ question_id: insertedQuestion.id, ...opt }));
                     const { data: createdOptions, error: optsInsertError } = await supabaseAdmin.from('question_options').insert(optionsToInsertDb).select('id, question_id, option_text, is_correct');
@@ -174,23 +198,15 @@ export async function POST(req: NextRequest) {
                     insertedOptionsData = (createdOptions || []).map(opt => ({ id: opt.id, question_id: opt.question_id!, option_text: opt.option_text, is_correct: opt.is_correct! }));
                 }
                 
-                // Explicitly construct an object typed as QuizQuestion to ensure the type is "read"
-                const _processedFullQuestion: QuizQuestion = { // This ensures QuizQuestion type is used
-                    id: insertedQuestion.id,
-                    quiz_id: insertedQuestion.quiz_id,
-                    question_text: insertedQuestion.question_text,
-                    question_type: insertedQuestion.question_type as 'multiple-choice' | 'true-false',
-                    explanation: insertedQuestion.explanation,
-                    points: insertedQuestion.points,
-                    order_num: insertedQuestion.order_num,
-                    image_url: insertedQuestion.image_url,
-                    video_url: insertedQuestion.video_url,
+                // Constructing this object uses the QuizQuestion type, ensuring it's "read"
+                const _processedFullQuestion: QuizQuestion = {
+                    id: insertedQuestion.id, quiz_id: insertedQuestion.quiz_id!, 
+                    question_text: insertedQuestion.question_text!, question_type: insertedQuestion.question_type as 'multiple-choice' | 'true-false',
+                    explanation: insertedQuestion.explanation, points: insertedQuestion.points!, order_num: insertedQuestion.order_num!,
+                    image_url: insertedQuestion.image_url, video_url: insertedQuestion.video_url,
                     media_position: insertedQuestion.media_position as MediaPosition | null,
                     options: insertedOptionsData,
                 };
-                // We don't actually need to do anything with _processedFullQuestion beyond this point
-                // for the API response, but its declaration uses the QuizQuestion type.
-
                 successfulRows++;
             } catch (err: any) {
                 processingErrors.push({ row: rowIndexForUser, error: err.message || 'Unknown error.' });
@@ -199,13 +215,14 @@ export async function POST(req: NextRequest) {
 
         let finalMessage = `Bulk upload processing complete. ${successfulRows} questions (for ${Object.keys(quizIdCache).length} quizzes, ${quizzesCreatedCount} new) processed.`;
         if (processingErrors.length > 0) finalMessage += ` ${processingErrors.length} rows had errors.`;
-
-        return NextResponse.json({ 
-            message: finalMessage, successfulRows, failedRows: processingErrors.length, errors: processingErrors 
-        }, { status: processingErrors.length > 0 ? 207 : 200 });
+        const responsePayload = { message: finalMessage, successfulRows, failedRows: processingErrors.length, errors: processingErrors };
+        console.log("API About to send JSON response:", JSON.stringify(responsePayload));
+        return NextResponse.json(responsePayload, { status: processingErrors.length > 0 ? 207 : 200 });
 
     } catch (error: any) {
         console.error('Bulk upload API error (outer catch):', error);
-        return NextResponse.json({ message: 'Failed to process CSV file.', error: error.message, errors: processingErrors }, { status: 500 });
+        const errorResponsePayload = { message: 'Failed to process CSV file.', error: error.message, errors: processingErrors };
+        console.log("API About to send ERROR JSON response:", JSON.stringify(errorResponsePayload));
+        return NextResponse.json(errorResponsePayload, { status: 500 });
     }
 }
