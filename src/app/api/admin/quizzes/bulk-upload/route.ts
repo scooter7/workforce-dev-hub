@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import Papa from 'papaparse';
 import { workforceTopics, Topic, SubTopic } from '@/lib/constants';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // These types are used below
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     if (!ADMIN_USER_ID || user.id !== ADMIN_USER_ID) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const supabaseAdmin = createSupabaseAdminClient();
-    const processingErrors: Array<{ row: number; error: string; details?: any }> = [];
+    const processingErrors: Array<{ row: number | string; error: string; details?: any }> = []; // Allow row to be string 'N/A'
     let successfulRows = 0;
     let quizzesCreatedCount = 0;
 
@@ -72,9 +72,21 @@ export async function POST(req: NextRequest) {
         });
         
         if (parseResult.errors.length > 0) {
-            const criticalErrors = parseResult.errors.filter(e => e.code !== 'TooFewFields' && e.code !== 'TooManyFields');
-            if (criticalErrors.length > 0) {
-                 return NextResponse.json({ message: 'Error parsing CSV file.', errors: criticalErrors.map(e => ({row: e.row + 2, error: e.message})) }, { status: 400 });
+            const reportableErrors = parseResult.errors.map(e => ({
+                // PapaParse e.row is 0-based index of the data row (after header).
+                // Add 2 to make it 1-based and account for header row.
+                row: typeof e.row === 'number' ? e.row + 2 : 'N/A', 
+                code: e.code,
+                error: e.message
+            }));
+            // Only return if there are errors that are not just about field counts, or if parsing truly failed.
+            // For now, let's report all parsing errors found.
+            if (reportableErrors.length > 0) {
+                 console.error("CSV Parsing errors:", reportableErrors);
+                 return NextResponse.json({ 
+                     message: 'Error parsing CSV file. Please check the file format and content.', 
+                     errors: reportableErrors 
+                 }, { status: 400 });
             }
         }
         
@@ -91,7 +103,7 @@ export async function POST(req: NextRequest) {
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
-            const rowIndexForUser = i + 2; 
+            const rowIndexForUser = i + 2; // 1-based row number for user feedback, including header
 
             try {
                 const mainTopicTitle = row['Main Topic Title']?.trim();
@@ -134,11 +146,11 @@ export async function POST(req: NextRequest) {
 
                 let imageUrl = row['Image URL']?.trim() || null;
                 let videoUrl = row['Video Embed Code']?.trim() || null;
-                let mediaPositionFromCsv = row['Media Position']?.trim() as MediaPosition | undefined || null; // MediaPosition type is used here
+                let mediaPositionFromCsv = (row['Media Position']?.trim() || null) as MediaPosition | null;
                 if (imageUrl && videoUrl) videoUrl = null; 
                 if (!imageUrl && !videoUrl) mediaPositionFromCsv = null;
 
-                const questionDataForDb: Omit<QuizQuestion, 'id' | 'options' | 'quiz_id'> & { quiz_id: string } = { // Explicit type for insert
+                const questionDataForDb: Omit<QuizQuestion, 'id' | 'options' | 'quiz_id'> & { quiz_id: string } = {
                     quiz_id: quizIdToUse, question_text: questionText,
                     question_type: questionTypeStr as 'multiple-choice' | 'true-false',
                     points: parseInt(row['Points'], 10) || 2, explanation: row['Explanation']?.trim() || null,
@@ -151,12 +163,12 @@ export async function POST(req: NextRequest) {
                 }
 
                 const { data: insertedQuestion, error: qInsertError } = await supabaseAdmin
-                    .from('quiz_questions').insert(questionDataForDb)
+                    .from('quiz_questions').insert(questionDataForDb as any)
                     .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position')
                     .single();
                 if (qInsertError || !insertedQuestion) throw new Error(`Failed to insert question (row ${rowIndexForUser}): ${qInsertError?.message || 'No data returned'}`);
                 
-                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = []; // QuestionOption type used here
+                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = [];
                 for (let optIdx = 1; optIdx <= 4; optIdx++) {
                     const optText = row[`Option ${optIdx} Text` as keyof CsvRow]?.trim();
                     const optIsCorrectStr = row[`Option ${optIdx} IsCorrect` as keyof CsvRow]?.trim().toUpperCase();
@@ -170,15 +182,12 @@ export async function POST(req: NextRequest) {
                     processingErrors.push({ row: rowIndexForUser, error: `No correct option marked.` }); continue;
                 }
 
-                // let insertedOptionsData: QuestionOption[] = []; // Not directly needed if not constructing fullQuestionForCallback
                 if (questionOptionsFromCsv.length > 0) {
                     const optionsToInsertDb = questionOptionsFromCsv.map(opt => ({ question_id: insertedQuestion.id, ...opt }));
                     const { error: optsInsertError } = await supabaseAdmin.from('question_options').insert(optionsToInsertDb);
                     if (optsInsertError) throw new Error(`Failed to insert options for question ${insertedQuestion.id} (row ${rowIndexForUser}): ${optsInsertError.message}`);
                 }
                 
-                // The _processedFullQuestion variable was removed as it was unused.
-                // The types QuizQuestion, QuestionOption, MediaPosition are used above in type annotations.
                 successfulRows++;
             } catch (err: any) {
                 processingErrors.push({ row: rowIndexForUser, error: err.message || 'Unknown error processing row.' });
@@ -188,13 +197,13 @@ export async function POST(req: NextRequest) {
         let finalMessage = `Bulk upload processing complete. ${successfulRows} questions (for ${Object.keys(quizIdCache).length} quizzes, ${quizzesCreatedCount} new) processed.`;
         if (processingErrors.length > 0) finalMessage += ` ${processingErrors.length} rows had errors.`;
         const responsePayload = { message: finalMessage, successfulRows, failedRows: processingErrors.length, errors: processingErrors };
-        console.log("API About to send JSON response:", JSON.stringify(responsePayload));
+        // console.log("API About to send JSON response:", JSON.stringify(responsePayload)); // Keep for debugging if needed
         return NextResponse.json(responsePayload, { status: processingErrors.length > 0 ? 207 : 200 });
 
     } catch (error: any) {
         console.error('Bulk upload API error (outer catch):', error);
         const errorResponsePayload = { message: 'Failed to process CSV file.', error: error.message, errors: processingErrors };
-        console.log("API About to send ERROR JSON response:", JSON.stringify(errorResponsePayload));
+        // console.log("API About to send ERROR JSON response:", JSON.stringify(errorResponsePayload)); // Keep for debugging
         return NextResponse.json(errorResponsePayload, { status: 500 });
     }
 }
