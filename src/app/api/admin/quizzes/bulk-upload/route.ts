@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import Papa from 'papaparse';
 import { workforceTopics, Topic, SubTopic } from '@/lib/constants';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz';
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // These types are used below
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         if (parseResult.errors.length > 0) {
             const criticalErrors = parseResult.errors.filter(e => e.code !== 'TooFewFields' && e.code !== 'TooManyFields');
             if (criticalErrors.length > 0) {
-                 return NextResponse.json({ message: 'Error parsing CSV file.', errors: criticalErrors.map(e => ({row: e.row, error: e.message})) }, { status: 400 });
+                 return NextResponse.json({ message: 'Error parsing CSV file.', errors: criticalErrors.map(e => ({row: e.row + 2, error: e.message})) }, { status: 400 });
             }
         }
         
@@ -100,12 +100,12 @@ export async function POST(req: NextRequest) {
                 const questionTypeStr = row['Question Type']?.trim().toLowerCase();
 
                 if (!questionText || !questionTypeStr || !mainTopicTitle) {
-                    processingErrors.push({ row: rowIndexForUser, error: 'Missing required fields.' }); continue;
+                    processingErrors.push({ row: rowIndexForUser, error: 'Missing required fields (Question Text, Question Type, or Main Topic Title).' }); continue;
                 }
 
                 const { topic: topicInfo, subtopic: subtopicInfo } = getTopicInfo(mainTopicTitle, subtopicTitle);
                 if (!topicInfo) { processingErrors.push({ row: rowIndexForUser, error: `Main Topic "${mainTopicTitle}" not found.` }); continue; }
-                if (subtopicTitle && !subtopicInfo) { processingErrors.push({ row: rowIndexForUser, error: `Subtopic "${subtopicTitle}" not found.` }); continue; }
+                if (subtopicTitle && !subtopicInfo) { processingErrors.push({ row: rowIndexForUser, error: `Subtopic "${subtopicTitle}" not found under "${mainTopicTitle}".` }); continue; }
 
                 const topicId = topicInfo.id;
                 const subtopicId = subtopicInfo ? subtopicInfo.id : null;
@@ -113,33 +113,16 @@ export async function POST(req: NextRequest) {
                 let quizIdToUse = quizIdCache[cacheKey];
 
                 if (!quizIdToUse) {
-                    const quizTitle = subtopicInfo ? 
-                        `${subtopicInfo.title} Quiz (${topicInfo.title})` : 
-                        `${topicInfo.title} Quiz`;
-                    
-                    // Build query conditionally for finding existing quiz
-                    let query = supabaseAdmin
-                        .from('quizzes')
-                        .select('id')
-                        .eq('topic_id', topicId)
-                        .eq('title', quizTitle);
-
-                    if (subtopicId) {
-                        query = query.eq('subtopic_id', subtopicId);
-                    } else {
-                        query = query.is('subtopic_id', null);
-                    }
+                    const quizTitle = subtopicInfo ? `${subtopicInfo.title} Quiz (${topicInfo.title})` : `${topicInfo.title} Quiz`;
+                    let query = supabaseAdmin.from('quizzes').select('id').eq('topic_id', topicId).eq('title', quizTitle);
+                    if (subtopicId) { query = query.eq('subtopic_id', subtopicId); } 
+                    else { query = query.is('subtopic_id', null); }
                     const { data: existingQuiz, error: findError } = await query.maybeSingle();
 
-                    if (findError && findError.code !== 'PGRST116') {
-                        throw new Error(`Error finding quiz: ${findError.message}`);
-                    }
-
-                    if (existingQuiz) {
-                        quizIdToUse = existingQuiz.id;
-                    } else {
-                        const { data: newQuiz, error: createQuizError } = await supabaseAdmin
-                            .from('quizzes')
+                    if (findError && findError.code !== 'PGRST116') throw new Error(`Error finding quiz: ${findError.message}`);
+                    if (existingQuiz) { quizIdToUse = existingQuiz.id; } 
+                    else {
+                        const { data: newQuiz, error: createQuizError } = await supabaseAdmin.from('quizzes')
                             .insert({ title: quizTitle, topic_id: topicId, subtopic_id: subtopicId, difficulty: 'medium' })
                             .select('id').single();
                         if (createQuizError || !newQuiz) throw new Error(`Failed to create quiz "${quizTitle}": ${createQuizError?.message}`);
@@ -151,18 +134,15 @@ export async function POST(req: NextRequest) {
 
                 let imageUrl = row['Image URL']?.trim() || null;
                 let videoUrl = row['Video Embed Code']?.trim() || null;
-                let mediaPositionFromCsv = row['Media Position']?.trim() as MediaPosition | undefined || null;
+                let mediaPositionFromCsv = row['Media Position']?.trim() as MediaPosition | undefined || null; // MediaPosition type is used here
                 if (imageUrl && videoUrl) videoUrl = null; 
                 if (!imageUrl && !videoUrl) mediaPositionFromCsv = null;
 
-                const questionDataForDb: Omit<QuizQuestion, 'id' | 'options'> = { // Use Omit for insert type
-                    quiz_id: quizIdToUse,
-                    question_text: questionText,
+                const questionDataForDb: Omit<QuizQuestion, 'id' | 'options' | 'quiz_id'> & { quiz_id: string } = { // Explicit type for insert
+                    quiz_id: quizIdToUse, question_text: questionText,
                     question_type: questionTypeStr as 'multiple-choice' | 'true-false',
-                    points: parseInt(row['Points'], 10) || 2,
-                    explanation: row['Explanation']?.trim() || null,
-                    image_url: imageUrl,
-                    video_url: videoUrl,
+                    points: parseInt(row['Points'], 10) || 2, explanation: row['Explanation']?.trim() || null,
+                    image_url: imageUrl, video_url: videoUrl,
                     media_position: mediaPositionFromCsv || (imageUrl || videoUrl ? 'above_text' : null),
                     order_num: questionOrderNumMap[quizIdToUse],
                 };
@@ -171,12 +151,12 @@ export async function POST(req: NextRequest) {
                 }
 
                 const { data: insertedQuestion, error: qInsertError } = await supabaseAdmin
-                    .from('quiz_questions').insert(questionDataForDb as any) // Cast to any if Omit type causes issue with Supabase client, or define specific Insert type
+                    .from('quiz_questions').insert(questionDataForDb)
                     .select('id, quiz_id, question_text, question_type, explanation, points, order_num, image_url, video_url, media_position')
                     .single();
-                if (qInsertError || !insertedQuestion) throw new Error(`Ins Q err: ${qInsertError?.message}`);
+                if (qInsertError || !insertedQuestion) throw new Error(`Failed to insert question (row ${rowIndexForUser}): ${qInsertError?.message || 'No data returned'}`);
                 
-                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = [];
+                const questionOptionsFromCsv: Omit<QuestionOption, 'id' | 'question_id'>[] = []; // QuestionOption type used here
                 for (let optIdx = 1; optIdx <= 4; optIdx++) {
                     const optText = row[`Option ${optIdx} Text` as keyof CsvRow]?.trim();
                     const optIsCorrectStr = row[`Option ${optIdx} IsCorrect` as keyof CsvRow]?.trim().toUpperCase();
@@ -190,26 +170,18 @@ export async function POST(req: NextRequest) {
                     processingErrors.push({ row: rowIndexForUser, error: `No correct option marked.` }); continue;
                 }
 
-                let insertedOptionsData: QuestionOption[] = [];
+                // let insertedOptionsData: QuestionOption[] = []; // Not directly needed if not constructing fullQuestionForCallback
                 if (questionOptionsFromCsv.length > 0) {
                     const optionsToInsertDb = questionOptionsFromCsv.map(opt => ({ question_id: insertedQuestion.id, ...opt }));
-                    const { data: createdOptions, error: optsInsertError } = await supabaseAdmin.from('question_options').insert(optionsToInsertDb).select('id, question_id, option_text, is_correct');
-                    if (optsInsertError) throw new Error(`Ins Opt err: ${optsInsertError.message}`);
-                    insertedOptionsData = (createdOptions || []).map(opt => ({ id: opt.id, question_id: opt.question_id!, option_text: opt.option_text, is_correct: opt.is_correct! }));
+                    const { error: optsInsertError } = await supabaseAdmin.from('question_options').insert(optionsToInsertDb);
+                    if (optsInsertError) throw new Error(`Failed to insert options for question ${insertedQuestion.id} (row ${rowIndexForUser}): ${optsInsertError.message}`);
                 }
                 
-                // Constructing this object uses the QuizQuestion type, ensuring it's "read"
-                const _processedFullQuestion: QuizQuestion = {
-                    id: insertedQuestion.id, quiz_id: insertedQuestion.quiz_id!, 
-                    question_text: insertedQuestion.question_text!, question_type: insertedQuestion.question_type as 'multiple-choice' | 'true-false',
-                    explanation: insertedQuestion.explanation, points: insertedQuestion.points!, order_num: insertedQuestion.order_num!,
-                    image_url: insertedQuestion.image_url, video_url: insertedQuestion.video_url,
-                    media_position: insertedQuestion.media_position as MediaPosition | null,
-                    options: insertedOptionsData,
-                };
+                // The _processedFullQuestion variable was removed as it was unused.
+                // The types QuizQuestion, QuestionOption, MediaPosition are used above in type annotations.
                 successfulRows++;
             } catch (err: any) {
-                processingErrors.push({ row: rowIndexForUser, error: err.message || 'Unknown error.' });
+                processingErrors.push({ row: rowIndexForUser, error: err.message || 'Unknown error processing row.' });
             }
         }
 
