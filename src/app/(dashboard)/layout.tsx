@@ -1,7 +1,7 @@
 // src/app/(dashboard)/layout.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import React, { Suspense } from 'react'; 
+import React from 'react';
 // Remove Sidebar import as it's handled by RootLayout
 // import Sidebar from '@/components/layout/Sidebar'; 
 // import Header from '@/components/layout/Header'; // Keep if you have a dashboard-specific header
