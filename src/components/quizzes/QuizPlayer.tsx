@@ -44,18 +44,22 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     if (!quizId) { 
       setQuizFetchError("Quiz ID is missing."); setIsLoadingQuiz(false); return;
     }
+    // console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`); // For debugging
     setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
     setCurrentQuestionIndex(0); setUserAnswers(EMPTY_USER_ANSWERS); setQuizCompleted(false);
     setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
 
     async function fetchQuizInternal() {
+      // console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`); // For debugging
       try {
         const response = await fetch(`/api/quizzes/${quizId}/questions`);
+        // console.log(`QuizPlayer: API response status: ${response.status}`); // For debugging
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
             throw new Error(errData.error || `Failed to load quiz (Status: ${response.status})`);
         }
         const data: QuizData = await response.json();
+        // console.log("QuizPlayer: Received quizData:", JSON.stringify(data, null, 2)); // For debugging
         if (!data || !data.questions || !Array.isArray(data.questions)) {
             throw new Error("Quiz data or questions array missing/invalid in API response.");
         }
@@ -73,14 +77,18 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
 
   const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
 
+  useEffect(() => { // For debugging the current question data
+    if (currentQuestion) {
+      console.log("QuizPlayer - Current Question for Render:", JSON.stringify(currentQuestion, null, 2));
+    }
+  }, [currentQuestion]);
+
   const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
     if (isFlipped || quizCompleted || !currentQuestion || !currentQuestion.options) return;
     setUserAnswers((prev) => ({ ...prev, [questionId]: selectedOptionId }));
-
     const question = currentQuestion;
     const selectedOpt = question.options.find(opt => opt.id === selectedOptionId || opt.option_text.toLowerCase() === selectedOptionId.toLowerCase());
     const correctOpt = question.options.find(opt => opt.is_correct);
-    
     setCurrentAnswerFeedback({
       isCorrect: selectedOpt?.is_correct || false,
       selectedOptionText: selectedOpt?.option_text || (selectedOptionId === 'true' || selectedOptionId === 'false' ? selectedOptionId.charAt(0).toUpperCase() + selectedOptionId.slice(1) : selectedOptionId),
@@ -93,9 +101,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     if (!quizData || !quizData.questions) return;
     setIsSubmitting(true); setQuizCompleted(true); 
     const submission = {
-      quizId: quizData.id, 
-      userId,
-      attemptId,
+      quizId: quizData.id, userId, attemptId,
       answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
     };
     try {
@@ -181,7 +187,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
 
   const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
-    if (!question) return null;
+    if (!question) return null; 
     if (question.video_url && typeof question.video_url === 'string' && question.video_url.trim().toLowerCase().includes('<iframe')) {
       return (
         <div 
@@ -206,7 +212,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
         {currentQuestion.points > 0 && ` (${currentQuestion.points} pts)`}
       </div>
 
-      <div className="flashcard-container flex-grow mx-4 md:mx-6">
+      <div className="flashcard-container flex-grow mx-4 md:mx-6 mb-4">
         <div className={`flashcard ${isFlipped ? 'is-flipped' : ''}`}>
           <div className="flashcard-face flashcard-front bg-white">
             {(currentQuestion.media_position === 'above_text' || (!currentQuestion.media_position && (currentQuestion.image_url || currentQuestion.video_url))) && 

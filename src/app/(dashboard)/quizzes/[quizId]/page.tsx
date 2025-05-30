@@ -1,3 +1,4 @@
+// src/app/(dashboard)/quizzes/[quizId]/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -15,7 +16,7 @@ async function getQuizHeaderInfo(supabase: any, quizId: string): Promise<{ title
   const { data: quizInfo, error: quizInfoError } = await supabase
     .from('quizzes')
     .select('title, description')
-    .eq('id', quizId) // Supabase client should handle UUID conversion if id is UUID type
+    .eq('id', quizId)
     .single();
 
   if (quizInfoError || !quizInfo) {
@@ -28,23 +29,13 @@ async function getQuizHeaderInfo(supabase: any, quizId: string): Promise<{ title
 }
 
 export async function generateMetadata({ params }: QuizTakingPageProps) {
-  if (!params.quizId) { // Handle case where quizId might be missing from params
-      return { title: 'Invalid Quiz URL' };
-  }
-  const quizId = params.quizId.trim(); // Trim whitespace
-  
-  // Basic check for obviously invalid static slugs caught by this dynamic route
-  if (quizId === 'new' || quizId === 'bulk-upload') {
-    return { title: 'Admin Action' }; // Or a more appropriate title for these paths if they resolve elsewhere
-  }
-
-  // UUID validation for actual quiz IDs
+  if (!params.quizId) return { title: 'Invalid Quiz URL' };
+  const quizId = params.quizId.trim();
+  const reservedSlugs = ['new', 'bulk-upload'];
   const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
-  if (!uuidRegex.test(quizId)) {
-    console.warn(`generateMetadata: quizId "${quizId}" is not a valid UUID format.`);
-    return { title: 'Invalid Quiz ID Format' };
+  if (reservedSlugs.includes(quizId) || !uuidRegex.test(quizId)) {
+    return { title: 'Invalid Action or Quiz ID' };
   }
-
   const supabase = createSupabaseServerClient();
   const quizHeaderInfo = await getQuizHeaderInfo(supabase, quizId);
   return {
@@ -53,37 +44,35 @@ export async function generateMetadata({ params }: QuizTakingPageProps) {
 }
 
 export default async function QuizTakingPage({ params }: QuizTakingPageProps) {
-  if (!params.quizId) {
-    console.error("QuizTakingPage: quizId missing from params.");
-    notFound();
-  }
-  const quizId = params.quizId.trim(); // Trim whitespace
+  if (!params.quizId) { notFound(); }
+  const quizId = params.quizId.trim();
 
-  const reservedSlugs = ['new', 'bulk-upload']; // Add any other static slugs at this level
+  const reservedSlugs = ['new', 'bulk-upload'];
   const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
   if (reservedSlugs.includes(quizId) || !uuidRegex.test(quizId)) {
-    console.log(`QuizTakingPage: quizId "${quizId}" (after trim) is a reserved slug or not a valid UUID. Calling notFound().`);
+    // console.log(`QuizTakingPage: quizId "${quizId}" is reserved or not UUID. Calling notFound().`);
     notFound();
   }
 
   const supabase = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (authError || !user) { // Added authError check
+  if (authError || !user) {
     return redirect(`/login?message=Please log in to take a quiz.&redirect=/quizzes/${quizId}`);
   }
 
   const quizHeaderInfo = await getQuizHeaderInfo(supabase, quizId);
 
   if (!quizHeaderInfo) {
-    console.log(`QuizTakingPage: No quizHeaderInfo found for quizId "${quizId}". Calling notFound().`);
+    // console.log(`QuizTakingPage: No quizHeaderInfo for quizId "${quizId}". Calling notFound().`);
     notFound(); 
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 flex flex-col h-full">
-      <div className="mb-6">
+    // This root div should be a flex column and allow its children to manage height
+    <div className="flex flex-col h-full p-4 md:p-6 lg:p-8"> {/* Takes full height from parent in DashboardLayout */}
+      <div className="mb-6 flex-shrink-0"> {/* Header part does not grow */}
         <Link href="/quizzes" className="inline-flex items-center text-brand-primary hover:text-brand-primary-dark mb-2 text-sm">
           <ArrowLeftIcon className="h-4 w-4 mr-1" />
           Back to Quizzes List
@@ -94,7 +83,8 @@ export default async function QuizTakingPage({ params }: QuizTakingPageProps) {
         )}
       </div>
       
-      <div className="flex-grow">
+      {/* This wrapper for QuizPlayer needs to grow and provide a flex context */}
+      <div className="flex-grow flex flex-col min-h-0"> {/* Allows QuizPlayer to use h-full effectively */}
         <QuizPlayer
             quizId={quizId}
             userId={user.id}
