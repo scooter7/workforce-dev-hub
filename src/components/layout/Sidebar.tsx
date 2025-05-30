@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { User } from '@supabase/supabase-js';
+//import { User } from '@supabase/supabase-js';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider'; // Assuming useAuth provides user
 import {
