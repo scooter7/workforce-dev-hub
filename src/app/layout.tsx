@@ -1,55 +1,42 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google'; // Example font, you can change this
-import './globals.css'; // Your global styles
+import { Inter } from 'next/font/google';
+import './globals.css';
+import { Toaster } from 'sonner'; // For toast notifications
+import AuthProvider from '@/components/providers/AuthProvider';
+import Sidebar from '@/components/layout/Sidebar'; // We'll make this responsive
+import SupabaseProvider from '@/components/providers/SupabaseProvider'; // If you created this
 
-// Optional: If you want to provide Supabase context to client components easily
-// import AuthProvider from '@/contexts/AuthProvider'; // We'll define this later
-
-// Example: Using Next/Font for optimized font loading
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: {
     default: 'Workforce Development Hub',
-    template: '%s | Workforce Hub', // For page-specific titles
+    template: '%s | Workforce Hub',
   },
   description: 'Your platform for professional growth, AI chat, and goal tracking.',
-  // Add more metadata like icons, open graph images, etc.
-  // icons: {
-  //   icon: '/favicon.ico', // Make sure favicon.ico is in public folder
-  //   apple: '/apple-touch-icon.png', // Example
-  // },
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className={`${inter.variable}`}>
-      <head>
-        {/* Standard head elements like charSet, viewport are handled by Next.js by default.
-            You can add other custom tags here if needed, e.g., for analytics scripts, custom fonts not via next/font */}
-      </head>
-      <body className="flex min-h-screen flex-col antialiased">
-        {/*
-          Optional: Wrap with an AuthProvider if you want to manage client-side auth state via context.
-          The Supabase middleware and server-side clients handle session for Server Components.
-          Client components can also use the client-side Supabase instance directly.
-          An AuthProvider can simplify access in deep component trees on the client.
-        */}
-        {/* <AuthProvider> */}
-        <main className="flex-grow">
-          {children}
-        </main>
-        {/* You could add a global footer here if desired */}
-        {/* <footer>
-          <div className="container mx-auto py-4 text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} Workforce Development Hub. All rights reserved.
-          </div>
-        </footer> */}
-        {/* </AuthProvider> */}
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} flex flex-col md:flex-row h-full bg-neutral-bg`}>
+        <SupabaseProvider> {/* If you have this provider for client Supabase context */}
+          <AuthProvider> {/* Handles fetching user for Sidebar and client components */}
+            {/* Sidebar will handle its own responsive display (sidebar on desktop, bottom bar on mobile) */}
+            <Sidebar /> 
+            
+            <main className="flex-grow overflow-y-auto"> 
+              {/* On mobile, this main content will be above the fixed bottom bar */}
+              {/* On desktop, it will be to the right of the sidebar */}
+              {children}
+            </main>
+            <Toaster richColors position="top-right" />
+          </AuthProvider>
+        </SupabaseProvider>
       </body>
     </html>
   );
