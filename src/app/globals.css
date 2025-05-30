@@ -63,19 +63,18 @@ a {
 
 /* === REVISED FLASHCARD FLIP ANIMATION STYLES === */
 .flashcard-container {
-  perspective: 1000px; /* Enables the 3D effect for children */
+  perspective: 1000px;
   width: 100%;
-  min-height: 350px; /* Ensure it has some min height for content, adjust as needed */
-  /* If QuizPlayer's parent is flex, this can be flex-grow: 1; (QuizPlayer sets flex-grow on this itself) */
+  min-height: 350px;
 }
 
 .flashcard {
   width: 100%;
-  height: 100%; /* Will try to fill flashcard-container's height if defined or grown */
+  height: 100%; 
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.7s cubic-bezier(0.3, 0, 0.2, 1); /* Smooth flip transition */
-  border-radius: 0.75rem; /* e.g., Tailwind's rounded-xl */
+  transition: transform 0.7s cubic-bezier(0.3, 0, 0.2, 1);
+  border-radius: 0.75rem; 
 }
 
 .flashcard.is-flipped {
@@ -87,15 +86,13 @@ a {
   width: 100%;
   height: 100%;
   backface-visibility: hidden;
-  -webkit-backface-visibility: hidden; /* For Safari compatibility */
-  
+  -webkit-backface-visibility: hidden;
   display: flex;
-  flex-direction: column; /* Children will stack vertically */
-  
-  border-radius: 0.75rem; /* Match .flashcard's rounding */
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); /* Tailwind's shadow-xl */
-  padding: 1.5rem; /* Equivalent to p-6 for consistent padding on faces */
-  overflow: hidden; /* Content scrolling inside is handled by .flashcard-content-scrollable */
+  flex-direction: column;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  padding: 1.5rem; 
+  overflow: hidden; 
 }
 
 .flashcard-front {
@@ -103,23 +100,17 @@ a {
 }
 
 .flashcard-back {
-  background-color: #f9fafb; /* Tailwind's gray-50, for a slightly different back */
-  transform: rotateY(180deg); /* Pre-rotate the back face */
-  align-items: center;     /* Center content on the back */
-  justify-content: center; /* Center content on the back */
+  background-color: #f9fafb; 
+  transform: rotateY(180deg);
+  align-items: center;    
+  justify-content: center; 
   text-align: center;
 }
 
-/* This class is for the main content area within a flashcard face 
-  (e.g., the list of options on the front, or explanation on the back)
-  that might need to scroll if content is too long.
-*/
 .flashcard-content-scrollable {
-  flex-grow: 1; /* Allows this area to take up available vertical space within the flex column of .flashcard-face */
-  overflow-y: auto; /* Makes this area scrollable if its content exceeds its height */
-  min-height: 0; /* Important for flex-grow to work correctly with overflow in some flex scenarios */
-  /* Add a little padding if scrollbars appear to avoid touching edge, or handle via inner elements */
-  /* e.g., padding-right: 0.25rem; but usually not needed if content has its own margins/padding */
+  flex-grow: 1; 
+  overflow-y: auto; 
+  min-height: 0; 
 }
 /* === END OF REVISED FLASHCARD STYLES === */
 

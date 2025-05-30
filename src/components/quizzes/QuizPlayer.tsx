@@ -14,7 +14,6 @@ interface QuizPlayerProps {
 
 type UserAnswers = Record<string, string>;
 
-// Define stable empty object reference outside the component
 const EMPTY_USER_ANSWERS: UserAnswers = {};
 
 export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProps) {
@@ -45,33 +44,28 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
     if (!quizId) { 
       setQuizFetchError("Quiz ID is missing."); setIsLoadingQuiz(false); return;
     }
-    console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`);
     setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
-    setCurrentQuestionIndex(0); setUserAnswers(EMPTY_USER_ANSWERS); setQuizCompleted(false); // Use stable ref
+    setCurrentQuestionIndex(0); setUserAnswers(EMPTY_USER_ANSWERS); setQuizCompleted(false);
     setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
 
     async function fetchQuizInternal() {
-      console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`);
       try {
         const response = await fetch(`/api/quizzes/${quizId}/questions`);
-        console.log(`QuizPlayer: API response status for /api/quizzes/${quizId}/questions: ${response.status}`);
         if (!response.ok) {
-            const errData = await response.json().catch(() => ({ error: "Failed to parse error response as JSON" }));
+            const errData = await response.json().catch(() => ({}));
             throw new Error(errData.error || `Failed to load quiz (Status: ${response.status})`);
         }
         const data: QuizData = await response.json();
-        console.log("QuizPlayer: Received quizData from API:", JSON.stringify(data, null, 2));
         if (!data || !data.questions || !Array.isArray(data.questions)) {
             throw new Error("Quiz data or questions array missing/invalid in API response.");
         }
         setQuizData(data);
       } catch (error: any) {
-        console.error("QuizPlayer: Failed to load quiz data:", error);
         setQuizFetchError(error.message || "An unexpected error occurred.");
       } finally { setIsLoadingQuiz(false); }
     }
     fetchQuizInternal();
-  }, [quizId]); // Removed EMPTY_USER_ANSWERS from here as it's stable
+  }, [quizId]);
 
   useEffect(() => {
     if (!isFlipped && !isLoadingQuiz && quizData) scrollToTop();
@@ -79,19 +73,11 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
 
   const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
 
-  useEffect(() => {
-    if (currentQuestion) {
-      console.log("QuizPlayer - Current Question for Render (includes media URLs):", JSON.stringify(currentQuestion, null, 2));
-    } else if (quizData && quizData.questions && quizData.questions.length > 0) {
-      console.warn("QuizPlayer - currentQuestion is undefined, but quizData.questions exists. Index:", currentQuestionIndex);
-    }
-  }, [currentQuestion, quizData, currentQuestionIndex]);
-
   const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
-    if (isFlipped || quizCompleted || !currentQuestion || !currentQuestion.options) return; // Added guard for currentQuestion.options
+    if (isFlipped || quizCompleted || !currentQuestion || !currentQuestion.options) return;
     setUserAnswers((prev) => ({ ...prev, [questionId]: selectedOptionId }));
 
-    const question = currentQuestion; // Use the already available currentQuestion
+    const question = currentQuestion;
     const selectedOpt = question.options.find(opt => opt.id === selectedOptionId || opt.option_text.toLowerCase() === selectedOptionId.toLowerCase());
     const correctOpt = question.options.find(opt => opt.is_correct);
     
@@ -101,7 +87,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
       correctOptionText: correctOpt?.option_text,
     });
     setIsFlipped(true);
-  }, [currentQuestion, isFlipped, quizCompleted]); // quizData removed, using currentQuestion
+  }, [currentQuestion, isFlipped, quizCompleted]);
   
   const handleSubmitQuiz = useCallback(async () => {
     if (!quizData || !quizData.questions) return;
@@ -195,9 +181,8 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
   if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
 
   const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
-    if (!question) return null; 
+    if (!question) return null;
     if (question.video_url && typeof question.video_url === 'string' && question.video_url.trim().toLowerCase().includes('<iframe')) {
-      console.log("[QuestionMedia] Rendering video_url with dangerouslySetInnerHTML:", question.video_url); // DEBUG LOG
       return (
         <div 
           className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg [&_iframe]:w-full [&_iframe]:h-full"
@@ -205,34 +190,32 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
         />
       );
     } else if (question.image_url && typeof question.image_url === 'string') {
-      console.log("[QuestionMedia] Rendering image_url:", question.image_url); // DEBUG LOG
       return (
         <div className="my-4 flex justify-center">
           <img src={question.image_url} alt={question.question_text || "Question image"} className="max-w-full h-auto max-h-80 rounded-md shadow-lg object-contain" />
         </div>
       );
     }
-    // console.log("[QuestionMedia] No video_url (iframe) or image_url found for this question.", question.video_url, question.image_url); // DEBUG LOG
     return null;
   };
 
   return (
-    <div className="flex flex-col h-full" ref={mainContentRef}>
-      <div className="mb-4 text-sm text-gray-600 px-1 flex-shrink-0">
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-xl" ref={mainContentRef}>
+      <div className="mb-4 text-sm text-gray-600 px-4 pt-4 md:px-6 md:pt-6 flex-shrink-0">
         Question {currentQuestionIndex + 1} of {quizData.questions.length}
         {currentQuestion.points > 0 && ` (${currentQuestion.points} pts)`}
       </div>
 
-      <div className="flashcard-container flex-grow">
+      <div className="flashcard-container flex-grow mx-4 md:mx-6">
         <div className={`flashcard ${isFlipped ? 'is-flipped' : ''}`}>
           <div className="flashcard-face flashcard-front bg-white">
             {(currentQuestion.media_position === 'above_text' || (!currentQuestion.media_position && (currentQuestion.image_url || currentQuestion.video_url))) && 
               <QuestionMedia question={currentQuestion} />
             }
-            <h2 className="text-xl font-semibold text-neutral-text mb-4 leading-tight flex-shrink-0 px-1">
+            <h2 className="text-xl font-semibold text-neutral-text mb-4 leading-tight flex-shrink-0">
                 {currentQuestion.question_text}
             </h2>
-            <div className="flashcard-content-scrollable px-1"> 
+            <div className="flashcard-content-scrollable"> 
                 {currentQuestion.question_type === 'multiple-choice' && currentQuestion.options.map((option) => (
                 <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                     <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
@@ -280,7 +263,7 @@ export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProp
         </div>
       </div>
 
-      <div className="mt-auto pt-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
+      <div className="mt-auto pt-4 pb-4 px-4 md:px-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
         <Button onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || quizCompleted || isFlipped} variant="outline">Previous</Button>
         {!isFlipped && (
             (currentQuestion && quizData && currentQuestionIndex < quizData.questions.length - 1) ? 
