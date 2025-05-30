@@ -1,40 +1,43 @@
-import { ReactNode, Suspense } from 'react';
-import { redirect } from 'next/navigation';
+// src/app/(dashboard)/layout.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-
-import Navbar from '@/components/layout/Navbar';
-import Sidebar from '@/components/layout/Sidebar'; // Ensure this import is correct
+import { redirect } from 'next/navigation';
+import Sidebar from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header'; // Assuming you might have a Header component
+import React, { Suspense } from 'react';
+// AuthProvider and SupabaseProvider are in the RootLayout (src/app/layout.tsx)
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: ReactNode;
+  children: React.ReactNode;
 }) {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (!user) {
-    return redirect('/login?message=Please log in to access this page.');
+  if (userError || !user) {
+    console.log('No user session found in DashboardLayout, redirecting to login.');
+    return redirect('/login?message=Please log in to access the dashboard.');
   }
 
-  // User is authenticated, render the dashboard layout
+  // The Sidebar component will get the user via useAuth() hook,
+  // so we don't need to pass it as a prop here.
+  // AuthProvider in RootLayout makes this possible.
+
   return (
-    <div className="flex h-screen bg-neutral-bg overflow-hidden"> {/* Added overflow-hidden to parent */}
+    <div className="flex h-screen bg-neutral-bg"> {/* Ensure full height for flex layout */}
       {/* Sidebar */}
-      <Suspense fallback={<div className="w-64 flex-shrink-0 bg-brand-primary p-4 text-white">Loading navigation...</div>}>
-        <Sidebar user={user} />
+      <Suspense fallback={<div className="w-60 lg:w-64 flex-shrink-0 bg-brand-primary p-4 text-white">Loading navigation...</div>}>
+        <Sidebar /> {/* <<< REMOVED user={user} prop */}
       </Suspense>
 
+      {/* Main content area */}
       <div className="flex flex-1 flex-col overflow-hidden"> {/* Main content area should handle its own scrolling */}
-        {/* Navbar */}
-        <Suspense fallback={<div className="bg-white shadow p-4 text-center h-16 flex-shrink-0">Loading header...</div>}>
-          <Navbar user={user} />
-        </Suspense>
-
-        {/* Main content area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 print:p-0">
+        {/* Optional Header within the main content area */}
+        {/* <Header user={user} /> */} 
+        
+        <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6 lg:p-8">
           {children}
-        </main>
+        </div>
       </div>
     </div>
   );
