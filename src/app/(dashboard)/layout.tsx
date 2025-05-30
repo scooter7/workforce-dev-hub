@@ -2,7 +2,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Sidebar from '@/components/layout/Sidebar';
-import Header from '@/components/layout/Header'; // Assuming you might have a Header component
+//import Header from '@/components/layout/Header'; // Assuming you might have a Header component
 import React, { Suspense } from 'react';
 // AuthProvider and SupabaseProvider are in the RootLayout (src/app/layout.tsx)
 
