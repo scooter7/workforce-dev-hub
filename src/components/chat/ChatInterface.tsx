@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// import DOMPurify from 'dompurify'; // <<< REMOVED if sanitizeHtml is removed
+// import DOMPurify from 'dompurify'; // Removed as per previous fix, ReactMarkdown handles sanitization
 
 interface ChatInterfaceProps {
   topic: Topic;
@@ -16,6 +16,14 @@ interface ChatInterfaceProps {
   knowledgeBaseScope: { topicId: string; subtopicId?: string };
   userId: string;
 }
+
+const aiWelcomeMessage = `Welcome to Your LifeRamp AI Coach Concierge!
+
+Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
+
+Think of this as your 24/7 thinking partner — ready to provide smart suggestions, guide you through exercises, answer questions, or help you prepare for your next big step. And when you need a human touch, we’ll connect you with one of our certified LifeRamp coaches.
+
+Let’s build your path forward — one powerful step at a time.`;
 
 export default function ChatInterface({
   topic,
@@ -36,13 +44,18 @@ export default function ChatInterface({
       },
       initialMessages: [
         {
-          id: 'system-init',
+          id: 'system-init', // For the system prompt (invisible to user)
           role: 'system',
           content: initialSystemMessage,
         },
+        {
+          id: 'ai-welcome-message', // Unique ID for the AI's welcome message
+          role: 'assistant',
+          content: aiWelcomeMessage,
+        }
       ],
-      onFinish: (message) => {
-        console.log('AI finished responding. Message ID:', message.id);
+      onFinish: (_message) => {
+        // Optional: console.log('AI finished responding. Message ID:', message.id);
       },
       onError: (err) => {
         console.error("Chat error in useChat hook:", err);
@@ -61,21 +74,34 @@ export default function ChatInterface({
 
   useEffect(() => {
     setIsMounted(true);
-    initialLoadDoneRef.current = false;
+    initialLoadDoneRef.current = false; // Reset this when topic/subtopic changes
   }, [topic.id, subtopic?.id]);
 
   useEffect(() => {
     if (isMounted && !initialLoadDoneRef.current && topic?.title) {
-      const nonSystemMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
-      if (nonSystemMessages.length === 0) {
+      // Check messages visible to user (assistant and user roles)
+      // We expect the AI welcome message to be present.
+      const actualChatMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
+      
+      // If only the AI welcome message is present from the assistant, then append the user's first prompt.
+      if (actualChatMessages.length === 1 && actualChatMessages[0].role === 'assistant') {
         append({
+          role: 'user',
+          content: `Hi! I'm interested in learning about ${subtopic?.title ? `${subtopic.title} within ${topic.title}` : topic.title}. Can you give me a brief introduction or some key points to start with?`
+        });
+        initialLoadDoneRef.current = true;
+      } else if (actualChatMessages.length === 0) {
+        // This case should be less likely if initialMessages includes the AI welcome.
+        // But as a fallback if something clears messages:
+         append({
           role: 'user',
           content: `Hi! I'm interested in learning about ${subtopic?.title ? `${subtopic.title} within ${topic.title}` : topic.title}. Can you give me a brief introduction or some key points to start with?`
         });
         initialLoadDoneRef.current = true;
       }
     }
-  }, [isMounted, messages, append, topic, subtopic, initialSystemMessage]);
+  }, [isMounted, messages, append, topic, subtopic]);
+
 
   const customHandleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,10 +109,8 @@ export default function ChatInterface({
     handleSubmit(e);
   };
 
+  // Filter out system messages before displaying
   const displayedMessages = messages.filter(m => m.role !== 'system');
-
-  // SanitizeHtml function removed as it was unused
-  // const sanitizeHtml = (htmlContent: string) => { ... };
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg shadow-inner overflow-hidden">
