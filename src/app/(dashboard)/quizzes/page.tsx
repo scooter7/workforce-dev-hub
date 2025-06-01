@@ -1,53 +1,61 @@
 // src/app/(dashboard)/quizzes/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-// Removed Link import as QuizCard handles it
 import { workforceTopics, Topic } from '@/lib/constants';
-// Removed PuzzlePieceIcon, ChevronRightIcon as they are in QuizCard
-import QuizCard from '@/components/quizzes/QuizCard'; // <<< IMPORT NEW COMPONENT
-import { QuizTeaser } from '@/types/quiz';
-import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'; // Or /24/solid
+import QuizCard from '@/components/quizzes/QuizCard'; // Using the new Netflix-style card
+import { QuizTeaser } from '@/types/quiz'; // QuizTeaser should include card_image_url
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 export const metadata = {
   title: 'Quizzes',
 };
 
-// Ensure this function selects card_image_url if you've added it to the DB and QuizTeaser type
 async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
   const { data: quizzes, error } = await supabaseClient
     .from('quizzes')
     .select(`
-      id, topic_id, subtopic_id, title, description, difficulty, created_at, 
-      card_image_url, /* <<< ADD THIS IF YOU ADDED THE COLUMN */
+      id, 
+      topic_id, 
+      subtopic_id, 
+      title, 
+      description, 
+      difficulty, 
+      created_at, 
+      card_image_url, /* This line assumes 'card_image_url' column exists in your 'quizzes' table */
       quiz_questions ( count )
-    `)
+    `) // <<< THE COMMENT WAS REMOVED FROM HERE
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error("Error fetching quizzes:", error);
-    return [];
+    console.error("Error fetching quizzes:", error); // Log the actual error object
+    // It's better to throw the error or return a more specific error state
+    // For now, returning empty array to prevent crash, but UI will show "no quizzes"
+    return []; 
   }
 
   return quizzes?.map((q: any) => ({
-    id: q.id, topic_id: q.topic_id, subtopic_id: q.subtopic_id,
-    title: q.title, description: q.description, difficulty: q.difficulty,
+    id: q.id,
+    topic_id: q.topic_id,
+    subtopic_id: q.subtopic_id,
+    title: q.title,
+    description: q.description,
+    difficulty: q.difficulty,
     created_at: q.created_at,
-    card_image_url: q.card_image_url, // <<< ADD THIS
+    card_image_url: q.card_image_url, // Make sure QuizTeaser type includes this
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
 
 export default async function QuizzesPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser(); // Also check for authError
 
-  if (!user) {
+  if (authError || !user) { // Check for authError as well
     return redirect('/login?message=Please log in to view quizzes.');
   }
 
   const allQuizzes = await getQuizzesFromAPI(supabase);
 
-  // Group quizzes by topic (same logic as before)
   const quizzesByTopicAndSubtopic: Record<string, Record<string, QuizTeaser[]>> = {};
   const quizzesByMainTopicOnly: Record<string, QuizTeaser[]> = {};
 
@@ -70,7 +78,6 @@ export default async function QuizzesPage() {
     }
   });
 
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -88,7 +95,6 @@ export default async function QuizzesPage() {
             {topic.title}
           </h2>
           
-          {/* Quizzes for main topic */}
           {quizzesByMainTopicOnly[topic.id] && quizzesByMainTopicOnly[topic.id].length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
               {quizzesByMainTopicOnly[topic.id].map((quiz) => (
@@ -97,7 +103,6 @@ export default async function QuizzesPage() {
             </div>
           )}
 
-          {/* Quizzes for subtopics */}
           {topic.subtopics.map(subtopic => {
             const subtopicQuizzes = quizzesByTopicAndSubtopic[topic.id]?.[subtopic.id] || [];
             return subtopicQuizzes.length > 0 ? (
@@ -123,7 +128,6 @@ export default async function QuizzesPage() {
 
       {allQuizzes.length === 0 && (
         <div className="text-center py-10">
-          {/* Replace with a more engaging "no quizzes" icon if desired */}
           <QuestionMarkCircleIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <p className="text-xl text-gray-500">No quizzes available at the moment.</p>
         </div>
