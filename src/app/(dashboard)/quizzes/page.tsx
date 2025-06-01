@@ -6,6 +6,7 @@ import { workforceTopics, Topic } from '@/lib/constants';
 // Removed PuzzlePieceIcon, ChevronRightIcon as they are in QuizCard
 import QuizCard from '@/components/quizzes/QuizCard'; // <<< IMPORT NEW COMPONENT
 import { QuizTeaser } from '@/types/quiz';
+import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline'; // Or /24/solid
 
 export const metadata = {
   title: 'Quizzes',
