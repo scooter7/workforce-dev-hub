@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image'; // <<< Import the Image component
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider'; 
 import {
@@ -13,7 +14,6 @@ import {
   ArrowRightOnRectangleIcon,
   DocumentPlusIcon,
   ArrowUpTrayIcon,
-  // CogIcon, // Commented out as "Manage All Quizzes" is a future link
 } from '@heroicons/react/24/outline'; 
 
 const iconSharedClass = "h-6 w-6"; 
@@ -26,7 +26,6 @@ const navigationItems = [
   { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
-// Admin links, assuming paths like /admin/feature
 const adminBaseLinks = [
     { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
 ];
@@ -34,16 +33,13 @@ const adminBaseLinks = [
 const quizAdminSpecificLinks = [
     { name: 'Create New Quiz', href: '/admin/quizzes/new', icon: DocumentPlusIcon },
     { name: 'Bulk Upload Questions', href: '/admin/quizzes/bulk-upload', icon: ArrowUpTrayIcon },
-    // { name: 'Manage All Quizzes', href: '/admin/quizzes/manage-list', icon: CogIcon }, 
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { user, isAdmin, signOut } = useAuth(); 
 
-  // --- DEBUGGING LOG ---
-  console.log("[Sidebar] Auth State | User ID:", user ? user.id : 'No User', "| IsAdmin:", isAdmin);
-  // --- END DEBUGGING LOG ---
+  // console.log("[Sidebar] Auth State | User ID:", user ? user.id : 'No User', "| IsAdmin:", isAdmin); // Keep for debugging if needed
 
   const commonLinkClasses = "transition-colors duration-150 group flex items-center";
   const activeDesktopLink = "bg-sky-700 text-white shadow-inner";
@@ -53,9 +49,8 @@ export default function Sidebar() {
 
   const isLinkActive = (href: string, exact: boolean = false) => {
     if (exact) return pathname === href;
-    // Make parent admin links active if a child route is active
-    if (href === '/admin' && pathname.startsWith('/admin')) return true; // General admin section
-    if (href === '/admin/quizzes' && pathname.startsWith('/admin/quizzes')) return true; // Quiz admin section
+    if (href === '/admin' && pathname.startsWith('/admin')) return true;
+    if (href === '/admin/quizzes' && pathname.startsWith('/admin/quizzes')) return true;
     return pathname === href || pathname.startsWith(href + '/');
   };
 
@@ -64,8 +59,14 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-60 lg:w-64 bg-gradient-to-b from-brand-primary-dark to-brand-primary text-white  flex-col shadow-lg print:hidden">
         <div className="h-16 flex items-center justify-center border-b border-brand-primary-medium flex-shrink-0 px-4">
-          <Link href="/" className="text-xl font-semibold text-white hover:opacity-80 transition-opacity truncate">
-            Workforce Hub
+          <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Workforce Hub Home">
+            <Image
+              src="/favicon.ico" // Path relative to the /public directory
+              alt="Workforce Hub Logo"
+              width={36} // Adjust size as needed (e.g., 32, 36, 40)
+              height={36} // Keep it square or adjust to your favicon's aspect ratio
+              priority // If it's a key visual element, consider priority
+            />
           </Link>
         </div>
 
@@ -139,7 +140,7 @@ export default function Sidebar() {
 
       {/* Mobile Bottom Navigation Bar */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-neutral-border shadow-top-md flex justify-around items-center z-40 print:hidden">
-        {navigationItems.slice(0, isAdmin ? 3 : 4).map((item) => { // Show 3 main if admin, 4 if not, to make space for Admin/Profile tab
+        {navigationItems.slice(0, isAdmin ? 3 : 4).map((item) => {
           const isActive = isLinkActive(item.href, item.exact);
           return (
             <Link
@@ -153,11 +154,10 @@ export default function Sidebar() {
             </Link>
           );
         })}
-        {/* Conditional Admin Tab / Profile Tab for the last slot */}
         {isAdmin ? (
              <Link
                 key="mobile-admin-tools"
-                href="/admin/quizzes/new" // Example: Main entry point for admin on mobile
+                href="/admin/quizzes/new" 
                 className={`${commonLinkClasses} flex-col p-1.5 sm:p-2 rounded-md text-center w-1/5 ${pathname.startsWith('/admin') ? activeMobileLink : inactiveMobileLink}`}
                 title="Admin Tools"
             >
@@ -176,7 +176,6 @@ export default function Sidebar() {
             </Link>
         )}
       </nav>
-      {/* Spacer for bottom nav on mobile to prevent content overlap */}
       <div className="md:hidden h-16 flex-shrink-0"></div>
     </>
   );

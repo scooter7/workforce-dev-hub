@@ -1,0 +1,128 @@
+// src/app/admin/quizzes/[quizId]/questions/[questionId]/edit/page.tsx
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeftIcon } from '@heroicons/react/24/solid';
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // Import necessary types
+import EditQuestionForm from '@/components/admin/EditQuestionForm'; // We will create this form component next
+
+interface EditQuestionPageParams {
+  quizId: string;
+  questionId: string;
+}
+
+interface EditQuestionPageProps {
+  params: EditQuestionPageParams;
+}
+
+async function getQuestionForEditing(
+  supabase: any, 
+  quizId: string, 
+  questionId: string
+): Promise<QuizQuestion | null> {
+  const { data: questionData, error: questionError } = await supabase
+    .from('quiz_questions')
+    .select(`
+      id,
+      quiz_id,
+      question_text,
+      question_type,
+      explanation,
+      points,
+      order_num,
+      image_url,
+      video_url,
+      media_position
+    `)
+    .eq('id', questionId)
+    .eq('quiz_id', quizId) // Ensure it belongs to the correct quiz
+    .single();
+
+  if (questionError || !questionData) {
+    console.error(`Error fetching question ${questionId} for quiz ${quizId} for editing:`, questionError);
+    return null;
+  }
+
+  // Fetch options for this question
+  const { data: optionsData, error: optionsError } = await supabase
+    .from('question_options')
+    .select('id, question_id, option_text, is_correct')
+    .eq('question_id', questionData.id)
+    .order('id'); // Or by some other consistent order if you have one
+
+  if (optionsError) {
+    console.error(`Error fetching options for question ${questionData.id}:`, optionsError);
+    // Continue without options or handle more gracefully if options are critical for display
+  }
+
+  return {
+    ...questionData,
+    options: optionsData || [], // Attach fetched options
+    // Ensure all fields match QuizQuestion type
+    quiz_id: questionData.quiz_id as string,
+    question_type: questionData.question_type as 'multiple-choice' | 'true-false',
+    media_position: questionData.media_position as MediaPosition | null,
+  };
+}
+
+
+export async function generateMetadata({ params }: EditQuestionPageProps) {
+  return {
+    title: `Edit Quiz Question`,
+  };
+}
+
+export default async function EditQuestionPage({ params }: EditQuestionPageProps) {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirect('/login?message=Please log in to access admin features.');
+  }
+  // Additional admin check can be done here if needed, or rely on AdminLayout
+
+  const questionData = await getQuestionForEditing(supabase, params.quizId, params.questionId);
+
+  if (!questionData) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-2xl font-semibold text-red-600 mb-4">Question Not Found</h1>
+        <p className="text-gray-600">The question you are trying to edit could not be found.</p>
+        <Link href={`/admin/quizzes/${params.quizId}/manage`} className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand-primary hover:bg-brand-primary-dark">
+          <ArrowLeftIcon className="h-5 w-5 mr-2" />
+          Back to Manage Questions
+        </Link>
+      </div>
+    );
+  }
+
+  // Fetch quiz title for breadcrumbs/context (optional but good UX)
+  const { data: quizInfo } = await supabase
+    .from('quizzes')
+    .select('title')
+    .eq('id', params.quizId)
+    .single();
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Link href={`/admin/quizzes/${params.quizId}/manage`} className="inline-flex items-center text-brand-primary hover:text-brand-primary-dark text-sm">
+          <ArrowLeftIcon className="h-4 w-4 mr-1" />
+          Back to Manage Questions for "{quizInfo?.title || 'Quiz'}"
+        </Link>
+      </div>
+      <h1 className="text-3xl font-bold text-neutral-text mb-2">
+        Edit Question
+      </h1>
+      <p className="mb-6 text-gray-600">
+        Modify the details for this quiz question.
+      </p>
+
+      {/* The EditQuestionForm will be a client component */}
+      <EditQuestionForm 
+        quizId={params.quizId} 
+        questionData={questionData} 
+      />
+    </div>
+  );
+}
