@@ -1,8 +1,9 @@
+// src/app/admin/quizzes/[quizId]/questions/[questionId]/edit/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // QuestionOption is used now
+import { QuizQuestion, MediaPosition } from '@/types/quiz'; 
 import EditQuestionForm from '@/components/admin/EditQuestionForm';
 
 interface EditQuestionPageParams {
@@ -42,23 +43,19 @@ async function getQuestionForEditing(
     return null;
   }
 
-  // Fetch options for this question
-  // Ensure the select string matches the QuestionOption type structure as much as possible
   const { data: optionsData, error: optionsError } = await supabase
     .from('question_options')
     .select('id, question_id, option_text, is_correct')
     .eq('question_id', questionData.id)
-    .order('id'); 
+    .order('id');
 
   if (optionsError) {
     console.error(`Error fetching options for question ${questionData.id}:`, optionsError);
-    // Consider how to handle this - e.g., return question with empty options or throw error
   }
 
-  // Explicitly type 'opt' in the map function
-  const mappedOptions: QuestionOption[] = (optionsData || []).map((opt: QuestionOption) => ({
+  const mappedOptions = (optionsData || []).map((opt: { id: string; question_id?: string; option_text: string; is_correct: boolean; }) => ({
       id: opt.id,
-      question_id: opt.question_id || questionData.id, // Fallback if question_id might be missing from select (though it's selected)
+      question_id: opt.question_id || questionData.id,
       option_text: opt.option_text,
       is_correct: opt.is_correct,
   }));
@@ -78,8 +75,8 @@ async function getQuestionForEditing(
   };
 }
 
-export async function generateMetadata({ params }: EditQuestionPageProps) {
-  // Add validation or fetch actual question title if needed
+export async function generateMetadata({ params: _params }: EditQuestionPageProps) { // Renamed params to _params
+  // _params is not used, title is static for this page
   return {
     title: `Edit Quiz Question`,
   };
@@ -92,7 +89,6 @@ export default async function EditQuestionPage({ params }: EditQuestionPageProps
   if (!user) {
     return redirect('/login?message=Please log in to access admin features.');
   }
-  // Further admin role check should happen in AdminLayout or here if necessary
 
   const questionData = await getQuestionForEditing(supabase, params.quizId, params.questionId);
 
