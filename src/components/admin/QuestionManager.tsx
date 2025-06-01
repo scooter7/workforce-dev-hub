@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuizQuestion, QuestionOption } from '@/types/quiz'; // Assuming QuestionOption is also needed if displaying options briefly
+import { QuizQuestion } from '@/types/quiz';
 import AddQuestionForm from './AddQuestionForm';
 import Button from '@/components/ui/Button';
 import { TrashIcon, PencilIcon, PlusCircleIcon } from '@heroicons/react/24/outline'; // Added PencilIcon
