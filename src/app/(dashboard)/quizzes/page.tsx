@@ -2,8 +2,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { workforceTopics, Topic } from '@/lib/constants';
-import QuizCard from '@/components/quizzes/QuizCard'; // Using the new Netflix-style card
-import { QuizTeaser } from '@/types/quiz'; // QuizTeaser should include card_image_url
+import QuizCard from '@/components/quizzes/QuizCard';
+import { QuizTeaser } from '@/types/quiz';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 export const metadata = {
@@ -21,15 +21,13 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       description, 
       difficulty, 
       created_at, 
-      card_image_url, /* This line assumes 'card_image_url' column exists in your 'quizzes' table */
+      card_image_url, 
       quiz_questions ( count )
-    `) // <<< THE COMMENT WAS REMOVED FROM HERE
+    `) // <<< COMMENT REMOVED HERE
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error("Error fetching quizzes:", error); // Log the actual error object
-    // It's better to throw the error or return a more specific error state
-    // For now, returning empty array to prevent crash, but UI will show "no quizzes"
+    console.error("Error fetching quizzes:", error);
     return []; 
   }
 
@@ -41,16 +39,16 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     description: q.description,
     difficulty: q.difficulty,
     created_at: q.created_at,
-    card_image_url: q.card_image_url, // Make sure QuizTeaser type includes this
+    card_image_url: q.card_image_url, 
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
 
 export default async function QuizzesPage() {
   const supabase = createSupabaseServerClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser(); // Also check for authError
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (authError || !user) { // Check for authError as well
+  if (authError || !user) {
     return redirect('/login?message=Please log in to view quizzes.');
   }
 
