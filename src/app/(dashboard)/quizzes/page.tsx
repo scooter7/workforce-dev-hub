@@ -21,7 +21,7 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       description, 
       difficulty, 
       created_at, 
-      card_image_url, /* Ensure this column exists in your 'quizzes' table */
+      card_image_url,  // Comment removed
       quiz_questions ( count )
     `)
     .order('created_at', { ascending: false });
@@ -30,6 +30,19 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     console.error("Error fetching quizzes:", error);
     return []; 
   }
+
+  return quizzes?.map((q: any) => ({
+    id: q.id,
+    topic_id: q.topic_id,
+    subtopic_id: q.subtopic_id,
+    title: q.title,
+    description: q.description,
+    difficulty: q.difficulty,
+    created_at: q.created_at,
+    card_image_url: q.card_image_url, 
+    question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
+  })) || [];
+}
 
   return quizzes?.map((q: any) => ({
     id: q.id,
