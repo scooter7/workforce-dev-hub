@@ -1,43 +1,37 @@
+// src/app/(dashboard)/quizzes/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+// Removed Link import as QuizCard handles it
 import { workforceTopics, Topic } from '@/lib/constants';
-import { PuzzlePieceIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+// Removed PuzzlePieceIcon, ChevronRightIcon as they are in QuizCard
+import QuizCard from '@/components/quizzes/QuizCard'; // <<< IMPORT NEW COMPONENT
 import { QuizTeaser } from '@/types/quiz';
 
 export const metadata = {
   title: 'Quizzes',
 };
 
+// Ensure this function selects card_image_url if you've added it to the DB and QuizTeaser type
 async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
   const { data: quizzes, error } = await supabaseClient
     .from('quizzes')
     .select(`
-      id,
-      topic_id,
-      subtopic_id,
-      title,
-      description,
-      difficulty,
-      created_at, 
+      id, topic_id, subtopic_id, title, description, difficulty, created_at, 
+      card_image_url, /* <<< ADD THIS IF YOU ADDED THE COLUMN */
       quiz_questions ( count )
-    `) // <<< COMMENT REMOVED HERE
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error("Error fetching quizzes directly in page:", error);
+    console.error("Error fetching quizzes:", error);
     return [];
   }
 
   return quizzes?.map((q: any) => ({
-    id: q.id,
-    topic_id: q.topic_id,
-    subtopic_id: q.subtopic_id,
-    title: q.title,
-    description: q.description,
-    difficulty: q.difficulty,
+    id: q.id, topic_id: q.topic_id, subtopic_id: q.subtopic_id,
+    title: q.title, description: q.description, difficulty: q.difficulty,
     created_at: q.created_at,
-    // @ts-ignore Supabase TS might struggle with related table count in this simple select
+    card_image_url: q.card_image_url, // <<< ADD THIS
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
@@ -52,17 +46,29 @@ export default async function QuizzesPage() {
 
   const allQuizzes = await getQuizzesFromAPI(supabase);
 
-  const quizzesByTopic: Record<string, QuizTeaser[]> = {};
+  // Group quizzes by topic (same logic as before)
+  const quizzesByTopicAndSubtopic: Record<string, Record<string, QuizTeaser[]>> = {};
+  const quizzesByMainTopicOnly: Record<string, QuizTeaser[]> = {};
+
   allQuizzes.forEach(quiz => {
     if (quiz.topic_id) {
-        if (!quizzesByTopic[quiz.topic_id]) {
-            quizzesByTopic[quiz.topic_id] = [];
+      if (quiz.subtopic_id) {
+        if (!quizzesByTopicAndSubtopic[quiz.topic_id]) {
+          quizzesByTopicAndSubtopic[quiz.topic_id] = {};
         }
-        quizzesByTopic[quiz.topic_id].push(quiz);
-    } else {
-        console.warn(`Quiz with ID ${quiz.id} has no topic_id and won't be grouped.`);
+        if (!quizzesByTopicAndSubtopic[quiz.topic_id][quiz.subtopic_id]) {
+          quizzesByTopicAndSubtopic[quiz.topic_id][quiz.subtopic_id] = [];
+        }
+        quizzesByTopicAndSubtopic[quiz.topic_id][quiz.subtopic_id].push(quiz);
+      } else {
+        if (!quizzesByMainTopicOnly[quiz.topic_id]) {
+          quizzesByMainTopicOnly[quiz.topic_id] = [];
+        }
+        quizzesByMainTopicOnly[quiz.topic_id].push(quiz);
+      }
     }
   });
+
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -75,52 +81,49 @@ export default async function QuizzesPage() {
         </p>
       </div>
 
-      {workforceTopics.map((topic: Topic) => {
-        const topicQuizzes = quizzesByTopic[topic.id] || [];
-        
-        return (
-          <section key={topic.id} className="mb-10">
-            <h2 className="text-2xl font-semibold text-neutral-text mb-2 border-b-2 pb-2" style={{borderColor: topic.color || '#cbd5e1'}}>
-              {topic.title}
-            </h2>
-            {topicQuizzes.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                {topicQuizzes.map((quiz) => (
-                  <Link href={`/quizzes/${quiz.id}`} key={quiz.id} className="group">
-                    <div className="block p-6 bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-200 ease-in-out h-full transform hover:-translate-y-1 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center mb-3">
-                          <PuzzlePieceIcon className="h-8 w-8 text-brand-primary mr-3 flex-shrink-0" />
-                          <h3 className="text-lg font-semibold text-brand-primary group-hover:text-brand-primary-dark">
-                            {quiz.title}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-3 min-h-[40px]">
-                          {quiz.description || 'A quiz to test your knowledge on this topic.'}
-                        </p>
-                      </div>
-                      <div className="mt-auto flex justify-between items-center text-xs text-gray-500 pt-3 border-t border-gray-100">
-                        <span className="capitalize">{quiz.difficulty || 'General'} | {quiz.question_count || 'N/A'} Questions</span>
-                        <span className="inline-flex items-center font-medium text-brand-primary group-hover:text-brand-primary-dark">
-                          Start Quiz <ChevronRightIcon className="h-4 w-4 ml-1" />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
+      {workforceTopics.map((topic: Topic) => (
+        <section key={topic.id} className="mb-10">
+          <h2 className="text-2xl font-semibold text-neutral-text mb-3 border-b-2 pb-2" style={{borderColor: topic.color || '#cbd5e1'}}>
+            {topic.title}
+          </h2>
+          
+          {/* Quizzes for main topic */}
+          {quizzesByMainTopicOnly[topic.id] && quizzesByMainTopicOnly[topic.id].length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
+              {quizzesByMainTopicOnly[topic.id].map((quiz) => (
+                <QuizCard key={quiz.id} quiz={quiz} topicColor={topic.color} />
+              ))}
+            </div>
+          )}
+
+          {/* Quizzes for subtopics */}
+          {topic.subtopics.map(subtopic => {
+            const subtopicQuizzes = quizzesByTopicAndSubtopic[topic.id]?.[subtopic.id] || [];
+            return subtopicQuizzes.length > 0 ? (
+              <div key={subtopic.id} className="mt-6">
+                <h3 className="text-xl font-medium text-neutral-text-light mb-2 pl-2">{subtopic.title}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                  {subtopicQuizzes.map((quiz) => (
+                    <QuizCard key={quiz.id} quiz={quiz} topicColor={topic.color} />
+                  ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-gray-500 mt-4 italic">
-                No quizzes currently available for this topic. Check back soon!
-              </p>
-            )}
-          </section>
-        );
-      })}
+            ) : null;
+          })}
+          
+          {(!quizzesByMainTopicOnly[topic.id] || quizzesByMainTopicOnly[topic.id].length === 0) && 
+           topic.subtopics.every(st => (!quizzesByTopicAndSubtopic[topic.id]?.[st.id] || quizzesByTopicAndSubtopic[topic.id]?.[st.id].length === 0)) && (
+            <p className="text-gray-500 mt-4 italic">
+              No quizzes currently available for this topic or its subtopics.
+            </p>
+          )}
+        </section>
+      ))}
 
       {allQuizzes.length === 0 && (
         <div className="text-center py-10">
-          <PuzzlePieceIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          {/* Replace with a more engaging "no quizzes" icon if desired */}
+          <QuestionMarkCircleIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <p className="text-xl text-gray-500">No quizzes available at the moment.</p>
         </div>
       )}
