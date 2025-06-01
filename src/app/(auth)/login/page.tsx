@@ -3,9 +3,10 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import LoginForm from '@/components/auth/LoginForm';
 import Link from 'next/link';
+import { APP_NAME } from '@/lib/constants'; // Optional: for consistent app name
 
 export const metadata = {
-  title: 'Login',
+  title: `Login - ${APP_NAME}`,
 };
 
 export default async function LoginPage({
@@ -25,18 +26,20 @@ export default async function LoginPage({
 
   return (
     <div 
-      className="flex flex-col items-center justify-center min-h-screen px-4"
+      className="flex flex-col items-center justify-center min-h-screen w-full px-4"
       style={{
-        backgroundImage: `url(/LifeRamp_LifeRamp.jpg)`, // <<< SET BACKGROUND IMAGE HERE
+        backgroundImage: `url(/LifeRamp_LifeRamp.jpg)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
       }}
     >
-      <div className="w-full max-w-md p-8 space-y-6 bg-white/90 backdrop-blur-sm rounded-xl shadow-2xl"> {/* Added some transparency and blur */}
+      <div className="w-full max-w-md p-8 space-y-6 bg-white/90 backdrop-blur-md rounded-xl shadow-2xl">
         <div className="text-center">
+          {/* Optional: You could add a logo here if you have one for the login card */}
+          {/* <Image src="/path-to-your-logo.png" alt="Logo" width={100} height={40} className="mx-auto mb-4" /> */}
           <h1 className="text-3xl font-bold text-brand-primary">Welcome Back!</h1>
-          <p className="mt-2 text-gray-700">Log in to access your dashboard.</p> {/* Slightly darker text for readability */}
+          <p className="mt-2 text-gray-700">Log in to access your dashboard.</p>
         </div>
 
         <LoginForm />
@@ -53,13 +56,13 @@ export default async function LoginPage({
         )}
 
         <div className="mt-6 text-center text-sm">
-          <p className="text-gray-700"> {/* Slightly darker text */}
+          <p className="text-gray-700">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="font-medium text-brand-primary hover:underline">
               Sign up
             </Link>
           </p>
-          <p className="mt-2 text-gray-700"> {/* Slightly darker text */}
+          <p className="mt-2 text-gray-700">
             <Link href="/forgot-password" className="font-medium text-brand-primary hover:underline">
               Forgot your password?
             </Link>
