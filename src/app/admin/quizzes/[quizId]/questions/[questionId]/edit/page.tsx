@@ -1,10 +1,9 @@
-// src/app/admin/quizzes/[quizId]/questions/[questionId]/edit/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // Import necessary types
-import EditQuestionForm from '@/components/admin/EditQuestionForm'; // We will create this form component next
+import { QuizQuestion, MediaPosition } from '@/types/quiz'; // Removed QuestionOption, kept QuizQuestion & MediaPosition
+import EditQuestionForm from '@/components/admin/EditQuestionForm';
 
 interface EditQuestionPageParams {
   quizId: string;
@@ -35,7 +34,7 @@ async function getQuestionForEditing(
       media_position
     `)
     .eq('id', questionId)
-    .eq('quiz_id', quizId) // Ensure it belongs to the correct quiz
+    .eq('quiz_id', quizId)
     .single();
 
   if (questionError || !questionData) {
@@ -43,28 +42,35 @@ async function getQuestionForEditing(
     return null;
   }
 
-  // Fetch options for this question
   const { data: optionsData, error: optionsError } = await supabase
     .from('question_options')
     .select('id, question_id, option_text, is_correct')
     .eq('question_id', questionData.id)
-    .order('id'); // Or by some other consistent order if you have one
+    .order('id');
 
   if (optionsError) {
     console.error(`Error fetching options for question ${questionData.id}:`, optionsError);
-    // Continue without options or handle more gracefully if options are critical for display
   }
 
   return {
-    ...questionData,
-    options: optionsData || [], // Attach fetched options
-    // Ensure all fields match QuizQuestion type
+    id: questionData.id, // Ensure all fields of QuizQuestion are covered
     quiz_id: questionData.quiz_id as string,
+    question_text: questionData.question_text,
     question_type: questionData.question_type as 'multiple-choice' | 'true-false',
-    media_position: questionData.media_position as MediaPosition | null,
+    explanation: questionData.explanation,
+    points: questionData.points,
+    order_num: questionData.order_num,
+    image_url: questionData.image_url,
+    video_url: questionData.video_url,
+    media_position: questionData.media_position as MediaPosition | null, // MediaPosition used here
+    options: (optionsData || []).map(opt => ({ // This structure must match QuestionOption defined in types/quiz.ts
+        id: opt.id,
+        question_id: opt.question_id || questionData.id,
+        option_text: opt.option_text,
+        is_correct: opt.is_correct,
+    })),
   };
 }
-
 
 export async function generateMetadata({ params }: EditQuestionPageProps) {
   return {
@@ -79,7 +85,6 @@ export default async function EditQuestionPage({ params }: EditQuestionPageProps
   if (!user) {
     return redirect('/login?message=Please log in to access admin features.');
   }
-  // Additional admin check can be done here if needed, or rely on AdminLayout
 
   const questionData = await getQuestionForEditing(supabase, params.quizId, params.questionId);
 
@@ -96,7 +101,6 @@ export default async function EditQuestionPage({ params }: EditQuestionPageProps
     );
   }
 
-  // Fetch quiz title for breadcrumbs/context (optional but good UX)
   const { data: quizInfo } = await supabase
     .from('quizzes')
     .select('title')
@@ -117,11 +121,9 @@ export default async function EditQuestionPage({ params }: EditQuestionPageProps
       <p className="mb-6 text-gray-600">
         Modify the details for this quiz question.
       </p>
-
-      {/* The EditQuestionForm will be a client component */}
       <EditQuestionForm 
         quizId={params.quizId} 
-        questionData={questionData} 
+        questionData={questionData} // This is typed as QuizQuestion
       />
     </div>
   );
