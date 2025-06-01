@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { workforceTopics, Topic } from '@/lib/constants';
 import QuizCard from '@/components/quizzes/QuizCard';
-import { QuizTeaser } from '@/types/quiz';
+import { QuizTeaser } from '@/types/quiz'; // Assumes this QuizTeaser has card_image_url
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 export const metadata = {
@@ -23,11 +23,13 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       created_at, 
       card_image_url, 
       quiz_questions ( count )
-    `) // <<< COMMENT REMOVED HERE
+    `)
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error("Error fetching quizzes:", error);
+    // Depending on the error, you might want to throw it or handle it differently
+    // For now, returning empty to prevent page crash, but UI will show "no quizzes"
     return []; 
   }
 
@@ -39,7 +41,7 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     description: q.description,
     difficulty: q.difficulty,
     created_at: q.created_at,
-    card_image_url: q.card_image_url, 
+    card_image_url: q.card_image_url, // Ensure QuizTeaser type includes this
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
 }
@@ -48,7 +50,7 @@ export default async function QuizzesPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (authError || !user) {
+  if (authError || !user) { // Also check for authError
     return redirect('/login?message=Please log in to view quizzes.');
   }
 
@@ -96,7 +98,7 @@ export default async function QuizzesPage() {
           {quizzesByMainTopicOnly[topic.id] && quizzesByMainTopicOnly[topic.id].length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
               {quizzesByMainTopicOnly[topic.id].map((quiz) => (
-                <QuizCard key={quiz.id} quiz={quiz} topicColor={topic.color} />
+                <QuizCard key={quiz.id} quiz={quiz} /> {/* <<< REMOVED topicColor prop */}
               ))}
             </div>
           )}
@@ -108,7 +110,7 @@ export default async function QuizzesPage() {
                 <h3 className="text-xl font-medium text-neutral-text-light mb-2 pl-2">{subtopic.title}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                   {subtopicQuizzes.map((quiz) => (
-                    <QuizCard key={quiz.id} quiz={quiz} topicColor={topic.color} />
+                    <QuizCard key={quiz.id} quiz={quiz} /> {/* <<< REMOVED topicColor prop */}
                   ))}
                 </div>
               </div>
