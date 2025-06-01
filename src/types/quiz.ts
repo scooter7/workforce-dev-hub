@@ -60,6 +60,7 @@ export interface QuizTeaser {
   difficulty?: string | null;
   question_count?: number; // Total number of questions in the quiz
   created_at?: string; // ISO date string, optional for display
+  card_image_url?: string | null; // <<< ADDED FOR NETFLIX-STYLE CARDS
 }
 
 // You can add other quiz-related shared types here as needed.
