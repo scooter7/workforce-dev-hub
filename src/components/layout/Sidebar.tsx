@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider'; // Ensure this path is correct
 import {
-  ChatBubbleLeftEllipsisIcon,
+  // ChatBubbleLeftEllipsisIcon, // Removed as HomeIcon is used for Explore
   ClipboardDocumentListIcon,
   UserCircleIcon,
   QuestionMarkCircleIcon,
