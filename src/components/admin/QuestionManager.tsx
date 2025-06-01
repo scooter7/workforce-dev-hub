@@ -1,29 +1,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuizQuestion } from '@/types/quiz';
+import { QuizQuestion } from '@/types/quiz'; // QuestionOption import removed as per previous fix
 import AddQuestionForm from './AddQuestionForm';
 import Button from '@/components/ui/Button';
-import { TrashIcon, PencilIcon, PlusCircleIcon } from '@heroicons/react/24/outline'; // Added PencilIcon
-import Link from 'next/link'; // For navigation to the edit page
+import { TrashIcon, PencilIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
 interface QuestionManagerProps {
   quizId: string;
-  initialQuestions?: QuizQuestion[]; // Optional initial load
-  quizTitle?: string;
+  initialQuestions?: QuizQuestion[];
+  // quizTitle?: string; // Removed as it was unused
 }
 
-export default function QuestionManager({ quizId, initialQuestions = [], quizTitle }: QuestionManagerProps) {
+export default function QuestionManager({ quizId, initialQuestions = [] }: QuestionManagerProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>(initialQuestions);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // For loading questions initially if not passed
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch questions if not provided initially or if we need to re-fetch
   useEffect(() => {
     if (initialQuestions.length === 0 && quizId) {
       setIsLoading(true);
-      fetch(`/api/admin/quizzes/${quizId}/questions?includeOptions=true`) // Assuming API can include options
+      fetch(`/api/admin/quizzes/${quizId}/questions?includeOptions=true`) 
         .then(res => {
           if (!res.ok) {
             return res.json().then(err => { throw new Error(err.error || 'Failed to fetch questions')});
@@ -31,7 +30,7 @@ export default function QuestionManager({ quizId, initialQuestions = [], quizTit
           return res.json();
         })
         .then(data => {
-          setQuestions(data.questions || []); // API might return { questions: [] }
+          setQuestions(data.questions || []);
           setError(null);
         })
         .catch(err => {
@@ -40,13 +39,11 @@ export default function QuestionManager({ quizId, initialQuestions = [], quizTit
         })
         .finally(() => setIsLoading(false));
     } else {
-        setQuestions(initialQuestions); // Use initially passed questions
+        setQuestions(initialQuestions);
     }
   }, [quizId, initialQuestions]);
 
-
   const handleQuestionAdded = (newQuestion: QuizQuestion) => {
-    // The API now returns the full question object including options and new media fields
     setQuestions(prev => [...prev, newQuestion].sort((a,b) => a.order_num - b.order_num));
     setShowAddForm(false);
   };
@@ -134,12 +131,11 @@ export default function QuestionManager({ quizId, initialQuestions = [], quizTit
                 </button>
               </div>
             </div>
-            {/* Optionally display options summary here if needed */}
             {question.options && question.options.length > 0 && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <p className="text-xs font-medium text-gray-600 mb-1">Options:</p>
                 <ul className="list-disc list-inside pl-1 space-y-0.5">
-                  {question.options.slice(0, 3).map(opt => ( // Show first 3 options as a preview
+                  {question.options.slice(0, 3).map(opt => (
                     <li key={opt.id} className={`text-xs ${opt.is_correct ? 'text-green-600 font-semibold' : 'text-gray-500'}`}>
                       {opt.option_text} {opt.is_correct ? '(Correct)' : ''}
                     </li>
