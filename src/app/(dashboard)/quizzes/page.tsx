@@ -96,7 +96,7 @@ export default async function QuizzesPage() { // Make sure this function is corr
           
           {quizzesByMainTopicOnly[topic.id] && quizzesByMainTopicOnly[topic.id].length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
-              {quizzesByMainTopicOnly[topic.id].map((quiz, index) => (
+              {quizzesByMainTopicOnly[topic.id].map((quiz) => (
                 <QuizCard key={quiz.id} quiz={quiz} />
               ))}
             </div>
@@ -108,7 +108,7 @@ export default async function QuizzesPage() { // Make sure this function is corr
               <div key={subtopic.id} className="mt-6">
                 <h3 className="text-xl font-medium text-neutral-text-light mb-2 pl-2">{subtopic.title}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                  {subtopicQuizzes.map((quiz, index) => ( 
+                  {subtopicQuizzes.map((quiz) => ( 
                     <QuizCard key={quiz.id} quiz={quiz} />
                   ))}
                 </div>
