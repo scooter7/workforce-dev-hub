@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // For typing the response for PATCH
+import { QuizQuestion, MediaPosition } from '@/types/quiz';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
