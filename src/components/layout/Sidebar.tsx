@@ -14,7 +14,7 @@ import {
   ArrowRightOnRectangleIcon,
   DocumentPlusIcon,      // For "Create Quiz" or "Add New"
   ArrowUpTrayIcon,       // For "Bulk Upload"
-  CogIcon,               // Example for "Manage Quizzes"
+  //CogIcon,               // Example for "Manage Quizzes"
 } from '@heroicons/react/24/outline'; 
 
 const iconSharedClass = "h-6 w-6"; 
