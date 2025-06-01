@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { workforceTopics, Topic } from '@/lib/constants';
 import QuizCard from '@/components/quizzes/QuizCard';
-import { QuizTeaser } from '@/types/quiz'; // Assumes QuizTeaser includes card_image_url
+import { QuizTeaser } from '@/types/quiz';
 import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 export const metadata = {
@@ -21,7 +21,7 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
       description, 
       difficulty, 
       created_at, 
-      card_image_url,  // Comment removed
+      card_image_url, 
       quiz_questions ( count )
     `)
     .order('created_at', { ascending: false });
@@ -42,22 +42,11 @@ async function getQuizzesFromAPI(supabaseClient: any): Promise<QuizTeaser[]> {
     card_image_url: q.card_image_url, 
     question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
   })) || [];
-}
+} // <<< End of getQuizzesFromAPI function
 
-  return quizzes?.map((q: any) => ({
-    id: q.id,
-    topic_id: q.topic_id,
-    subtopic_id: q.subtopic_id,
-    title: q.title,
-    description: q.description,
-    difficulty: q.difficulty,
-    created_at: q.created_at,
-    card_image_url: q.card_image_url, 
-    question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
-  })) || [];
-}
+// Ensure no stray code between the function above and the component below
 
-export default async function QuizzesPage() { // Make sure this function is correctly defined
+export default async function QuizzesPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -87,9 +76,8 @@ export default async function QuizzesPage() { // Make sure this function is corr
         quizzesByMainTopicOnly[quiz.topic_id].push(quiz);
       }
     }
-  }); // Ensure this forEach and its parent function QuizzesPage are correctly closed
+  });
 
-  // No stray characters or incomplete JavaScript blocks before this return
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -121,7 +109,7 @@ export default async function QuizzesPage() { // Make sure this function is corr
               <div key={subtopic.id} className="mt-6">
                 <h3 className="text-xl font-medium text-neutral-text-light mb-2 pl-2">{subtopic.title}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                  {subtopicQuizzes.map((quiz) => ( 
+                  {subtopicQuizzes.map((quiz) => (
                     <QuizCard key={quiz.id} quiz={quiz} />
                   ))}
                 </div>
@@ -146,4 +134,4 @@ export default async function QuizzesPage() { // Make sure this function is corr
       )}
     </div>
   );
-} // Ensure this is the final closing brace for the QuizzesPage function
+} // <<< End of QuizzesPage component
