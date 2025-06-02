@@ -1,7 +1,6 @@
-// src/app/(auth)/layout.tsx
 import React from 'react';
 import Link from 'next/link';
-// import Image from 'next/image'; // If you want a logo in the layout header
+// import Image from 'next/image'; // Uncomment if you add a logo image here
 
 export default function AuthLayout({
   children,
@@ -9,27 +8,44 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    // This div will center the content provided by the page (e.g., LoginPage, RegisterPage)
-    // The page itself will now handle its own full-screen background.
+    // This root div should primarily focus on layout (centering, min-height)
+    // and NOT apply a competing full-page background if child pages set their own.
     <div className="flex flex-col items-center justify-center min-h-screen w-full">
-      {/* Optional: A consistent header for all auth pages, like a logo */}
-      <div className="pt-8 pb-4 text-center"> {/* Adjusted padding */}
+      
+      {/* Optional: A consistent header for all auth pages */}
+      <div className="py-8 text-center"> {/* Increased padding for better spacing */}
         <Link href="/" className="inline-block">
-          {/* If using an Image component for the logo: */}
-          {/* <Image src="/your-logo.png" alt="Workforce Hub Logo" width={180} height={60} priority /> */}
+          {/* Example if using an Image component for the logo:
+          <Image 
+            src="/your-company-logo.png" // Place your logo in /public
+            alt="Workforce Hub Logo" 
+            width={180} // Adjust
+            height={60}  // Adjust
+            priority 
+          /> 
+          */}
           <h1 className="text-4xl font-bold text-brand-primary hover:text-brand-primary-dark transition-colors">
-            Workforce Development Hub
+            Workforce Hub
           </h1>
         </Link>
       </div>
 
-      {/* The children (LoginPage or RegisterPage) will take up the main area */}
-      {/* The page itself will apply its background and centering for its form card */}
-      {children} 
+      {/* The 'children' will be the LoginPage or RegisterPage content.
+          These pages will now apply their own full-screen background image.
+          The `w-full` ensures the child page can potentially use the full width.
+      */}
+      <div className="w-full flex-grow flex"> {/* Added flex-grow and flex to allow child to fill */}
+        {children}
+      </div>
       
       {/* Optional: A consistent footer for all auth pages */}
       <div className="py-8 text-center text-sm text-gray-600">
-        <p>&copy; {new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} LifeRamp. All rights reserved.</p>
+        {/* <p className="mt-1">
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link> |
+          <Link href="/terms" className="hover:underline">Terms of Service</Link>
+        </p> 
+        */}
       </div>
     </div>
   );
