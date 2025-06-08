@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image'; // <<< Import the Image component
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/components/providers/AuthProvider'; 
+import { useAuth } from '@/components/providers/AuthProvider';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -14,14 +14,14 @@ import {
   ArrowRightOnRectangleIcon,
   DocumentPlusIcon,
   ArrowUpTrayIcon,
-} from '@heroicons/react/24/outline'; 
+} from '@heroicons/react/24/outline';
 
-const iconSharedClass = "h-6 w-6"; 
+const iconSharedClass = "h-6 w-6";
 
 const navigationItems = [
   { name: 'Explore', href: '/', icon: HomeIcon, exact: true },
   { name: 'My Goals', href: '/goals', icon: ClipboardDocumentListIcon },
-  { name: 'Quizzes', href: '/quizzes', icon: QuestionMarkCircleIcon },
+  { name: 'Build Knowledge', href: '/quizzes', icon: QuestionMarkCircleIcon },
   { name: 'My Points', href: '/points', icon: TrophyIcon },
   { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
 ];
@@ -37,7 +37,7 @@ const quizAdminSpecificLinks = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { user, isAdmin, signOut } = useAuth(); 
+  const { user, isAdmin, signOut } = useAuth();
 
   // console.log("[Sidebar] Auth State | User ID:", user ? user.id : 'No User', "| IsAdmin:", isAdmin); // Keep for debugging if needed
 
@@ -125,10 +125,10 @@ export default function Sidebar() {
             <p className="text-sm font-medium truncate" title={user.email || ''}>
               {user.user_metadata?.full_name || user.email}
             </p>
-            <button 
+            <button
               onClick={async () => {
                 if (signOut) await signOut();
-              }} 
+              }}
               className="mt-2 w-full text-left text-xs text-blue-200 hover:text-white flex items-center"
             >
               <ArrowRightOnRectangleIcon className="h-4 w-4 mr-1.5" />
@@ -157,7 +157,7 @@ export default function Sidebar() {
         {isAdmin ? (
              <Link
                 key="mobile-admin-tools"
-                href="/admin/quizzes/new" 
+                href="/admin/quizzes/new"
                 className={`${commonLinkClasses} flex-col p-1.5 sm:p-2 rounded-md text-center w-1/5 ${pathname.startsWith('/admin') ? activeMobileLink : inactiveMobileLink}`}
                 title="Admin Tools"
             >
@@ -166,7 +166,7 @@ export default function Sidebar() {
             </Link>
         ) : (
              <Link
-                key="mobile-profile" 
+                key="mobile-profile"
                 href="/profile"
                 className={`${commonLinkClasses} flex-col p-1.5 sm:p-2 rounded-md text-center w-1/5 ${isLinkActive("/profile") ? activeMobileLink : inactiveMobileLink}`}
                 title="Profile"
