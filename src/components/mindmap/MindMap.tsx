@@ -14,7 +14,7 @@ import ReactFlow, {
   NodeOrigin,
   useReactFlow,
   ReactFlowProvider,
-  BackgroundVariant, // <<< IMPORTED BackgroundVariant
+  BackgroundVariant,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -29,9 +29,9 @@ const elk = new ELK();
 
 const elkLayoutOptions: LayoutOptions = {
   'elk.algorithm': 'layered',
-  'elk.direction': 'RIGHT',
-  'elk.layered.spacing.nodeNodeBetweenLayers': '160',
-  'elk.spacing.nodeNode': '100',
+  'elk.direction': 'DOWN', // Changed to DOWN for vertical layout
+  'elk.layered.spacing.nodeNodeBetweenLayers': '120', // Adjusted spacing for vertical
+  'elk.spacing.nodeNode': '80', // Adjusted spacing for vertical
   'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
   'elk.layered.cycleBreaking.strategy': 'DEPTH_FIRST',
   'elk.edgeRouting': 'SPLINES',
@@ -45,9 +45,9 @@ interface MindMapProps {
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
 const ESTIMATED_MAIN_NODE_WIDTH = 250;
-const ESTIMATED_MAIN_NODE_HEIGHT = 90;
+const ESTIMATED_MAIN_NODE_HEIGHT = 120; // Adjusted height for new card design
 const ESTIMATED_SUB_NODE_WIDTH = 220;
-const ESTIMATED_SUB_NODE_HEIGHT = 70;
+const ESTIMATED_SUB_NODE_HEIGHT = 90; // Adjusted height for new card design
 
 const nodeTypes = {
   modernTopic: ModernTopicNode,
@@ -56,13 +56,14 @@ const nodeTypes = {
 
 const getLayoutedElements = async (
   topicsData: TopicType[],
-  expandedTopics: Set<string>,
-  onToggleExpandForNode: (topicId: string) => void,
   layoutOptionsToUse: LayoutOptions
 ): Promise<{ layoutedNodes: Node[]; layoutedEdges: Edge[] }> => {
   const elkNodes: ElkNode[] = [];
   const elkEdges: ElkExtendedEdge[] = [];
   const visibleNodeIds = new Set<string>();
+
+  // All topics with subtopics are now considered expanded by default.
+  const expandedTopics = new Set(topicsData.filter(t => t.subtopics?.length > 0).map(t => t.id));
 
   topicsData.forEach((topic) => {
     const topicNodeId = `topic-${topic.id}`;
@@ -120,9 +121,6 @@ const getLayoutedElements = async (
         nodeData = {
           label: originalTopic.title,
           topic: originalTopic,
-          isExpanded: expandedTopics.has(originalTopic.id),
-          hasSubtopics: originalTopic.subtopics && originalTopic.subtopics.length > 0,
-          onToggleExpand: () => onToggleExpandForNode(originalTopic.id),
         };
       } else if (originalSubtopicInfo) {
         nodeTypeIdentifier = 'modernSubtopic';
@@ -167,21 +165,11 @@ function MindMapContent({ topics }: MindMapProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isLaidOut, setIsLaidOut] = useState(false);
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(new Set());
   const { fitView } = useReactFlow();
-
-  const handleToggleExpand = useCallback((topicId: string) => {
-    setExpandedTopics(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(topicId)) newSet.delete(topicId);
-      else newSet.add(topicId);
-      return newSet;
-    });
-  }, []);
 
   const updateLayout = useCallback(() => {
     setIsLaidOut(false);
-    getLayoutedElements(topics, expandedTopics, handleToggleExpand, elkLayoutOptions)
+    getLayoutedElements(topics, elkLayoutOptions)
       .then(({ layoutedNodes, layoutedEdges }) => {
         setNodes(layoutedNodes);
         setEdges(layoutedEdges);
@@ -191,7 +179,7 @@ function MindMapContent({ topics }: MindMapProps) {
         console.error("Failed to get layouted elements:", error);
         setIsLaidOut(true);
       });
-  }, [topics, expandedTopics, handleToggleExpand]);
+  }, [topics]);
 
   useEffect(() => {
     updateLayout();
@@ -200,7 +188,7 @@ function MindMapContent({ topics }: MindMapProps) {
   useEffect(() => {
     if (isLaidOut && nodes.length > 0) {
       const timer = setTimeout(() => {
-        fitView({ padding: 0.25, duration: 600 });
+        fitView({ padding: 0.2, duration: 600 });
       }, 150);
       return () => clearTimeout(timer);
     }
@@ -211,9 +199,15 @@ function MindMapContent({ topics }: MindMapProps) {
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      const { topicId, subtopic } = node.data as any;
-      if (topicId && subtopic?.id) {
-        router.push(`/chat/${topicId}?subtopic=${subtopic.id}`);
+      // Navigate to chat for the topic/subtopic
+      // The individual action links inside the node will handle their own specific navigation
+      // This click handler is for clicking the main body of the node
+      const topicData = node.data.topic;
+      const subtopicData = node.data.subtopic;
+      const topicId = node.data.topicId || topicData?.id;
+
+      if (subtopicData?.id) {
+        router.push(`/chat/${topicId}?subtopic=${subtopicData.id}`);
       } else if (topicId) {
         router.push(`/chat/${topicId}`);
       }
@@ -246,7 +240,6 @@ function MindMapContent({ topics }: MindMapProps) {
         maxZoom={2}
       >
         <Controls showInteractive={false} />
-        {/* CORRECTED Background variant prop */}
         <Background variant={BackgroundVariant.Dots} gap={20} size={0.7} color="#d1d5db" />
       </ReactFlow>
     </div>
