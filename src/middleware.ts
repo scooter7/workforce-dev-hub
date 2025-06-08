@@ -35,48 +35,39 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+  const authRoutes = ['/login', '/register', '/forgot-password'];
+  const dashboardRoutes = ['/goals', '/quizzes', '/points', '/profile', '/chat'];
 
-  // --- Admin Route Protection ---
+  // --- Redirect logged-in users from auth pages ---
+  if (session && authRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // --- Protect Admin Routes ---
   if (pathname.startsWith('/admin')) {
     if (!session) {
       return NextResponse.redirect(new URL('/login?message=Please log in to access admin features.&redirect=/admin', request.url));
     }
-    const { data: { user } } = await supabase.auth.getUser(); // Re-fetch user for admin check
     if (user?.id !== process.env.ADMIN_USER_ID) {
-      // Non-admin trying to access /admin/*
-      // Redirect to dashboard or show an access denied page if you have one for non-admins.
-      // For now, redirecting to dashboard.
-      return NextResponse.redirect(new URL('/?message=Admin access required.', request.url)); 
+      return NextResponse.redirect(new URL('/?message=Admin access required.', request.url));
     }
   }
-  // --- End Admin Route Protection ---
 
-  // For non-admin protected routes (user dashboard areas)
-  // This list should match the paths you want to protect for any logged-in user.
-  const protectedUserRoutes = ['/', '/goals', '/quizzes', '/points', '/profile', '/chat']; 
-  // Check if the current path starts with any of the protectedUserRoutes
-  if (protectedUserRoutes.some(route => pathname.startsWith(route) && (pathname === route || pathname.startsWith(route + '/'))) && !pathname.startsWith('/admin')) {
-    if (!session) {
+  // --- Protect Dashboard Routes for logged-out users ---
+  const isDashboardRoute = dashboardRoutes.some(route => pathname.startsWith(route));
+  const isRootRoute = pathname === '/';
+
+  if (!session && (isRootRoute || isDashboardRoute)) {
       let redirectUrl = '/login?message=Please log in to access this page.';
-      if (pathname !== '/') { // Append redirect only if not trying to access the root
+      if (pathname !== '/') {
         redirectUrl += `&redirect=${pathname}`;
       }
       return NextResponse.redirect(new URL(redirectUrl, request.url));
-    }
   }
 
-  // Allow access to auth pages if no session
-  if (!session && (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password'))) {
-    return response;
-  }
-
-  // Redirect logged-in users from auth pages to dashboard
-  if (session && (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/forgot-password'))) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
-  
   return response;
 }
 
@@ -90,16 +81,7 @@ export const config = {
      * - auth/callback (Supabase auth callback)
      * - error (error page)
      * - And specific files in /public like favicons, site.webmanifest, images etc.
-     * This can be done by excluding common file extensions OR by being more specific.
-     * A common pattern is to exclude paths that include a '.' (indicating a file extension)
-     * in the last segment, but this can be too broad or too narrow.
      */
     '/((?!api|_next/static|_next/image|auth/callback|error|.*\\..*\\w{2,4}$).*)',
-    // The `.*\\..*\\w{2,4}$` part tries to exclude paths ending with a typical file extension.
-    // It means: any characters (.*), then a literal dot (\\.), then any characters (.*), 
-    // then 2 to 4 word characters (\\w{2,4}) at the end of the string ($).
-    // This should exclude .jpg, .png, .ico, .svg, .webmanifest etc.
-    // If you want to be more explicit and still protect some root files:
-    // '/((?!api|_next/static|_next/image|favicon.ico|site.webmanifest|robots.txt|images/.*|LifeRamp_LifeRamp.jpg|LifeRamp_Assessment.jpg|auth/callback|error).*)',
   ],
 };
