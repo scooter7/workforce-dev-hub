@@ -7,7 +7,9 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-// import DOMPurify from 'dompurify'; // Removed as per previous fix, ReactMarkdown handles sanitization
+import Link from 'next/link';
+import { PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
+
 
 interface ChatInterfaceProps {
   topic: Topic;
@@ -154,6 +156,20 @@ export default function ChatInterface({
       )}
 
       <div className="border-t border-gray-200 p-3 md:p-4 bg-gray-50">
+        <div className="flex items-center space-x-3 mb-3">
+            <Link href="/goals" className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                <PlusIcon className="h-5 w-5 mr-1.5" />
+                Create Goal
+                </Button>
+            </Link>
+            <Link href="/quizzes" className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                <QuestionMarkCircleIcon className="h-5 w-5 mr-1.5" />
+                Build Knowledge
+                </Button>
+            </Link>
+        </div>
         <form onSubmit={customHandleSubmit} className="flex items-center space-x-2">
           <Input
             type="text"
