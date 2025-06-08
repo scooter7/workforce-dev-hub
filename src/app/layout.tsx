@@ -15,8 +15,8 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Workforce Development Hub',
-    template: '%s | Workforce Hub',
+    default: 'Power Skills',
+    template: '%s | Power Skills',
   },
   description: 'Your platform for professional growth, AI chat, and goal tracking.',
 };

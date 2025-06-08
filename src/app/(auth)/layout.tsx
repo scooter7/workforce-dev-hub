@@ -18,14 +18,14 @@ export default function AuthLayout({
           {/* Example if using an Image component for the logo:
           <Image 
             src="/your-company-logo.png" // Place your logo in /public
-            alt="Workforce Hub Logo" 
+            alt="Power Skills Logo" 
             width={180} // Adjust
             height={60}  // Adjust
             priority 
           /> 
           */}
           <h1 className="text-4xl font-bold text-brand-primary hover:text-brand-primary-dark transition-colors">
-            Workforce Hub
+            Power Skills
           </h1>
         </Link>
       </div>

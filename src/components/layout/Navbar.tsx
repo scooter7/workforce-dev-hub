@@ -36,7 +36,7 @@ export default function Navbar({ user }: { user: User | null }) {
           <div className="flex-shrink-0">
             <Link href="/" className="text-2xl font-bold text-brand-primary hover:text-brand-primary-dark">
               {/* <Image src="/images/logo-sm.png" alt="Logo" width={32} height={32} /> */}
-              Workforce Hub
+              Power Skills
             </Link>
           </div>
 

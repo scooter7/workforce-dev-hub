@@ -1,6 +1,6 @@
 // src/lib/constants.ts
 
-export const APP_NAME = 'Workforce Development Hub';
+export const APP_NAME = 'Power Skills';
 export const APP_DESCRIPTION = 'Your platform for professional growth, AI chat, and goal tracking.';
 
 export interface SubTopic {

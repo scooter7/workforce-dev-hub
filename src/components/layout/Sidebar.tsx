@@ -59,10 +59,10 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex md:w-60 lg:w-64 bg-gradient-to-b from-brand-primary-dark to-brand-primary text-white  flex-col shadow-lg print:hidden">
         <div className="h-16 flex items-center justify-center border-b border-brand-primary-medium flex-shrink-0 px-4">
-          <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Workforce Hub Home">
+          <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Power Skills Home">
             <Image
               src="/favicon.ico" // Path relative to the /public directory
-              alt="Workforce Hub Logo"
+              alt="Power Skills Logo"
               width={36} // Adjust size as needed (e.g., 32, 36, 40)
               height={36} // Keep it square or adjust to your favicon's aspect ratio
               priority // If it's a key visual element, consider priority
