@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { UserProfileWithPoints } from '@/app/(dashboard)/points/page'; // Re-use type
 import { InformationCircleIcon } from '@heroicons/react/24/solid';
 import Link from 'next/link';
 
@@ -17,16 +16,10 @@ export interface PointActivity {
   related_entity_id?: string | null;
 }
 
+// No props are needed for this component anymore
+interface PointsPageClientContentProps {}
 
-interface PointsPageClientContentProps {
-  currentUserId: string;
-  currentUserProfile: UserProfileWithPoints | null;
-}
-
-export default function PointsPageClientContent({
-  currentUserId,
-  currentUserProfile,
-}: PointsPageClientContentProps) {
+export default function PointsPageClientContent({}: PointsPageClientContentProps) {
   const [recentActivities, setRecentActivities] = useState<PointActivity[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [activitiesError, setActivitiesError] = useState<string | null>(null);

@@ -70,10 +70,7 @@ export default async function PointsPage() {
       </section>
 
       {/* Client component to handle leaderboard and recent activities fetching & display */}
-      <PointsPageClientContent
-        currentUserId={user.id}
-        currentUserProfile={userProfile} // Pass current user's profile for highlighting
-      />
+      <PointsPageClientContent />
     </div>
   );
 }
