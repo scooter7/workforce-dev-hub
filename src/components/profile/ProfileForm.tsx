@@ -34,21 +34,19 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
     setError(null);
 
     const profileUpdate = {
-      id: user.id,
       full_name: fullName,
       company: company,
       role: role,
       updated_at: new Date().toISOString(),
     };
 
-    // Using upsert: updates if profile exists, inserts if it doesn't (based on 'id').
-    const { data: _data, error: updateError } = await supabase // CHANGED: data to _data
+    // Using a direct update which is more explicit and works better with RLS.
+    const { data: _data, error: updateError } = await supabase
       .from('profiles')
-      .upsert(profileUpdate, {
-        onConflict: 'id', 
-      })
-      .select() 
-      .single(); 
+      .update(profileUpdate)
+      .eq('id', user.id) // Explicitly target the user's row
+      .select()
+      .single();
 
     setIsLoading(false);
 
@@ -58,7 +56,7 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
     } else {
       setMessage('Profile updated successfully!');
       // _data contains the updated profile if you needed to use it, e.g., to update local state more precisely
-      // console.log('Updated profile data:', _data); 
+      // console.log('Updated profile data:', _data);
     }
   };
 
