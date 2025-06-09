@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { QuizQuestion } from '@/types/quiz';
+import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 const NewQuizQuestionSchema = z.object({
   question: z.string(),
@@ -23,7 +23,7 @@ export async function POST(
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
 
-  // Validate and parse body
+  // Validate and parse request body
   const body = await req.json();
   const parsed = NewQuizQuestionSchema.safeParse(body);
   if (!parsed.success) {
@@ -34,7 +34,7 @@ export async function POST(
   }
   const { question, options, media_url } = parsed.data;
 
-  // Insert question
+  // Insert the new question
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -60,7 +60,7 @@ export async function POST(
     );
   }
 
-  // Insert options
+  // Prepare and insert options
   const optionsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
@@ -69,11 +69,12 @@ export async function POST(
 
   const { data: createdOptions, error: optionsError } = await supabase
     .from('question_options')
-    .insert(optionsToInsert);
+    .insert(optionsToInsert)
+    .select('*');
 
-  if (optionsError) {
+  if (optionsError || !createdOptions) {
     return NextResponse.json(
-      { error: optionsError.message },
+      { error: optionsError?.message ?? 'Failed to create question options' },
       { status: 500 }
     );
   }
