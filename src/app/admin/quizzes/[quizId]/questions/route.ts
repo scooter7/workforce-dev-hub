@@ -3,11 +3,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { QuizQuestion } from '@/types/quiz';
+import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 /**
  * GET handler: fetch all questions (with their options) for a given quiz.
- * Note the request argument is prefixed with `_` to avoid the “declared but never read” error.
+ * The request arg is prefixed `_req` to avoid “declared but never read” errors.
  */
 export async function GET(
   _req: NextRequest,
@@ -28,7 +28,6 @@ export async function GET(
     );
   }
 
-  // Map Supabase result into our QuizQuestion interface
   const result: QuizQuestion[] = (questions ?? []).map((q) => ({
     id: q.id,
     quiz_id: q.quiz_id,
@@ -37,7 +36,7 @@ export async function GET(
     explanation: q.explanation,
     points: q.points,
     order_num: q.order_num,
-    options: q.question_options.map((opt) => ({
+    options: (q.question_options ?? []).map((opt: QuestionOption) => ({
       id: opt.id,
       question_id: opt.question_id,
       option_text: opt.option_text,
@@ -85,7 +84,7 @@ export async function POST(
   }
   const { question, options, media_url } = parsed.data;
 
-  // Insert the question row
+  // Insert the question
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -111,7 +110,7 @@ export async function POST(
     );
   }
 
-  // Insert the option rows
+  // Prepare and insert options
   const optionsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
@@ -139,7 +138,7 @@ export async function POST(
     explanation: createdQuestion.explanation,
     points: createdQuestion.points,
     order_num: createdQuestion.order_num,
-    options: createdOptions.map((opt) => ({
+    options: createdOptions.map((opt: QuestionOption) => ({
       id: opt.id,
       question_id: opt.question_id,
       option_text: opt.option_text,
