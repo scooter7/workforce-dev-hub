@@ -1,98 +1,108 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { z } from 'zod';
+// src/app/admin/quizzes/[quizId]/questions/route.ts
 
-// Keep the existing POST handler as is
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import type { QuizQuestion, QuestionOption } from '@/types/quiz';
+
+// 1) Define and validate the shape of the incoming POST body
+const NewQuizQuestionSchema = z.object({
+  question: z.string(),
+  options: z.array(
+    z.object({
+      option_text: z.string(),
+      is_correct: z.boolean(),
+    })
+  ),
+  media_url: z.string().url().optional(),
+});
+
+type NewQuizQuestionInput = z.infer<typeof NewQuizQuestionSchema>;
+
 export async function POST(
-  req: NextRequest,
+  req: Request,
   { params }: { params: { quizId: string } }
 ) {
+  // 2) Spin up Supabase client
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
-  const { question, options, media_url } = (await req.json()) as Question;
 
-  const { data, error } = await supabase
+  // 3) Parse & validate request body
+  const body = await req.json();
+  const parsed = NewQuizQuestionSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Invalid payload', issues: parsed.error.issues },
+      { status: 400 }
+    );
+  }
+
+  const { question, options, media_url } = parsed.data;
+
+  // 4) Insert the new question
+  const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
       {
         quiz_id: quizId,
         question_text: question,
-        media_url: media_url,
+        question_type: 'multiple-choice', // or derive from payload if needed
+        explanation: null,
+        points: 1,
+        order_num: 0,
+        image_url: media_url ?? null,
+        video_url: null,
+        media_position: null,
       },
     ])
-    .select('id')
+    .select('*')
     .single();
 
-  if (error || !data) {
+  if (questionError || !createdQuestion) {
     return NextResponse.json(
-      { error: 'Failed to create question', details: error?.message },
+      { error: questionError?.message ?? 'Failed to create question' },
       { status: 500 }
     );
   }
 
-  const questionId = data.id;
-  const optionsWithQuestionId = options.map((option) => ({
-    ...option,
-    question_id: questionId,
+  // 5) Insert all the options, linking them to the newly created question
+  const optionsToInsert = options.map((opt) => ({
+    question_id: createdQuestion.id,
+    option_text: opt.option_text,
+    is_correct: opt.is_correct,
   }));
 
-  const { error: optionsError } = await supabase
-    .from('quiz_options')
-    .insert(optionsWithQuestionId);
+  const { data: createdOptions, error: optionsError } = await supabase
+    .from('question_options')
+    .insert(optionsToInsert);
 
   if (optionsError) {
     return NextResponse.json(
-      { error: 'Failed to create options', details: optionsError.message },
+      { error: optionsError.message },
       { status: 500 }
     );
   }
 
-  return NextResponse.json(
-    { message: 'Question created successfully' },
-    { status: 201 }
-  );
-}
+  // 6) Build the full QuizQuestion object to return
+  const result: QuizQuestion = {
+    id: createdQuestion.id,
+    quiz_id: createdQuestion.quiz_id,
+    question_text: createdQuestion.question_text,
+    question_type: createdQuestion.question_type,
+    explanation: createdQuestion.explanation,
+    points: createdQuestion.points,
+    order_num: createdQuestion.order_num,
+    options: createdOptions.map((opt) => ({
+      id: opt.id,
+      question_id: opt.question_id,
+      option_text: opt.option_text,
+      is_correct: opt.is_correct,
+    })),
+    image_url: createdQuestion.image_url,
+    video_url: createdQuestion.video_url,
+    media_position: createdQuestion.media_position,
+  };
 
-// ✨ ADD THIS NEW GET HANDLER ✨
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { quizId: string } }
-) {
-  const supabase = createSupabaseServerClient();
-  const { searchParams } = new URL(req.url);
-  const includeOptions = searchParams.get('includeOptions') === 'true';
-
-  const paramsSchema = z.object({
-    quizId: z.string().uuid("Invalid quiz ID."),
-  });
-
-  const validation = paramsSchema.safeParse(params);
-  if (!validation.success) {
-    return NextResponse.json({ error: 'Invalid URL parameters' }, { status: 400 });
-  }
-
-  const { quizId } = validation.data;
-
-  try {
-    // Fetch questions for the given quizId
-    const { data: questions, error } = await supabase
-      .from('quiz_questions')
-      .select(`
-        *,
-        options:quiz_options (
-          *
-        )
-      `)
-      .eq('quiz_id', quizId);
-
-    if (error) {
-      console.error('Error fetching questions:', error);
-      return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
-    }
-
-    return NextResponse.json(questions, { status: 200 });
-
-  } catch (err: any) {
-    return NextResponse.json({ error: 'An unexpected error occurred.', details: err.message }, { status: 500 });
-  }
+  // 7) Return the newly created question (with its options)
+  return NextResponse.json(result, { status: 201 });
 }
