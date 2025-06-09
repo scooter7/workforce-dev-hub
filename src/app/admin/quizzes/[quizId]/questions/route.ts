@@ -1,31 +1,82 @@
-// src/app/admin/quizzes/[quizId]/questions/route.ts
+// src/app/api/admin/quizzes/[quizId]/questions/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { QuizQuestion } from '@/types/quiz';
 
-const NewQuizQuestionSchema = z.object({
-  question: z.string(),
-  options: z.array(
-    z.object({
-      option_text: z.string(),
-      is_correct: z.boolean(),
-    })
-  ),
-  media_url: z.string().url().optional(),
-});
-
-export async function POST(
-  req: Request,
+/**
+ * GET handler: fetch all questions (with their options) for a given quiz.
+ * Note the request argument is prefixed with `_` to avoid the “declared but never read” error.
+ */
+export async function GET(
+  _req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
 
-  // Validate and parse request body
-  const body = await req.json();
-  const parsed = NewQuizQuestionSchema.safeParse(body);
+  const { data: questions, error } = await supabase
+    .from('quiz_questions')
+    .select('*, question_options(*)')
+    .eq('quiz_id', quizId);
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+
+  // Map Supabase result into our QuizQuestion interface
+  const result: QuizQuestion[] = (questions ?? []).map((q) => ({
+    id: q.id,
+    quiz_id: q.quiz_id,
+    question_text: q.question_text,
+    question_type: q.question_type,
+    explanation: q.explanation,
+    points: q.points,
+    order_num: q.order_num,
+    options: q.question_options.map((opt) => ({
+      id: opt.id,
+      question_id: opt.question_id,
+      option_text: opt.option_text,
+      is_correct: opt.is_correct,
+    })),
+    image_url: q.image_url,
+    video_url: q.video_url,
+    media_position: q.media_position,
+  }));
+
+  return NextResponse.json(result);
+}
+
+// Zod schema for validating POST payload
+const NewQuizQuestionSchema = z.object({
+  question: z.string(),
+  options: z
+    .array(
+      z.object({
+        option_text: z.string(),
+        is_correct: z.boolean(),
+      })
+    )
+    .min(1),
+  media_url: z.string().url().optional(),
+});
+
+/**
+ * POST handler: create a new question (and its options) for a given quiz.
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { quizId: string } }
+) {
+  const supabase = createSupabaseServerClient();
+  const { quizId } = params;
+
+  // Validate request body
+  const parsed = NewQuizQuestionSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid payload', issues: parsed.error.issues },
@@ -34,7 +85,7 @@ export async function POST(
   }
   const { question, options, media_url } = parsed.data;
 
-  // Insert the new question
+  // Insert the question row
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -60,7 +111,7 @@ export async function POST(
     );
   }
 
-  // Prepare and insert options
+  // Insert the option rows
   const optionsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
@@ -79,7 +130,7 @@ export async function POST(
     );
   }
 
-  // Build and return the full QuizQuestion
+  // Build and return the full QuizQuestion object
   const result: QuizQuestion = {
     id: createdQuestion.id,
     quiz_id: createdQuestion.quiz_id,
