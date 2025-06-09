@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { QuizQuestion } from '@/types/quiz';
 
 // Keep the existing POST handler as is
 export async function POST(
