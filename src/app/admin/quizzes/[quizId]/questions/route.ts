@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { QuizQuestion, QuestionOption } from '@/types/quiz';
+import type { QuizQuestion } from '@/types/quiz';
 
 const NewQuizQuestionSchema = z.object({
   question: z.string(),
