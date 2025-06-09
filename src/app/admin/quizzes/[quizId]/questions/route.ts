@@ -3,7 +3,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { QuizQuestion, QuestionOption } from '@/types/quiz';
+import type { QuizQuestion} from '@/types/quiz';
 
 // 1) Define and validate the shape of the incoming POST body
 const NewQuizQuestionSchema = z.object({
