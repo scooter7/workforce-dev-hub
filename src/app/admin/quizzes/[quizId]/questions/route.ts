@@ -7,7 +7,7 @@ import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 /**
  * GET handler: fetch all questions (with their options) for a given quiz.
- * The request arg is prefixed `_req` to avoid “declared but never read” errors.
+ * We prefix the request argument with `_` since we don’t use it in this function.
  */
 export async function GET(
   _req: NextRequest,
@@ -16,19 +16,17 @@ export async function GET(
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
 
-  const { data: questions, error } = await supabase
+  const { data, error } = await supabase
     .from('quiz_questions')
     .select('*, question_options(*)')
-    .eq('quiz_id', quizId);
+    .eq('quiz_id', quizId)
+    .order('order_num', { ascending: true });
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const result: QuizQuestion[] = (questions ?? []).map((q) => ({
+  const result: QuizQuestion[] = (data ?? []).map((q) => ({
     id: q.id,
     quiz_id: q.quiz_id,
     question_text: q.question_text,
@@ -50,7 +48,6 @@ export async function GET(
   return NextResponse.json(result);
 }
 
-// Zod schema for validating POST payload
 const NewQuizQuestionSchema = z.object({
   question: z.string(),
   options: z
@@ -84,7 +81,7 @@ export async function POST(
   }
   const { question, options, media_url } = parsed.data;
 
-  // Insert the question
+  // Insert the question row
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
