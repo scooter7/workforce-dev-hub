@@ -1,5 +1,3 @@
-// src/types/quiz.ts
-
 /**
  * Defines the possible positions for media (image/video) relative to the question text.
  */
