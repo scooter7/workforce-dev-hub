@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz'; // <<< ADDED/RESTORED IMPORTS
+import { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
+
+// Shared Zod Schemas
+const paramsSchema = z.object({
+  quizId: z.string().uuid("Invalid Quiz ID format in URL"),
+});
 
 const optionSchema = z.object({
   option_text: z.string().min(1, "Option text cannot be empty"),
@@ -22,10 +27,11 @@ const questionPayloadSchema = z.object({
   options: z.array(optionSchema).min(2, "At least two options required.").optional(),
 });
 
-const paramsSchema = z.object({
-    quizId: z.string().uuid("Invalid Quiz ID format in URL"),
-});
 
+/**
+ * Handles POST requests to create a new question for a quiz.
+ * Admin-only route.
+ */
 export async function POST(
   req: NextRequest,
   { params }: { params: { quizId: string } }
@@ -84,8 +90,8 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to create question.', details: questionInsertError?.message }, { status: 500 });
     }
 
-    let insertedOptionsData: QuestionOption[] = []; // Use QuestionOption type
-    if (options && options.length > 0 && newQuestion) { // Ensure options exist
+    let insertedOptionsData: QuestionOption[] = [];
+    if (options && options.length > 0 && newQuestion) {
       const optionsToInsert = options.map(opt => ({
         question_id: newQuestion.id, 
         option_text: opt.option_text, 
@@ -93,7 +99,7 @@ export async function POST(
       }));
 
       const { data: createdOptions, error: optionsInsertError } = await supabaseAdmin
-        .from('question_options')
+        .from('quiz_options') // Corrected table name
         .insert(optionsToInsert)
         .select('id, question_id, option_text, is_correct');
       
@@ -110,7 +116,7 @@ export async function POST(
     
     const fullQuestionData: QuizQuestion = {
         id: newQuestion.id,
-        quiz_id: newQuestion.quiz_id as string, // quiz_id from DB should be string if NOT NULL
+        quiz_id: newQuestion.quiz_id as string,
         question_text: newQuestion.question_text,
         question_type: newQuestion.question_type as 'multiple-choice' | 'true-false',
         explanation: newQuestion.explanation,
@@ -119,13 +125,53 @@ export async function POST(
         image_url: newQuestion.image_url,
         video_url: newQuestion.video_url,
         media_position: newQuestion.media_position as MediaPosition | null,
-        options: insertedOptionsData, // Already typed as QuestionOption[]
+        options: insertedOptionsData,
     };
 
     return NextResponse.json({ message: 'Question added successfully!', question: fullQuestionData }, { status: 201 });
 
   } catch (error: any) {
-    console.error(`POST /api/admin/quizzes/${quizId}/questions - Generic Error:`, error);
+    console.error(`POST /api/admin/quizzes/${params.quizId}/questions - Generic Error:`, error);
     return NextResponse.json({ error: 'An unexpected error occurred.', details: error.message }, { status: 500 });
+  }
+}
+
+/**
+ * Handles GET requests to fetch all questions for a specific quiz.
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { quizId: string } }
+) {
+  const supabase = createSupabaseServerClient();
+  
+  const validation = paramsSchema.safeParse(params);
+  if (!validation.success) {
+    return NextResponse.json({ error: 'Invalid URL parameters', details: validation.error.flatten().fieldErrors }, { status: 400 });
+  }
+
+  const { quizId } = validation.data;
+
+  try {
+    const { data: questions, error } = await supabase
+      .from('quiz_questions')
+      .select(`
+        *,
+        options:quiz_options (
+          *
+        )
+      `)
+      .eq('quiz_id', quizId)
+      .order('order_num', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching questions:', error);
+      return NextResponse.json({ error: 'Failed to fetch questions' }, { status: 500 });
+    }
+
+    return NextResponse.json(questions, { status: 200 });
+
+  } catch (err: any) {
+    return NextResponse.json({ error: 'An unexpected error occurred.', details: err.message }, { status: 500 });
   }
 }

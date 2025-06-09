@@ -1,69 +1,49 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'; // UPDATED IMPORT
-import { createClient } from '@supabase/supabase-js'; // For admin client - this stays the same
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { Database } from '@/types/db'; // Your generated DB types
+import { createClient } from '@supabase/supabase-js';
 
-// Environment variables for Supabase URL and Anon Key
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// Function to create a Supabase client for Server Components
-export function createSupabaseServerClient() { // Keeping your wrapper function name
-  const cookieStore = cookies(); // Get the cookie store from next/headers
-
-  // Check if essential environment variables are set
-  if (!supabaseUrl) {
-    throw new Error("Missing environment variable NEXT_PUBLIC_SUPABASE_URL for server client.");
-  }
-  if (!supabaseAnonKey) {
-    throw new Error("Missing environment variable NEXT_PUBLIC_SUPABASE_ANON_KEY for server client.");
-  }
-
-  return createServerClient<Database>( // Use createServerClient from @supabase/ssr
-    supabaseUrl,
-    supabaseAnonKey,
+/**
+ * Creates a Supabase client for server-side operations that respects user authentication.
+ * Used for read operations or writes on behalf of the logged-in user.
+ */
+export const createSupabaseServerClient = () => {
+  const cookieStore = cookies();
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set(name: string, value: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value, ...options });
-          } catch (error) {
-            // The `set` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-            // console.warn(`ServerComponent: Tried to set cookie '${name}' from a Server Component. This is a no-op without revalidation. Ensure middleware handles session refresh.`);
-          }
+        set(name: string, value: string, options) {
+          cookieStore.set({ name, value, ...options });
         },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options });
-          } catch (error) {
-            // The `delete` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-            // console.warn(`ServerComponent: Tried to remove cookie '${name}' from a Server Component. This is a no-op without revalidation. Ensure middleware handles session refresh.`);
-          }
+        remove(name: string, options) {
+          cookieStore.set({ name, value: '', ...options });
         },
       },
     }
   );
-}
+};
 
-// Function to create a Supabase admin client for privileged operations
-export function createSupabaseAdminClient() {
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    throw new Error(
-      "Supabase URL or Service Role Key is missing for admin client. Check your .env.local file."
+/**
+ * Creates a Supabase admin client that can bypass RLS.
+ * This should ONLY be used in server-side routes for administrative tasks.
+ * Requires the SUPABASE_SERVICE_ROLE_KEY environment variable to be set.
+ */
+export const createSupabaseAdminClient = () => {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set. Admin client cannot be created.');
+    }
+    return createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+            auth: {
+                autoRefreshToken: false,
+                persistSession: false,
+            },
+        }
     );
-  }
-  return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
+};
