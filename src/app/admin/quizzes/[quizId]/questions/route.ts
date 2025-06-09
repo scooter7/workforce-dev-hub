@@ -7,7 +7,7 @@ import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 /**
  * GET handler: fetch all questions (with their options) for a given quiz.
- * We prefix the request argument with `_` since we don’t use it in this function.
+ * The incoming request object is prefixed with `_` since we don't actually read it.
  */
 export async function GET(
   _req: NextRequest,
@@ -48,6 +48,9 @@ export async function GET(
   return NextResponse.json(result);
 }
 
+/**
+ * Zod schema for validating the body of POST requests.
+ */
 const NewQuizQuestionSchema = z.object({
   question: z.string(),
   options: z
@@ -71,7 +74,7 @@ export async function POST(
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
 
-  // Validate request body
+  // 1) Validate body
   const parsed = NewQuizQuestionSchema.safeParse(await req.json());
   if (!parsed.success) {
     return NextResponse.json(
@@ -81,7 +84,7 @@ export async function POST(
   }
   const { question, options, media_url } = parsed.data;
 
-  // Insert the question row
+  // 2) Insert into quiz_questions
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -107,7 +110,7 @@ export async function POST(
     );
   }
 
-  // Prepare and insert options
+  // 3) Insert question_options
   const optionsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
@@ -126,7 +129,7 @@ export async function POST(
     );
   }
 
-  // Build and return the full QuizQuestion object
+  // 4) Build full QuizQuestion to return
   const result: QuizQuestion = {
     id: createdQuestion.id,
     quiz_id: createdQuestion.quiz_id,
