@@ -10,7 +10,7 @@ import type {
 } from '@/types/quiz';
 
 /**
- * GET handler: fetch all questions + options.
+ * GET handler: returns all questions + their options for a quiz
  */
 export async function GET(
   _req: NextRequest,
@@ -37,14 +37,12 @@ export async function GET(
     explanation:   q.explanation,
     points:        q.points,
     order_num:     q.order_num,
-    options:       (q.question_options ?? []).map(
-                     (opt: QuestionOption) => ({
-                       id:           opt.id,
-                       question_id:  opt.question_id,
-                       option_text:  opt.option_text,
-                       is_correct:   opt.is_correct,
-                     })
-                   ),
+    options:       (q.question_options ?? []).map((opt: QuestionOption) => ({
+                     id:           opt.id,
+                     question_id:  opt.question_id,
+                     option_text:  opt.option_text,
+                     is_correct:   opt.is_correct,
+                   })),
     image_url:     q.image_url,
     video_url:     q.video_url,
     media_position:q.media_position,
@@ -54,19 +52,46 @@ export async function GET(
 }
 
 /**
- * Zod schema for the POST payload your UI is sending.
+ * Zod schema for POST payload.
+ * Empty strings for image_url/video_url are converted to null first.
  */
 const NewQuizQuestionSchema = z.object({
-  question_text: z.string().min(1, 'question_text is required'),
+  question_text: z
+    .string()
+    .min(1, 'question_text is required'),
+
   question_type: z
     .enum(['multiple-choice', 'true-false'])
     .default('multiple-choice'),
-  explanation:   z.string().nullable().optional(),
-  points:        z.number().int().min(0).default(1),
-  order_num:     z.number().int().min(0).default(0),
 
-  image_url:     z.string().url().nullable().optional(),
-  video_url:     z.string().url().nullable().optional(),
+  explanation: z
+    .string()
+    .nullable()
+    .optional(),
+
+  points: z
+    .number()
+    .int()
+    .min(0)
+    .default(1),
+
+  order_num: z
+    .number()
+    .int()
+    .min(0)
+    .default(0),
+
+  // Preprocess "" → null, then require string URL or null/undefined
+  image_url: z
+    .preprocess(val => val === "" ? null : val, 
+      z.string().url().nullable().optional()
+    ),
+
+  video_url: z
+    .preprocess(val => val === "" ? null : val,
+      z.string().url().nullable().optional()
+    ),
+
   media_position: z
     .enum(['above_text','below_text','left_of_text','right_of_text'])
     .optional(),
@@ -74,8 +99,11 @@ const NewQuizQuestionSchema = z.object({
   options: z
     .array(
       z.object({
-        option_text: z.string().min(1, 'option_text is required'),
-        is_correct:  z.boolean(),
+        option_text: z
+          .string()
+          .min(1, 'option_text is required'),
+        is_correct:  z
+          .boolean(),
       })
     )
     .min(1, 'At least one option is required'),
@@ -96,8 +124,7 @@ export async function POST(
       { status: 400 }
     );
   }
-
-  // 2) Destructure everything we need
+  // 2) Destructure validated + preprocessed data
   const {
     question_text,
     question_type,
@@ -110,7 +137,7 @@ export async function POST(
     options,
   } = parsed.data;
 
-  // 3) Insert into quiz_questions
+  // 3) Insert the question row
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -136,12 +163,13 @@ export async function POST(
     );
   }
 
-  // 4) Insert the options rows
+  // 4) Insert each option
   const optsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
     is_correct:  opt.is_correct,
   }));
+
   const { data: createdOptions, error: optionsError } = await supabase
     .from('question_options')
     .insert(optsToInsert)
