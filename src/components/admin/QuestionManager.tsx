@@ -3,7 +3,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// Corrected: Use default imports for these components
 import Button from '@/components/ui/Button';
 import AddQuestionForm from './AddQuestionForm';
 import Modal from '@/components/ui/Modal';
@@ -21,6 +20,7 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
   const [loading, setLoading] = useState(true);
 
   const fetchQuestions = async () => {
+    setLoading(true); // Set loading true at the start of fetch
     try {
       const response = await fetch(
         `/api/admin/quizzes/${quizId}/questions`
@@ -39,19 +39,16 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
 
   useEffect(() => {
     fetchQuestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId]);
 
   const handleQuestionAdded = (newQuestion: QuizQuestion) => {
-    // Add the new question to the top of the list for immediate visibility
-    setQuestions((prev) => [newQuestion, ...prev]);
-    setIsModalOpen(false);
-    // Optional: refetch all to ensure list is perfectly in sync with DB order
+    // Re-fetch questions to get the definitive list from the server
     fetchQuestions();
+    setIsModalOpen(false);
   };
 
   const handleDelete = async (questionId: string) => {
-    // Use a custom modal for confirmation instead of window.confirm
-    // For now, we'll keep window.confirm for simplicity, but a custom modal is better UI
     if (window.confirm('Are you sure you want to delete this question?')) {
       try {
         const response = await fetch(
@@ -68,13 +65,15 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
         } else {
           const errorData = await response.json();
           console.error('Failed to delete question:', errorData.error);
-          // Here you would show an error toast to the user
         }
       } catch (error) {
         console.error('Error deleting question:', error);
       }
     }
   };
+
+  // Calculate the next order number for the new question
+  const nextOrderNum = questions.length > 0 ? Math.max(...questions.map(q => q.order_num)) + 1 : 0;
 
   if (loading) return <div>Loading questions...</div>;
 
@@ -86,21 +85,25 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        {/* Correctly passing all required props to the form */}
         <AddQuestionForm
           quizId={quizId}
           onQuestionAdded={handleQuestionAdded}
+          onCancel={() => setIsModalOpen(false)}
+          nextOrderNum={nextOrderNum}
         />
       </Modal>
 
       <div className="space-y-4">
         {questions.length > 0 ? (
-          questions.map((q) => (
+          // Sort questions by order_num for consistent display
+          [...questions].sort((a, b) => a.order_num - b.order_num).map((q) => (
             <div
               key={q.id}
               className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
             >
               <div>
-                <p className="font-semibold">{q.question_text}</p>
+                <p className="font-semibold">({q.order_num}) {q.question_text}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Type: {q.question_type} | Points: {q.points}
                 </p>
