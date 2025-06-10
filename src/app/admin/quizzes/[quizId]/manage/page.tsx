@@ -1,9 +1,11 @@
+// src/app/admin/quizzes/[quizId]/manage/page.tsx
+
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-//import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeftIcon } from '@heroicons/react/24/solid';
-import QuestionManager from '@/components/admin/QuestionManager'; // We'll create this
-import { QuizQuestion, QuestionOption } from '@/types/quiz'; // Corrected import
+// Corrected: Use a named import for QuestionManager
+import { QuestionManager } from '@/components/admin/QuestionManager';
 
 interface ManageQuizPageProps {
   params: {
@@ -11,97 +13,66 @@ interface ManageQuizPageProps {
   };
 }
 
-interface QuizDetailsForAdmin {
-    id: string;
-    title: string;
-    description?: string | null;
-    questions: Array<Omit<QuizQuestion, 'options'> & { options: Array<Omit<QuestionOption, 'question_id'>> }>;
+// This function is simplified to only fetch the main quiz details.
+// The QuestionManager component will handle fetching its own questions and options.
+async function getQuizDetails(supabase: any, quizId: string) {
+  const { data: quiz, error } = await supabase
+    .from('quizzes')
+    .select('id, title, description')
+    .eq('id', quizId)
+    .single();
+
+  if (error) {
+    console.error(`Error fetching quiz details for ${quizId}:`, error);
+    return null;
+  }
+  return quiz;
 }
-
-async function getQuizForAdmin(supabase: any, quizId: string): Promise<QuizDetailsForAdmin | null> {
-    const { data: quiz, error: quizError } = await supabase
-        .from('quizzes')
-        .select('id, title, description')
-        .eq('id', quizId)
-        .single();
-
-    if (quizError || !quiz) {
-        console.error("Admin: Error fetching quiz details for ", quizId, quizError);
-        return null;
-    }
-
-    const { data: questionsRaw, error: questionsError } = await supabase
-        .from('quiz_questions')
-        .select('id, question_text, question_type, explanation, points, order_num')
-        .eq('quiz_id', quizId)
-        .order('order_num');
-
-    if (questionsError) {
-        console.error("Admin: Error fetching questions for quiz ", quizId, questionsError);
-        // Return quiz metadata even if questions fail, QuestionManager can show "no questions"
-        return { ...quiz, questions: [] };
-    }
-
-    const questions = [];
-    if (questionsRaw) {
-        for (const q of questionsRaw) {
-            const { data: optionsRaw, error: optionsError } = await supabase
-                .from('question_options')
-                // For admin, we DO fetch is_correct
-                .select('id, option_text, is_correct')
-                .eq('question_id', q.id)
-                .order('id'); // Or some other consistent order
-
-            if (optionsError) {
-                console.error("Admin: Error fetching options for question ", q.id, optionsError);
-            }
-            questions.push({ ...q, options: optionsRaw || [] });
-        }
-    }
-    // @ts-ignore
-    return { ...quiz, questions };
-}
-
 
 export async function generateMetadata({ params }: ManageQuizPageProps) {
   const supabase = createSupabaseServerClient();
-  const { data: quiz } = await supabase.from('quizzes').select('title').eq('id', params.quizId).single();
+  const quiz = await getQuizDetails(supabase, params.quizId);
   return {
     title: quiz ? `Manage Quiz: ${quiz.title}` : 'Manage Quiz',
   };
 }
 
-export default async function ManageQuizQuestionsPage({ params }: ManageQuizPageProps) {
+export default async function ManageQuizQuestionsPage({
+  params,
+}: ManageQuizPageProps) {
   const supabase = createSupabaseServerClient();
-  // Admin check is handled by the AdminLayout
-
   const quizId = params.quizId;
-  const quizDetails = await getQuizForAdmin(supabase, quizId);
+  const quiz = await getQuizDetails(supabase, quizId);
 
-  if (!quizDetails) {
-    return (
-      <div>
-        <h1 className="text-2xl font-bold text-red-600">Quiz Not Found</h1>
-        <p>The quiz you are trying to manage (ID: {quizId}) does not exist.</p>
-        <Link href="/admin/quizzes" className="text-blue-500 hover:underline mt-4 inline-block">
-          &larr; Back to Quizzes List (Admin)
-        </Link>
-      </div>
-    );
+  if (!quiz) {
+    // The notFound() function is a cleaner way to handle this in Next.js
+    notFound();
   }
 
   return (
-    <div>
-      <Link href="/quizzes" className="inline-flex items-center text-brand-primary hover:text-brand-primary-dark mb-4 text-sm">
-          <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          Back to Public Quizzes List
+    <div className="container mx-auto p-4">
+      {/* Corrected Link to point back to the admin quizzes list */}
+      <Link
+        href="/admin/quizzes"
+        className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white mb-4"
+      >
+        <ArrowLeftIcon className="h-4 w-4 mr-2" />
+        Back to Quizzes
       </Link>
-      <h1 className="text-3xl font-bold text-neutral-text mb-2">
-        Manage Questions for: <span className="text-brand-primary">{quizDetails.title}</span>
-      </h1>
-      <p className="text-gray-600 mb-6">{quizDetails.description || 'No description for this quiz.'}</p>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">
+          Manage Questions for: <span className="text-blue-600">{quiz.title}</span>
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          {quiz.description || 'No description for this quiz.'}
+        </p>
+      </div>
 
-      <QuestionManager quizId={quizDetails.id} initialQuestions={quizDetails.questions} />
+      {/* The QuestionManager now only needs the quizId.
+        It will fetch its own list of questions internally.
+        This resolves the error from passing an unexpected 'initialQuestions' prop.
+      */}
+      <QuestionManager quizId={quiz.id} />
     </div>
   );
 }
