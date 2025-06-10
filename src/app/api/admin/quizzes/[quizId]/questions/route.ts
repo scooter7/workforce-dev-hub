@@ -1,11 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type {
-  QuizQuestion,
-  QuestionOption,
-  MediaPosition,
-} from '@/types/quiz';
 
 /**
  * GET handler: returns all questions + their options for a quiz
