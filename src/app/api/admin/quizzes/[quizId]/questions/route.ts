@@ -1,13 +1,12 @@
 // src/app/api/admin/quizzes/[quizId]/questions/route.ts
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { createSupabaseServerClient }    from '@/lib/supabase/server';
 import { z }                             from 'zod';
+import { createSupabaseServerClient }    from '@/lib/supabase/server';
 import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 /**
- * GET /api/admin/quizzes/:quizId/questions
- * — Returns all questions + their options for this quiz.
+ * GET handler: fetch all questions + their options for a quiz.
  */
 export async function GET(
   _req: NextRequest,
@@ -26,7 +25,6 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Map exactly into your QuizQuestion interface
   const result: QuizQuestion[] = (data ?? []).map((q) => ({
     id:            q.id,
     quiz_id:       q.quiz_id,
@@ -34,7 +32,7 @@ export async function GET(
     question_type: q.question_type,
     explanation:   q.explanation,
     points:        q.points,
-    order_num:     q.order_num,                // ← ensures order_num is present
+    order_num:     q.order_num,
     options:       (q.question_options ?? []).map((opt: QuestionOption) => ({
                      id:           opt.id,
                      question_id:  opt.question_id,
@@ -49,9 +47,9 @@ export async function GET(
   return NextResponse.json(result);
 }
 
-
 /**
- * Zod schema for validating POST /api/admin/quizzes/:quizId/questions
+ * Zod schema for POST body.
+ * Allows image_url/video_url to be string URLs or null.
  */
 const NewQuizQuestionSchema = z.object({
   question_text: z.string().min(1, 'question_text is required'),
@@ -63,17 +61,13 @@ const NewQuizQuestionSchema = z.object({
       })
     )
     .min(1, 'At least one option is required'),
-  image_url:      z.string().url().optional(),
-  video_url:      z.string().url().optional(),
+  image_url: z.string().url().nullable().optional(),
+  video_url: z.string().url().nullable().optional(),
   media_position: z
     .enum(['above_text','below_text','left_of_text','right_of_text'])
     .optional(),
 });
 
-/**
- * POST /api/admin/quizzes/:quizId/questions
- * — Creates a new question + its options.
- */
 export async function POST(
   req: NextRequest,
   { params }: { params: { quizId: string } }
@@ -92,19 +86,19 @@ export async function POST(
   const { question_text, options, image_url, video_url, media_position } =
     parsed.data;
 
-  // 2) Insert question
+  // 2) Insert the question
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
       {
         quiz_id:        quizId,
-        question_text,
+        question_text,                   // maps directly
         question_type:  'multiple-choice',
         explanation:    null,
         points:         1,
-        order_num:      0,             // you can compute the next order_num here instead
-        image_url:      image_url ?? null,
-        video_url:      video_url ?? null,
+        order_num:      0,               // adjust/order logic if needed
+        image_url:      image_url  ?? null,
+        video_url:      video_url  ?? null,
         media_position: media_position ?? 'above_text',
       },
     ])
@@ -118,7 +112,7 @@ export async function POST(
     );
   }
 
-  // 3) Insert options
+  // 3) Insert its options
   const optsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
