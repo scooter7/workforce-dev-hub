@@ -32,7 +32,6 @@ export async function GET(
 
 /**
  * Zod schema for POST payload.
- * Empty strings for image_url/video_url are converted to null first.
  */
 const NewQuizQuestionSchema = z.object({
   question_text: z.string().min(1, 'question_text is required'),
@@ -41,7 +40,6 @@ const NewQuizQuestionSchema = z.object({
     .default('multiple-choice'),
   explanation: z.string().nullable().optional(),
   points: z.number().int().min(0).default(1),
-  // order_num is now optional, as the server will determine the correct value
   order_num: z.number().int().min(0).optional(),
   image_url: z.preprocess(
     (val) => (val === '' ? null : val),
@@ -69,96 +67,100 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
-  const supabase = await createSupabaseServerClient();
+  // Wrap the entire function in a try...catch block for robust error handling
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const parsed = NewQuizQuestionSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid payload', issues: parsed.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const {
+      question_text,
+      question_type,
+      explanation,
+      points,
+      image_url,
+      video_url,
+      media_position,
+      options,
+    } = parsed.data;
+
+    const { data: existingQuestions, error: countError } = await supabase
+      .from('quiz_questions')
+      .select('order_num')
+      .eq('quiz_id', params.quizId)
+      .order('order_num', { ascending: false })
+      .limit(1);
+
+    if (countError) {
+      return NextResponse.json({ error: "Failed to determine question order", details: countError.message }, { status: 500 });
+    }
+
+    const nextOrderNum = existingQuestions.length > 0 ? existingQuestions[0].order_num + 1 : 0;
+
+    const { data: createdQuestion, error: questionError } = await supabase
+      .from('quiz_questions')
+      .insert([
+        {
+          quiz_id: params.quizId,
+          question_text,
+          question_type,
+          explanation,
+          points,
+          order_num: nextOrderNum,
+          image_url: image_url ?? null,
+          video_url: video_url ?? null,
+          media_position: media_position,
+        },
+      ])
+      .select('*')
+      .single();
+
+    // Add explicit checks for both an error and for null data
+    if (questionError || !createdQuestion) {
+      console.error("Error inserting question:", questionError);
+      return NextResponse.json({ error: "Database error: Could not create the question.", details: questionError?.message || "Insert failed to return data." }, { status: 500 });
+    }
+
+    const optionsWithQuestionId = options.map((option) => ({
+      ...option,
+      question_id: createdQuestion.id,
+    }));
+
+    const { error: optionsError } = await supabase
+      .from('quiz_question_options')
+      .insert(optionsWithQuestionId);
+
+    if (optionsError) {
+      console.error("Error inserting options:", optionsError);
+      // Ideally, you would delete the orphaned question here in a real-world app
+      return NextResponse.json({ error: "Question was created, but failed to add answer options.", details: optionsError.message }, { status: 500 });
+    }
+
+    const finalQuestion = {
+      ...createdQuestion,
+      options: optionsWithQuestionId,
+    };
+
+    return NextResponse.json(finalQuestion, { status: 201 });
+
+  } catch (e: any) {
+    // This will catch any other unexpected errors in the process
+    console.error("An unexpected error occurred in POST /questions:", e);
+    return NextResponse.json({ error: "An unexpected internal server error occurred.", details: e.message }, { status: 500 });
   }
-
-  const body = await req.json();
-  const parsed = NewQuizQuestionSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid payload', issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-
-  const {
-    question_text,
-    question_type,
-    explanation,
-    points,
-    image_url,
-    video_url,
-    media_position,
-    options,
-  } = parsed.data;
-
-  // --- Start of Server-Side Order Number Calculation ---
-  // This makes the process robust and prevents crashes from duplicate order numbers.
-  const { data: existingQuestions, error: countError } = await supabase
-    .from('quiz_questions')
-    .select('order_num')
-    .eq('quiz_id', params.quizId)
-    .order('order_num', { ascending: false })
-    .limit(1);
-
-  if (countError) {
-    return NextResponse.json({ error: "Failed to determine question order" }, { status: 500 });
-  }
-
-  const nextOrderNum = existingQuestions.length > 0 ? existingQuestions[0].order_num + 1 : 0;
-  // --- End of Server-Side Order Number Calculation ---
-
-
-  const { data: createdQuestion, error: questionError } = await supabase
-    .from('quiz_questions')
-    .insert([
-      {
-        quiz_id: params.quizId,
-        question_text,
-        question_type,
-        explanation,
-        points,
-        order_num: nextOrderNum, // Use the server-calculated order number
-        image_url: image_url ?? null,
-        video_url: video_url ?? null,
-        media_position: media_position,
-      },
-    ])
-    .select('*')
-    .single();
-
-  if (questionError) {
-    console.error("Error inserting question:", questionError);
-    return NextResponse.json({ error: "Database error: Could not create the question.", details: questionError.message }, { status: 500 });
-  }
-
-  const optionsWithQuestionId = options.map((option) => ({
-    ...option,
-    question_id: createdQuestion.id,
-  }));
-
-  const { error: optionsError } = await supabase
-    .from('quiz_question_options')
-    .insert(optionsWithQuestionId);
-
-  if (optionsError) {
-    // If options fail, we should ideally delete the question we just created
-    // to avoid orphaned data. For now, we return a detailed error.
-    console.error("Error inserting options:", optionsError);
-    return NextResponse.json({ error: "Question was created, but failed to add answer options.", details: optionsError.message }, { status: 500 });
-  }
-
-  const finalQuestion = {
-    ...createdQuestion,
-    options: optionsWithQuestionId,
-  };
-
-  return NextResponse.json(finalQuestion, { status: 201 });
 }
