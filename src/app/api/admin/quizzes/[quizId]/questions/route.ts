@@ -36,34 +36,25 @@ export async function GET(
  */
 const NewQuizQuestionSchema = z.object({
   question_text: z.string().min(1, 'question_text is required'),
-
   question_type: z
     .enum(['multiple-choice', 'true-false'])
     .default('multiple-choice'),
-
   explanation: z.string().nullable().optional(),
-
   points: z.number().int().min(0).default(1),
-
-  order_num: z.number().int().min(0).default(0),
-
-  // Corrected: Removed the strict .url() validation to be more flexible.
+  // order_num is now optional, as the server will determine the correct value
+  order_num: z.number().int().min(0).optional(),
   image_url: z.preprocess(
     (val) => (val === '' ? null : val),
     z.string().nullable().optional()
   ),
-
-  // Corrected: Removed the strict .url() validation to be more flexible.
   video_url: z.preprocess(
     (val) => (val === '' ? null : val),
     z.string().nullable().optional()
   ),
-
   media_position: z
     .enum(['above_text', 'below_text', 'left_of_text', 'right_of_text'])
     .nullable()
     .optional(),
-
   options: z
     .array(
       z.object({
@@ -102,12 +93,28 @@ export async function POST(
     question_type,
     explanation,
     points,
-    order_num,
     image_url,
     video_url,
     media_position,
     options,
   } = parsed.data;
+
+  // --- Start of Server-Side Order Number Calculation ---
+  // This makes the process robust and prevents crashes from duplicate order numbers.
+  const { data: existingQuestions, error: countError } = await supabase
+    .from('quiz_questions')
+    .select('order_num')
+    .eq('quiz_id', params.quizId)
+    .order('order_num', { ascending: false })
+    .limit(1);
+
+  if (countError) {
+    return NextResponse.json({ error: "Failed to determine question order" }, { status: 500 });
+  }
+
+  const nextOrderNum = existingQuestions.length > 0 ? existingQuestions[0].order_num + 1 : 0;
+  // --- End of Server-Side Order Number Calculation ---
+
 
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
@@ -118,7 +125,7 @@ export async function POST(
         question_type,
         explanation,
         points,
-        order_num,
+        order_num: nextOrderNum, // Use the server-calculated order number
         image_url: image_url ?? null,
         video_url: video_url ?? null,
         media_position: media_position,
@@ -128,7 +135,8 @@ export async function POST(
     .single();
 
   if (questionError) {
-    return NextResponse.json({ error: questionError.message }, { status: 500 });
+    console.error("Error inserting question:", questionError);
+    return NextResponse.json({ error: "Database error: Could not create the question.", details: questionError.message }, { status: 500 });
   }
 
   const optionsWithQuestionId = options.map((option) => ({
@@ -141,7 +149,10 @@ export async function POST(
     .insert(optionsWithQuestionId);
 
   if (optionsError) {
-    return NextResponse.json({ error: optionsError.message }, { status: 500 });
+    // If options fail, we should ideally delete the question we just created
+    // to avoid orphaned data. For now, we return a detailed error.
+    console.error("Error inserting options:", optionsError);
+    return NextResponse.json({ error: "Question was created, but failed to add answer options.", details: optionsError.message }, { status: 500 });
   }
 
   const finalQuestion = {
