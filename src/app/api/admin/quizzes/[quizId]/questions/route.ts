@@ -1,12 +1,11 @@
 // src/app/api/admin/quizzes/[quizId]/questions/route.ts
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { z }                             from 'zod';
 import { createSupabaseServerClient }    from '@/lib/supabase/server';
 import type { QuizQuestion, QuestionOption } from '@/types/quiz';
 
 /**
- * GET handler: fetch all questions + their options for a quiz.
+ * GET handler (unchanged)
  */
 export async function GET(
   _req: NextRequest,
@@ -48,107 +47,27 @@ export async function GET(
 }
 
 /**
- * Zod schema for POST body.
- * Allows image_url/video_url to be string URLs or null.
+ * POST handler (temporarily only logs & echoes).
  */
-const NewQuizQuestionSchema = z.object({
-  question_text: z.string().min(1, 'question_text is required'),
-  options: z
-    .array(
-      z.object({
-        option_text: z.string().min(1),
-        is_correct:  z.boolean(),
-      })
-    )
-    .min(1, 'At least one option is required'),
-  image_url: z.string().url().nullable().optional(),
-  video_url: z.string().url().nullable().optional(),
-  media_position: z
-    .enum(['above_text','below_text','left_of_text','right_of_text'])
-    .optional(),
-});
-
 export async function POST(
   req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
-  const supabase = createSupabaseServerClient();
-  const { quizId } = params;
-
-  // 1) Validate incoming JSON
-  const parsed = NewQuizQuestionSchema.safeParse(await req.json());
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Invalid payload', issues: parsed.error.issues },
-      { status: 400 }
-    );
-  }
-  const { question_text, options, image_url, video_url, media_position } =
-    parsed.data;
-
-  // 2) Insert the question
-  const { data: createdQuestion, error: questionError } = await supabase
-    .from('quiz_questions')
-    .insert([
-      {
-        quiz_id:        quizId,
-        question_text,                   // maps directly
-        question_type:  'multiple-choice',
-        explanation:    null,
-        points:         1,
-        order_num:      0,               // adjust/order logic if needed
-        image_url:      image_url  ?? null,
-        video_url:      video_url  ?? null,
-        media_position: media_position ?? 'above_text',
-      },
-    ])
-    .select('*')
-    .single();
-
-  if (!createdQuestion || questionError) {
-    return NextResponse.json(
-      { error: questionError?.message ?? 'Failed to create question' },
-      { status: 500 }
-    );
+  // 1) Parse JSON
+  let body: any;
+  try {
+    body = await req.json();
+  } catch (err) {
+    console.error('⚠️ JSON parse error:', err);
+    return NextResponse.json({ error: 'Bad JSON', details: String(err) }, { status: 400 });
   }
 
-  // 3) Insert its options
-  const optsToInsert = options.map((opt) => ({
-    question_id: createdQuestion.id,
-    option_text: opt.option_text,
-    is_correct:  opt.is_correct,
-  }));
-  const { data: createdOptions, error: optionsError } = await supabase
-    .from('question_options')
-    .insert(optsToInsert)
-    .select('*');
+  // 2) Log on server:
+  console.log('🛠️ RAW BODY RECEIVED for quizId=' + params.quizId, body);
 
-  if (!createdOptions || optionsError) {
-    return NextResponse.json(
-      { error: optionsError?.message ?? 'Failed to create options' },
-      { status: 500 }
-    );
-  }
-
-  // 4) Build and return the new QuizQuestion
-  const result: QuizQuestion = {
-    id:            createdQuestion.id,
-    quiz_id:       createdQuestion.quiz_id,
-    question_text: createdQuestion.question_text,
-    question_type: createdQuestion.question_type,
-    explanation:   createdQuestion.explanation,
-    points:        createdQuestion.points,
-    order_num:     createdQuestion.order_num,
-    options:       createdOptions.map((opt: QuestionOption) => ({
-                     id:           opt.id,
-                     question_id:  opt.question_id,
-                     option_text:  opt.option_text,
-                     is_correct:   opt.is_correct,
-                   })),
-    image_url:     createdQuestion.image_url,
-    video_url:     createdQuestion.video_url,
-    media_position:createdQuestion.media_position,
-  };
-
-  return NextResponse.json(result, { status: 201 });
+  // 3) Echo back to browser so you can inspect it:
+  return NextResponse.json(
+    { quizId: params.quizId, received: body },
+    { status: 200 }
+  );
 }
