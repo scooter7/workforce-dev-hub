@@ -20,7 +20,7 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
   const [loading, setLoading] = useState(true);
 
   const fetchQuestions = async () => {
-    setLoading(true); // Set loading true at the start of fetch
+    setLoading(true);
     try {
       const response = await fetch(
         `/api/admin/quizzes/${quizId}/questions`
@@ -42,7 +42,8 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId]);
 
-  const handleQuestionAdded = (newQuestion: QuizQuestion) => {
+  // Corrected: Prefixed the unused variable with an underscore.
+  const handleQuestionAdded = (_newQuestion: QuizQuestion) => {
     // Re-fetch questions to get the definitive list from the server
     fetchQuestions();
     setIsModalOpen(false);
@@ -72,7 +73,6 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
     }
   };
 
-  // Calculate the next order number for the new question
   const nextOrderNum = questions.length > 0 ? Math.max(...questions.map(q => q.order_num)) + 1 : 0;
 
   if (loading) return <div>Loading questions...</div>;
@@ -85,7 +85,6 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        {/* Correctly passing all required props to the form */}
         <AddQuestionForm
           quizId={quizId}
           onQuestionAdded={handleQuestionAdded}
@@ -96,7 +95,6 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
 
       <div className="space-y-4">
         {questions.length > 0 ? (
-          // Sort questions by order_num for consistent display
           [...questions].sort((a, b) => a.order_num - b.order_num).map((q) => (
             <div
               key={q.id}
