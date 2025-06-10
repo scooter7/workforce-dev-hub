@@ -3,17 +3,26 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { QuizQuestion } from '@/types/quiz';
+import type { QuizQuestion, QuestionOption, MediaPosition } from '@/types/quiz';
 
+// 1) This is the schema we expect from the client
 const NewQuizQuestionSchema = z.object({
   question: z.string(),
-  options: z.array(
-    z.object({
-      option_text: z.string(),
-      is_correct: z.boolean(),
-    })
-  ),
-  media_url: z.string().url().optional(),
+  options: z
+    .array(
+      z.object({
+        option_text: z.string(),
+        is_correct: z.boolean(),
+      })
+    )
+    .min(1),
+  media_url: z.string().url().optional(),              // becomes image_url
+  media_position: z.enum([
+    'above_text',
+    'below_text',
+    'left_of_text',
+    'right_of_text',
+  ]).optional(),
 });
 
 export async function POST(
@@ -23,7 +32,7 @@ export async function POST(
   const supabase = createSupabaseServerClient();
   const { quizId } = params;
 
-  // 1) Validate & parse the incoming body
+  // 2) Validate the incoming JSON
   const body = await req.json();
   const parsed = NewQuizQuestionSchema.safeParse(body);
   if (!parsed.success) {
@@ -32,9 +41,9 @@ export async function POST(
       { status: 400 }
     );
   }
-  const { question, options, media_url } = parsed.data;
+  const { question, options, media_url, media_position } = parsed.data;
 
-  // 2) Insert the new question row
+  // 3) Insert the quiz_questions row
   const { data: createdQuestion, error: questionError } = await supabase
     .from('quiz_questions')
     .insert([
@@ -47,7 +56,7 @@ export async function POST(
         order_num: 0,
         image_url: media_url ?? null,
         video_url: null,
-        media_position: null,
+        media_position: media_position ?? null,
       },
     ])
     .select('*')
@@ -60,12 +69,13 @@ export async function POST(
     );
   }
 
-  // 3) Insert its options
+  // 4) Insert all the options in question_options
   const optionsToInsert = options.map((opt) => ({
     question_id: createdQuestion.id,
     option_text: opt.option_text,
     is_correct: opt.is_correct,
   }));
+
   const { data: createdOptions, error: optionsError } = await supabase
     .from('question_options')
     .insert(optionsToInsert)
@@ -78,7 +88,7 @@ export async function POST(
     );
   }
 
-  // 4) Build and return the full QuizQuestion
+  // 5) Shape the response to match your QuizQuestion interface
   const result: QuizQuestion = {
     id: createdQuestion.id,
     quiz_id: createdQuestion.quiz_id,
@@ -87,7 +97,7 @@ export async function POST(
     explanation: createdQuestion.explanation,
     points: createdQuestion.points,
     order_num: createdQuestion.order_num,
-    options: createdOptions.map((opt) => ({
+    options: createdOptions.map((opt: QuestionOption) => ({
       id: opt.id,
       question_id: opt.question_id,
       option_text: opt.option_text,
@@ -95,8 +105,9 @@ export async function POST(
     })),
     image_url: createdQuestion.image_url,
     video_url: createdQuestion.video_url,
-    media_position: createdQuestion.media_position,
+    media_position: createdQuestion.media_position as MediaPosition | null,
   };
 
+  // 6) Return the newly created question + options
   return NextResponse.json(result, { status: 201 });
 }
