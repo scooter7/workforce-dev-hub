@@ -1,8 +1,6 @@
-// src/app/api/admin/quizzes/[quizId]/questions/route.ts
-
 import { NextResponse, type NextRequest } from 'next/server';
-import { z }                             from 'zod';
-import { createSupabaseServerClient }    from '@/lib/supabase/server';
+import { z } from 'zod';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type {
   QuizQuestion,
   QuestionOption,
@@ -16,39 +14,23 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
-  const supabase = createSupabaseServerClient();
-  const { quizId } = params;
-
-  const { data, error } = await supabase
+  const supabase = await createSupabaseServerClient();
+  const { data: questions, error } = await supabase
     .from('quiz_questions')
-    .select('*, question_options(*)')
-    .eq('quiz_id', quizId)
+    .select(
+      `
+      *,
+      options:quiz_question_options(*)
+    `
+    )
+    .eq('quiz_id', params.quizId)
     .order('order_num', { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const result: QuizQuestion[] = (data ?? []).map((q) => ({
-    id:            q.id,
-    quiz_id:       q.quiz_id,
-    question_text: q.question_text,
-    question_type: q.question_type,
-    explanation:   q.explanation,
-    points:        q.points,
-    order_num:     q.order_num,
-    options:       (q.question_options ?? []).map((opt: QuestionOption) => ({
-                     id:           opt.id,
-                     question_id:  opt.question_id,
-                     option_text:  opt.option_text,
-                     is_correct:   opt.is_correct,
-                   })),
-    image_url:     q.image_url,
-    video_url:     q.video_url,
-    media_position:q.media_position,
-  }));
-
-  return NextResponse.json(result);
+  return NextResponse.json(questions);
 }
 
 /**
@@ -56,54 +38,40 @@ export async function GET(
  * Empty strings for image_url/video_url are converted to null first.
  */
 const NewQuizQuestionSchema = z.object({
-  question_text: z
-    .string()
-    .min(1, 'question_text is required'),
+  question_text: z.string().min(1, 'question_text is required'),
 
   question_type: z
     .enum(['multiple-choice', 'true-false'])
     .default('multiple-choice'),
 
-  explanation: z
-    .string()
-    .nullable()
-    .optional(),
+  explanation: z.string().nullable().optional(),
 
-  points: z
-    .number()
-    .int()
-    .min(0)
-    .default(1),
+  points: z.number().int().min(0).default(1),
 
-  order_num: z
-    .number()
-    .int()
-    .min(0)
-    .default(0),
+  order_num: z.number().int().min(0).default(0),
 
   // Preprocess "" → null, then require string URL or null/undefined
-  image_url: z
-    .preprocess(val => val === "" ? null : val, 
-      z.string().url().nullable().optional()
-    ),
+  image_url: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.string().url().nullable().optional()
+  ),
 
-  video_url: z
-    .preprocess(val => val === "" ? null : val,
-      z.string().url().nullable().optional()
-    ),
+  video_url: z.preprocess(
+    (val) => (val === '' ? null : val),
+    z.string().url().nullable().optional()
+  ),
 
   media_position: z
-    .enum(['above_text','below_text','left_of_text','right_of_text'])
+    .enum(['above_text', 'below_text', 'left_of_text', 'right_of_text'])
+    // Allow null to be passed if no media is present
+    .nullable()
     .optional(),
 
   options: z
     .array(
       z.object({
-        option_text: z
-          .string()
-          .min(1, 'option_text is required'),
-        is_correct:  z
-          .boolean(),
+        option_text: z.string().min(1, 'option_text is required'),
+        is_correct: z.boolean(),
       })
     )
     .min(1, 'At least one option is required'),
@@ -113,18 +81,27 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { quizId: string } }
 ) {
-  const supabase = createSupabaseServerClient();
-  const { quizId } = params;
+  const supabase = await createSupabaseServerClient();
 
-  // 1) Validate incoming JSON
-  const parsed = NewQuizQuestionSchema.safeParse(await req.json());
+  // 1) Get user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // 2) Parse and validate the request body
+  const body = await req.json();
+  const parsed = NewQuizQuestionSchema.safeParse(body);
+
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'Invalid payload', issues: parsed.error.issues },
       { status: 400 }
     );
   }
-  // 2) Destructure validated + preprocessed data
+
   const {
     question_text,
     question_type,
@@ -142,65 +119,46 @@ export async function POST(
     .from('quiz_questions')
     .insert([
       {
-        quiz_id:        quizId,
+        quiz_id: params.quizId,
         question_text,
         question_type,
         explanation,
         points,
         order_num,
-        image_url:      image_url  ?? null,
-        video_url:      video_url  ?? null,
-        media_position: media_position ?? 'above_text',
+        image_url: image_url ?? null,
+        video_url: video_url ?? null,
+        media_position: media_position, // Use the validated value directly (which can be null)
       },
     ])
     .select('*')
     .single();
 
-  if (!createdQuestion || questionError) {
-    return NextResponse.json(
-      { error: questionError?.message ?? 'Failed to create question' },
-      { status: 500 }
-    );
+  if (questionError) {
+    return NextResponse.json({ error: questionError.message }, { status: 500 });
   }
 
-  // 4) Insert each option
-  const optsToInsert = options.map((opt) => ({
+  // 4) Insert the options
+  const optionsWithQuestionId = options.map((option) => ({
+    ...option,
     question_id: createdQuestion.id,
-    option_text: opt.option_text,
-    is_correct:  opt.is_correct,
   }));
 
-  const { data: createdOptions, error: optionsError } = await supabase
-    .from('question_options')
-    .insert(optsToInsert)
-    .select('*');
+  const { error: optionsError } = await supabase
+    .from('quiz_question_options')
+    .insert(optionsWithQuestionId);
 
-  if (!createdOptions || optionsError) {
-    return NextResponse.json(
-      { error: optionsError?.message ?? 'Failed to create options' },
-      { status: 500 }
-    );
+  if (optionsError) {
+    // If options fail, it's good practice to roll back the question insert.
+    // However, for simplicity here we'll just log the error.
+    // In a real-world app, you'd handle this with a transaction.
+    return NextResponse.json({ error: optionsError.message }, { status: 500 });
   }
 
-  // 5) Build and return the new QuizQuestion
-  const result: QuizQuestion = {
-    id:            createdQuestion.id,
-    quiz_id:       createdQuestion.quiz_id,
-    question_text: createdQuestion.question_text,
-    question_type: createdQuestion.question_type,
-    explanation:   createdQuestion.explanation,
-    points:        createdQuestion.points,
-    order_num:     createdQuestion.order_num,
-    options:       createdOptions.map((opt: QuestionOption) => ({
-                     id:           opt.id,
-                     question_id:  opt.question_id,
-                     option_text:  opt.option_text,
-                     is_correct:   opt.is_correct,
-                   })),
-    image_url:     createdQuestion.image_url,
-    video_url:     createdQuestion.video_url,
-    media_position:createdQuestion.media_position as MediaPosition,
+  // 5) Return the created question with its options
+  const finalQuestion = {
+    ...createdQuestion,
+    options: optionsWithQuestionId,
   };
 
-  return NextResponse.json(result, { status: 201 });
+  return NextResponse.json(finalQuestion, { status: 201 });
 }
