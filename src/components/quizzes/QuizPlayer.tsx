@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react'; // Corrected: Removed unused 'useEffect'
 import { useRouter } from 'next/navigation';
-import type { QuizQuestion, QuestionOption } from '@/types/quiz';
+import type { QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 
 interface QuizPlayerProps {
@@ -22,10 +22,9 @@ const getYouTubeEmbedUrl = (url: string | null | undefined) => {
     if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
       return `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}`;
     }
-    // Return null if it's not a recognizable YouTube URL
     return null;
   } catch (error) {
-    return null; // Invalid URL
+    return null;
   }
 };
 
@@ -57,9 +56,8 @@ export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps
       setCurrentQuestionIndex((prev) => prev - 1);
     }
   };
-  
+
   const handleSubmit = async () => {
-    // Logic to calculate score
     let finalScore = 0;
     questions.forEach(q => {
         const correctOption = q.options.find(opt => opt.is_correct);
@@ -70,7 +68,6 @@ export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps
     setScore(finalScore);
     setIsFinished(true);
 
-    // Here you would typically submit the results to your backend
     try {
         await fetch(`/api/quizzes/${quizId}/submit`, {
             method: 'POST',
@@ -104,12 +101,11 @@ export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps
           Question {currentQuestionIndex + 1} of {questions.length} ({currentQuestion.points} pts)
         </p>
         
-        {/* Corrected Layout: Use flex-col and remove fixed height constraints */}
         <div className="mt-4 flex flex-col">
             {embedUrl && (
                 <div className="w-full aspect-video mb-4">
                     <iframe
-                        key={embedUrl} // Add key to force re-render on change
+                        key={embedUrl}
                         width="100%"
                         height="100%"
                         src={embedUrl}
@@ -129,7 +125,6 @@ export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps
 
             <p className="text-lg font-medium my-4">{currentQuestion.question_text}</p>
             
-            {/* Options Area */}
             <div className="space-y-3">
                 {currentQuestion.options.map((option) => (
                     <label
@@ -149,7 +144,6 @@ export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps
             </div>
         </div>
 
-        {/* Navigation Buttons */}
         <div className="flex justify-between mt-8">
             <Button onClick={goToPrevious} disabled={currentQuestionIndex === 0}>
                 Previous
