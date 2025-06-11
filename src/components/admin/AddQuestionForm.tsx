@@ -5,7 +5,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
-// Corrected: Changed from named to default import
 import Input from '@/components/ui/Input';
 
 // Zod schema for form validation
@@ -138,7 +137,8 @@ export default function AddQuestionForm({
                       })
                   }} defaultChecked={fields[index].is_correct} />
                   <label>Correct</label>
-                  {fields.length > 2 && <Button type="button" onClick={() => remove(index)} variant="destructive" size="sm">X</Button>}
+                  {/* Corrected: Changed variant to "outline" which is a valid type */}
+                  {fields.length > 2 && <Button type="button" onClick={() => remove(index)} variant="outline" size="sm">X</Button>}
               </div>
           ))}
           <Button type="button" onClick={() => append({ option_text: '', is_correct: false })}>Add Option</Button>
