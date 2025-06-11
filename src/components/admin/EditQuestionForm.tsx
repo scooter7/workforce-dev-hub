@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form'; // Removed 'useFieldArray'
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -14,7 +14,7 @@ const formSchema = z.object({
   explanation: z.string().optional().nullable(),
   points: z.coerce.number().int().min(0),
   video_url: z.string().optional().nullable(),
-  image_url: z.string().optional().nullable(), // Added image_url
+  image_url: z.string().optional().nullable(),
   media_position: z.enum(['above_text', 'below_text', 'left_of_text', 'right_of_text']).default('above_text'),
   options: z.array(z.object({
     id: z.string().uuid().optional(),
@@ -39,9 +39,10 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
   const {
     register,
     handleSubmit,
-    control,
+    control, // control is still needed for options
     watch,
     formState: { errors, isSubmitting },
+    setValue, // Keep setValue
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -58,7 +59,9 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
   const videoUrlValue = watch("video_url");
   const imageUrlValue = watch("image_url");
 
-  const { fields, append, remove } = useFieldArray({ control, name: "options" });
+  // The useFieldArray hook is no longer needed here as we are not adding/removing options
+  // in the edit form. We map over the existing options from the defaultValues.
+  const options = watch('options');
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -73,9 +76,8 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
         throw new Error(errorData.details || 'Failed to update question');
       }
       
-      // On success, redirect back to the manage page
       router.push(`/admin/quizzes/${quizId}/manage`);
-      router.refresh(); // Refresh server components on the target page
+      router.refresh();
 
     } catch (error: any) {
       console.error("Update Error:", error);
@@ -99,7 +101,6 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
         {errors.video_url && <p className="text-red-500 text-sm mt-1">{errors.video_url.message}</p>}
       </div>
       
-      {/* Added Image URL Field */}
       <div>
         <label className="block text-sm font-medium mb-1">Or Image URL (Optional)</label>
         <Input {...register('image_url')} placeholder="https://..." disabled={!!videoUrlValue} />
@@ -108,7 +109,26 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
 
       <div>
           <label className="block text-sm font-medium mb-1">Options</label>
-          {/* Options logic... */}
+          {/* We now map over the watched 'options' array */}
+          {options.map((field, index) => (
+            <div key={field.id || index} className="flex items-center space-x-2 mb-2">
+                <Input {...register(`options.${index}.option_text`)} />
+                <label className="flex items-center space-x-2">
+                    <input 
+                        type="radio" 
+                        name="correct_option_group"
+                        defaultChecked={field.is_correct}
+                        onChange={() => {
+                            options.forEach((_opt, i) => {
+                                setValue(`options.${i}.is_correct`, i === index);
+                            });
+                        }}
+                    />
+                    <span>Correct</span>
+                </label>
+            </div>
+          ))}
+          {errors.options && <p className="text-red-500 text-sm mt-1">{errors.options.root?.message}</p>}
       </div>
 
       <div className="flex justify-end space-x-2 pt-4 border-t mt-6">
