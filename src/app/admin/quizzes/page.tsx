@@ -1,7 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { PlusCircleIcon, UploadIcon } from '@heroicons/react/24/solid';
-import QuizList from './QuizList'; // We'll define this client component below
+// Corrected: Replaced non-existent 'UploadIcon' with 'ArrowUpTrayIcon'
+import { PlusCircleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/solid';
+import QuizList from './QuizList';
 
 // This server component fetches all quizzes from the database.
 export default async function AdminQuizzesDashboard() {
@@ -13,7 +14,7 @@ export default async function AdminQuizzesDashboard() {
 
   if (error) {
     console.error("Error fetching quizzes for admin dashboard:", error);
-    // Render an error state, but don't crash the page
+    // In a real app, you might show a toast or a more user-friendly error message.
   }
 
   return (
@@ -22,29 +23,25 @@ export default async function AdminQuizzesDashboard() {
         <div>
           <h1 className="text-3xl font-bold">Quiz Dashboard</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">
-            Manage, create, and delete all quizzes.
+            Manage, create, and delete all quizzes from one place.
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <Link href="/admin/quizzes/new" passHref>
-            <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75">
                 <PlusCircleIcon className="h-5 w-5 mr-2" />
                 Create New Quiz
             </button>
           </Link>
           <Link href="/admin/quizzes/bulk-upload" passHref>
-            <button className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
-                <UploadIcon className="h-5 w-5 mr-2" />
+            <button className="inline-flex items-center px-4 py-2 bg-gray-600 text-white font-semibold rounded-lg shadow-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75">
+                <ArrowUpTrayIcon className="h-5 w-5 mr-2" />
                 Bulk Upload
             </button>
           </Link>
         </div>
       </div>
       
-      {/* We pass the fetched quizzes to a Client Component.
-        This is a standard pattern in Next.js: fetch data on the server,
-        but handle user interactions (like clicking delete) on the client.
-      */}
       <QuizList initialQuizzes={quizzes || []} />
 
     </div>
