@@ -5,7 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+// Corrected: Changed from named to default import
+import Input from '@/components/ui/Input';
 
 // Zod schema for form validation
 const formSchema = z.object({
@@ -131,19 +132,17 @@ export default function AddQuestionForm({
           {fields.map((field, index) => (
               <div key={field.id} className="flex items-center space-x-2 mb-2">
                   <Input {...register(`options.${index}.option_text`)} placeholder={`Option ${index + 1}`} />
-                  <label className="flex items-center space-x-1">
-                      <input type="radio" {...register('options')} name="correct_option_group" value={index.toString()} onChange={() => {
-                          fields.forEach((f, i) => {
-                              setValue(`options.${i}.is_correct`, i === index);
-                          })
-                      }} defaultChecked={field.is_correct} />
-                      <span>Correct</span>
-                  </label>
+                  <input type="radio" {...register('options')} name="correct_option_group" value={index.toString()} onChange={() => {
+                      fields.forEach((_field, i) => {
+                          setValue(`options.${i}.is_correct`, i === index);
+                      })
+                  }} defaultChecked={fields[index].is_correct} />
+                  <label>Correct</label>
                   {fields.length > 2 && <Button type="button" onClick={() => remove(index)} variant="destructive" size="sm">X</Button>}
               </div>
           ))}
           <Button type="button" onClick={() => append({ option_text: '', is_correct: false })}>Add Option</Button>
-          {errors.options && <p className="text-red-500 text-sm">{errors.options.message}</p>}
+          {errors.options && <p className="text-red-500 text-sm">{errors.options.root?.message || errors.options.message}</p>}
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">
