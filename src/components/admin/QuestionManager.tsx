@@ -1,7 +1,3 @@
-/*
-* FILE: src/components/admin/QuestionManager.tsx
-* This component now finds the last used video URL and passes it to the form.
-*/
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -9,7 +5,7 @@ import Button from '@/components/ui/Button';
 import AddQuestionForm from './AddQuestionForm';
 import Modal from '@/components/ui/Modal';
 import type { QuizQuestion } from '@/types/quiz';
-import { Trash2, Edit, Video } from 'lucide-react';
+import { Trash2, Edit } from 'lucide-react';
 import Link from 'next/link';
 
 interface QuestionManagerProps {
@@ -25,7 +21,9 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
     setLoading(true);
     try {
       const response = await fetch(`/api/admin/quizzes/${quizId}/questions`);
-      if (!response.ok) throw new Error('Failed to fetch questions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions');
+      }
       const data = await response.json();
       setQuestions(data);
     } catch (error) {
@@ -37,29 +35,56 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
 
   useEffect(() => {
     fetchQuestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId]);
 
   const handleQuestionAdded = () => {
-    fetchQuestions(); // Refetch to get the latest state from the DB
+    // When a question is added, refetch the entire list to ensure UI is in sync with the database.
+    fetchQuestions();
     setIsModalOpen(false);
   };
   
-  // --- NEW LOGIC ---
-  // Find the most recent video_url from the existing questions.
-  const lastVideoUrl = useMemo(() => {
-      const questionsWithVideos = [...questions]
-        .filter(q => q.video_url)
-        .sort((a,b) => b.order_num - a.order_num);
-      return questionsWithVideos[0]?.video_url || '';
-  }, [questions]);
-  
-  const nextOrderNum = useMemo(() => {
-      if (questions.length === 0) return 0;
-      return Math.max(...questions.map(q => q.order_num)) + 1;
-  }, [questions]);
-  // --- END NEW LOGIC ---
+  const handleDelete = async (questionId: string) => {
+    if (window.confirm('Are you sure you want to delete this question?')) {
+      try {
+        const response = await fetch(
+          `/api/admin/quizzes/${quizId}/questions/${questionId}`,
+          {
+            method: 'DELETE',
+          }
+        );
 
-  if (loading) return <div>Loading questions...</div>;
+        if (response.ok) {
+          // Refetch questions to update the list and order numbers
+          fetchQuestions();
+        } else {
+          const errorData = await response.json();
+          console.error('Failed to delete question:', errorData.error);
+          alert('Failed to delete question.');
+        }
+      } catch (error) {
+        console.error('Error deleting question:', error);
+      }
+    }
+  };
+
+  // Find the most recent video_url from the existing questions to pass to the form.
+  const lastVideoUrl = useMemo(() => {
+    const questionsWithVideos = [...questions]
+      .filter((q) => q.video_url)
+      .sort((a, b) => b.order_num - a.order_num);
+    return questionsWithVideos[0]?.video_url || '';
+  }, [questions]);
+
+  // Safely calculate the next order number for a new question.
+  const nextOrderNum = useMemo(() => {
+    if (questions.length === 0) return 0;
+    return Math.max(...questions.map((q) => q.order_num)) + 1;
+  }, [questions]);
+
+  if (loading) {
+    return <div>Loading questions...</div>;
+  }
 
   return (
     <div className="mt-6">
@@ -74,111 +99,52 @@ export function QuestionManager({ quizId }: QuestionManagerProps) {
           onQuestionAdded={handleQuestionAdded}
           onCancel={() => setIsModalOpen(false)}
           nextOrderNum={nextOrderNum}
-          lastVideoUrl={lastVideoUrl} // Pass the last video URL to the form
+          lastVideoUrl={lastVideoUrl}
         />
       </Modal>
 
-      <div className="space-y-4">
-        {/* Render logic remains the same... */}
+      <div className="space-y-4 mt-4">
+        {questions.length > 0 ? (
+          [...questions]
+            .sort((a, b) => a.order_num - b.order_num)
+            .map((q) => (
+              <div
+                key={q.id}
+                className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800 flex justify-between items-center"
+              >
+                <div className="flex-grow">
+                  <p className="font-semibold">
+                    (#{q.order_num}) {q.question_text}
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Type: {q.question_type} | Points: {q.points}
+                    {q.video_url && ' | 🎬 Video'}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <Link
+                    href={`/admin/quizzes/${quizId}/questions/${q.id}/edit`}
+                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md"
+                    title="Edit Question"
+                  >
+                    <Edit size={18} />
+                  </Link>
+                   <button
+                    onClick={() => handleDelete(q.id)}
+                    className="p-2 hover:bg-red-100 dark:hover:bg-red-900 rounded-md"
+                    title="Delete Question"
+                  >
+                    <Trash2 size={18} className="text-red-600" />
+                  </button>
+                </div>
+              </div>
+            ))
+        ) : (
+          <p className="text-gray-500 dark:text-gray-400 mt-4">
+            No questions have been added to this quiz yet. Click "Add New Question" to start.
+          </p>
+        )}
       </div>
     </div>
   );
-}
-
-
-/*
-* FILE: src/components/admin/AddQuestionForm.tsx
-* This form now has a button to reuse the last video URL.
-*/
-import { useForm, useFieldArray } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import type { QuizQuestion } from '@/types/quiz';
-// Make sure to have these UI components
-// import { Input } from '@/components/ui/Input';
-// import Button from '@/components/ui/Button';
-
-// Zod schema for the form
-const formSchema = z.object({
-  question_text: z.string().min(1, 'Question text is required.'),
-  video_url: z.string().optional(),
-  // ... other fields
-  options: z.array(z.object({
-      option_text: z.string().min(1, 'Option text cannot be empty.'),
-      is_correct: z.boolean(),
-  })).min(2, 'Must have at least two options.'),
-});
-
-interface AddQuestionFormProps {
-  quizId: string;
-  onQuestionAdded: (newQuestion: QuizQuestion) => void;
-  onCancel: () => void;
-  nextOrderNum: number;
-  lastVideoUrl: string; // New prop
-}
-
-export default function AddQuestionForm({ quizId, onQuestionAdded, onCancel, nextOrderNum, lastVideoUrl }: AddQuestionFormProps) {
-    const { register, handleSubmit, control, formState: { errors }, setValue } = useForm({
-        resolver: zodResolver(formSchema),
-        defaultValues: {
-            question_text: '',
-            video_url: '',
-            options: [{ option_text: '', is_correct: true }, { option_text: '', is_correct: false }]
-        }
-    });
-    
-    const { fields, append, remove } = useFieldArray({ control, name: "options" });
-
-    const onSubmit = async (data: any) => {
-        const payload = {
-            ...data,
-            quiz_id: quizId,
-            order_num: nextOrderNum,
-            // ... other default values
-        };
-
-        const response = await fetch(`/api/admin/quizzes/${quizId}/questions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-
-        if (response.ok) {
-            const newQuestion = await response.json();
-            onQuestionAdded(newQuestion);
-        } else {
-            // Handle error
-            console.error("Failed to add question");
-        }
-    };
-    
-    // --- NEW FUNCTION ---
-    const handleUseLastVideo = () => {
-        if(lastVideoUrl) {
-            setValue('video_url', lastVideoUrl);
-        }
-    }
-    // --- END NEW FUNCTION ---
-
-    return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* ... other form fields for question_text, etc. ... */}
-
-            <div className="flex items-center space-x-2">
-                <input {...register('video_url')} placeholder="Video URL (optional)" className="border p-2 rounded w-full" />
-                {lastVideoUrl && (
-                     <Button type="button" onClick={handleUseLastVideo} className="flex-shrink-0">
-                         Use Last Video
-                     </Button>
-                )}
-            </div>
-            
-            {/* ... options mapping and other form elements ... */}
-
-            <div className="flex justify-end space-x-2">
-                <Button type="button" onClick={onCancel} variant="outline">Cancel</Button>
-                <Button type="submit">Add Question</Button>
-            </div>
-        </form>
-    );
 }
