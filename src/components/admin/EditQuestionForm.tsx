@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm } from 'react-hook-form'; // Removed 'useFieldArray'
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -39,10 +39,9 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
   const {
     register,
     handleSubmit,
-    control, // control is still needed for options
     watch,
     formState: { errors, isSubmitting },
-    setValue, // Keep setValue
+    setValue,
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -59,8 +58,6 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
   const videoUrlValue = watch("video_url");
   const imageUrlValue = watch("image_url");
 
-  // The useFieldArray hook is no longer needed here as we are not adding/removing options
-  // in the edit form. We map over the existing options from the defaultValues.
   const options = watch('options');
 
   const onSubmit = async (data: FormData) => {
@@ -109,7 +106,6 @@ export default function EditQuestionForm({ quizId, question }: EditQuestionFormP
 
       <div>
           <label className="block text-sm font-medium mb-1">Options</label>
-          {/* We now map over the watched 'options' array */}
           {options.map((field, index) => (
             <div key={field.id || index} className="flex items-center space-x-2 mb-2">
                 <Input {...register(`options.${index}.option_text`)} />
