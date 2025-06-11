@@ -26,6 +26,9 @@ const formSchema = z.object({
     .refine((opts) => opts.some(opt => opt.is_correct), {
         message: "At least one option must be correct."
     }),
+}).refine(data => !data.video_url || !data.image_url, {
+    message: "Provide either a video URL or an image URL, not both.",
+    path: ["video_url"], // Attach the error message to the video_url field
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -49,6 +52,7 @@ export default function AddQuestionForm({
     register,
     handleSubmit,
     control,
+    watch,
     formState: { errors, isSubmitting },
     setValue,
   } = useForm<FormData>({
@@ -65,6 +69,9 @@ export default function AddQuestionForm({
       ],
     },
   });
+  
+  const videoUrlValue = watch("video_url");
+  const imageUrlValue = watch("image_url");
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -75,7 +82,7 @@ export default function AddQuestionForm({
     const payload = {
       ...data,
       order_num: nextOrderNum,
-      question_type: 'multiple-choice', // Assuming for now
+      question_type: 'multiple-choice',
     };
 
     try {
@@ -101,56 +108,63 @@ export default function AddQuestionForm({
   const handleUseLastVideo = () => {
     if (lastVideoUrl) {
       setValue('video_url', lastVideoUrl, { shouldValidate: true });
+      setValue('image_url', '', { shouldValidate: true });
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 p-1">
       <h3 className="text-xl font-semibold">Add New Question (Order: {nextOrderNum})</h3>
+      
       <div>
-        <label>Question Text</label>
+        <label className="block text-sm font-medium mb-1">Question Text</label>
         <Input {...register('question_text')} />
-        {errors.question_text && <p className="text-red-500 text-sm">{errors.question_text.message}</p>}
+        {errors.question_text && <p className="text-red-500 text-sm mt-1">{errors.question_text.message}</p>}
       </div>
       
       <div>
-        <label>Video URL</label>
+        <label className="block text-sm font-medium mb-1">Video URL (Optional)</label>
         <div className="flex items-center space-x-2">
-            <Input {...register('video_url')} placeholder="https://..." />
+            <Input {...register('video_url')} placeholder="https://youtube.com/..." disabled={!!imageUrlValue}/>
             {lastVideoUrl && (
                 <Button type="button" onClick={handleUseLastVideo} variant="outline" className="flex-shrink-0">
-                    Use Last
+                    Use Last Video
                 </Button>
             )}
         </div>
-        {errors.video_url && <p className="text-red-500 text-sm">{errors.video_url.message}</p>}
+         {errors.video_url && <p className="text-red-500 text-sm mt-1">{errors.video_url.message}</p>}
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-1">Or Image URL (Optional)</label>
+        <Input {...register('image_url')} placeholder="https://..." disabled={!!videoUrlValue} />
+        {errors.image_url && <p className="text-red-500 text-sm mt-1">{errors.image_url.message}</p>}
       </div>
 
       <div>
-          <label>Options</label>
+          <label className="block text-sm font-medium mb-1">Options</label>
           {fields.map((field, index) => (
               <div key={field.id} className="flex items-center space-x-2 mb-2">
                   <Input {...register(`options.${index}.option_text`)} placeholder={`Option ${index + 1}`} />
-                  <input type="radio" {...register('options')} name="correct_option_group" value={index.toString()} onChange={() => {
-                      fields.forEach((_field, i) => {
-                          setValue(`options.${i}.is_correct`, i === index);
-                      })
-                  }} defaultChecked={fields[index].is_correct} />
-                  <label>Correct</label>
-                  {/* Corrected: Changed variant to "outline" which is a valid type */}
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                      <input type="radio" {...register('options')} name="correct_option_group" value={index.toString()} onChange={() => {
+                          fields.forEach((_f, i) => setValue(`options.${i}.is_correct`, i === index));
+                      }} defaultChecked={field.is_correct} className="h-4 w-4"/>
+                      <span>Correct</span>
+                  </label>
                   {fields.length > 2 && <Button type="button" onClick={() => remove(index)} variant="outline" size="sm">X</Button>}
               </div>
           ))}
           <Button type="button" onClick={() => append({ option_text: '', is_correct: false })}>Add Option</Button>
-          {errors.options && <p className="text-red-500 text-sm">{errors.options.root?.message || errors.options.message}</p>}
+          {errors.options && <p className="text-red-500 text-sm mt-1">{errors.options.root?.message || errors.options.message}</p>}
       </div>
 
-      <div className="flex justify-end space-x-2 pt-4">
+      <div className="flex justify-end space-x-2 pt-4 border-t mt-6">
         <Button type="button" onClick={onCancel} variant="outline" disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Adding...' : 'Add Question'}
+          {isSubmitting ? 'Saving...' : 'Save Question'}
         </Button>
       </div>
     </form>

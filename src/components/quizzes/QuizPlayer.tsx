@@ -1,285 +1,169 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { QuizData, QuizQuestion } from '@/types/quiz';
-import Button from '@/components/ui/Button';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/solid';
+import type { QuizQuestion, QuestionOption } from '@/types/quiz';
+import Button from '@/components/ui/Button';
 
 interface QuizPlayerProps {
   quizId: string;
-  userId: string;
-  attemptId?: string;
+  questions: QuizQuestion[];
+  title: string;
 }
 
-type UserAnswers = Record<string, string>;
-
-const EMPTY_USER_ANSWERS: UserAnswers = {};
-
-export default function QuizPlayer({ quizId, userId, attemptId }: QuizPlayerProps) {
-  const router = useRouter();
-  const [quizData, setQuizData] = useState<QuizData | null>(null);
-  const [isLoadingQuiz, setIsLoadingQuiz] = useState(true);
-  const [quizFetchError, setQuizFetchError] = useState<string | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<UserAnswers>(EMPTY_USER_ANSWERS);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [currentAnswerFeedback, setCurrentAnswerFeedback] = useState<{
-    isCorrect: boolean; selectedOptionText?: string; correctOptionText?: string;
-  } | null>(null);
-  const [quizCompleted, setQuizCompleted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [results, setResults] = useState<{
-    score: number; totalQuestions: number; pointsAwarded: number;
-    userChoices?: Record<string, { selected: string | null; correct: boolean; explanation?: string | null }>;
-  } | null>(null);
-  
-  const mainContentRef = useRef<HTMLDivElement>(null);
-
-  const scrollToTop = useCallback(() => {
-    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
-  useEffect(() => {
-    if (!quizId) { 
-      setQuizFetchError("Quiz ID is missing."); setIsLoadingQuiz(false); return;
+// A helper to safely render embedded YouTube URLs
+const getYouTubeEmbedUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'youtu.be') {
+      return `https://www.youtube.com/embed/${urlObj.pathname.slice(1)}`;
     }
-    // console.log(`QuizPlayer: useEffect for quizId ${quizId} triggered. Resetting state.`); // For debugging
-    setIsLoadingQuiz(true); setQuizFetchError(null); setQuizData(null);
-    setCurrentQuestionIndex(0); setUserAnswers(EMPTY_USER_ANSWERS); setQuizCompleted(false);
-    setResults(null); setIsFlipped(false); setCurrentAnswerFeedback(null); setIsSubmitting(false);
-
-    async function fetchQuizInternal() {
-      // console.log(`QuizPlayer: Fetching questions for quizId: ${quizId}`); // For debugging
-      try {
-        const response = await fetch(`/api/quizzes/${quizId}/questions`);
-        // console.log(`QuizPlayer: API response status: ${response.status}`); // For debugging
-        if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || `Failed to load quiz (Status: ${response.status})`);
-        }
-        const data: QuizData = await response.json();
-        // console.log("QuizPlayer: Received quizData:", JSON.stringify(data, null, 2)); // For debugging
-        if (!data || !data.questions || !Array.isArray(data.questions)) {
-            throw new Error("Quiz data or questions array missing/invalid in API response.");
-        }
-        setQuizData(data);
-      } catch (error: any) {
-        setQuizFetchError(error.message || "An unexpected error occurred.");
-      } finally { setIsLoadingQuiz(false); }
+    if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('v')) {
+      return `https://www.youtube.com/embed/${urlObj.searchParams.get('v')}`;
     }
-    fetchQuizInternal();
-  }, [quizId]);
-
-  useEffect(() => {
-    if (!isFlipped && !isLoadingQuiz && quizData) scrollToTop();
-  }, [currentQuestionIndex, isFlipped, isLoadingQuiz, quizData, scrollToTop]);
-
-  const currentQuestion: QuizQuestion | undefined = quizData?.questions[currentQuestionIndex];
-
-  useEffect(() => { // For debugging the current question data
-    if (currentQuestion) {
-      console.log("QuizPlayer - Current Question for Render:", JSON.stringify(currentQuestion, null, 2));
-    }
-  }, [currentQuestion]);
-
-  const handleOptionSelect = useCallback((questionId: string, selectedOptionId: string) => {
-    if (isFlipped || quizCompleted || !currentQuestion || !currentQuestion.options) return;
-    setUserAnswers((prev) => ({ ...prev, [questionId]: selectedOptionId }));
-    const question = currentQuestion;
-    const selectedOpt = question.options.find(opt => opt.id === selectedOptionId || opt.option_text.toLowerCase() === selectedOptionId.toLowerCase());
-    const correctOpt = question.options.find(opt => opt.is_correct);
-    setCurrentAnswerFeedback({
-      isCorrect: selectedOpt?.is_correct || false,
-      selectedOptionText: selectedOpt?.option_text || (selectedOptionId === 'true' || selectedOptionId === 'false' ? selectedOptionId.charAt(0).toUpperCase() + selectedOptionId.slice(1) : selectedOptionId),
-      correctOptionText: correctOpt?.option_text,
-    });
-    setIsFlipped(true);
-  }, [currentQuestion, isFlipped, quizCompleted]);
-  
-  const handleSubmitQuiz = useCallback(async () => {
-    if (!quizData || !quizData.questions) return;
-    setIsSubmitting(true); setQuizCompleted(true); 
-    const submission = {
-      quizId: quizData.id, userId, attemptId,
-      answers: Object.entries(userAnswers).map(([questionId, selectedOptionId]) => ({ questionId, selectedOptionId })),
-    };
-    try {
-      const response = await fetch(`/api/quizzes/${quizData.id}/submit`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(submission),
-      });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ error: `HTTP error! Status: ${response.status}` }));
-        throw new Error(errData.error || 'Failed to submit quiz.');
-      }
-      const resultData = await response.json();
-      setResults(resultData); 
-      setIsFlipped(false); 
-      scrollToTop();
-    } catch (error: any) {
-      console.error('Error submitting quiz:', error);
-      setResults({ score: 0, totalQuestions: quizData.questions.length, pointsAwarded: 0 });
-    } finally { setIsSubmitting(false); }
-  }, [quizData, userId, attemptId, userAnswers, scrollToTop]);
-
-  const proceedToNextQuestion = useCallback(() => {
-    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
-      setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-    } else { 
-      handleSubmitQuiz();
-    }
-    setIsFlipped(false); 
-    setCurrentAnswerFeedback(null);
-  }, [quizData, currentQuestionIndex, handleSubmitQuiz]);
-
-  const goToNextQuestion = useCallback(() => {
-    if (quizData && currentQuestionIndex < quizData.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setIsFlipped(false); 
-      setCurrentAnswerFeedback(null);
-    }
-  }, [quizData, currentQuestionIndex]);
-
-  const goToPreviousQuestion = useCallback(() => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setIsFlipped(false);
-      setCurrentAnswerFeedback(null);
-    }
-  }, [currentQuestionIndex]);
-
-  if (isLoadingQuiz) return <div className="text-center p-8 animate-pulse">Loading quiz...</div>;
-  if (quizFetchError) return <div className="text-center p-8 text-red-600">Error loading quiz: {quizFetchError}</div>;
-  if (!quizData || !quizData.questions || quizData.questions.length === 0) return <div className="text-center p-8 text-gray-500">Quiz unavailable or has no questions.</div>;
-  
-  if (isSubmitting && !results) return <div className="text-center p-8">Submitting and grading...</div>;
-
-  if (quizCompleted && results) { 
-    return (
-        <div className="p-4 md:p-6 bg-white rounded-lg shadow-xl" ref={mainContentRef}>
-            <h2 className="text-2xl font-bold mb-4 text-center text-brand-primary">Quiz Completed!</h2>
-            <p className="text-xl text-center mb-2">Your Score: <span className="font-bold">{results.score}</span> / {results.totalQuestions}</p>
-            <p className="text-lg text-center mb-6">Points Awarded: <span className="font-bold text-green-600">+{results.pointsAwarded}</span></p>
-            <div className="my-6 space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-                <h3 className="text-lg font-semibold text-neutral-text">Review Your Answers:</h3>
-                {quizData.questions.map((q, idx) => {
-                    const choiceInfo = results.userChoices?.[q.id];
-                    const selectedOption = q.options?.find(opt => opt.id === choiceInfo?.selected);
-                    let displaySelectedText = selectedOption?.option_text;
-                    if (q.question_type === 'true-false' && (choiceInfo?.selected === 'true' || choiceInfo?.selected === 'false')) {
-                        displaySelectedText = choiceInfo.selected.charAt(0).toUpperCase() + choiceInfo.selected.slice(1);
-                    }
-                    return ( 
-                      <div key={q.id} className={`p-3 rounded-md ${choiceInfo?.correct ? 'bg-green-100 border-l-4 border-green-500' : 'bg-red-100 border-l-4 border-red-500'}`}>
-                          <p className="font-medium text-gray-800">{idx + 1}. {q.question_text}</p>
-                          <p className="text-sm text-gray-700">Your answer: <span className={choiceInfo?.correct ? "font-semibold text-green-700" : "font-semibold text-red-700"}>{displaySelectedText || (choiceInfo?.selected ? 'N/A' : 'Not answered')}</span></p>
-                          {!choiceInfo?.correct && choiceInfo?.selected && (<p className="text-sm text-green-600">Correct Answer: (Details can be enhanced)</p> )}
-                          {q.explanation && <p className="text-xs mt-1 italic text-gray-600">{q.explanation}</p>}
-                      </div>
-                    );
-                })}
-            </div>
-            <div className="text-center mt-8"><Button onClick={() => router.push('/quizzes')} variant="primary">Back to Quizzes</Button></div>
-        </div>
-    );
-  }
-  
-  if (!currentQuestion) return <div className="text-center p-8">Preparing question...</div>;
-
-  const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
-    if (!question) return null; 
-    if (question.video_url && typeof question.video_url === 'string' && question.video_url.trim().toLowerCase().includes('<iframe')) {
-      return (
-        <div 
-          className="aspect-video w-full max-w-xl mx-auto my-4 rounded-lg overflow-hidden shadow-lg [&_iframe]:w-full [&_iframe]:h-full"
-          dangerouslySetInnerHTML={{ __html: question.video_url }}
-        />
-      );
-    } else if (question.image_url && typeof question.image_url === 'string') {
-      return (
-        <div className="my-4 flex justify-center">
-          <img src={question.image_url} alt={question.question_text || "Question image"} className="max-w-full h-auto max-h-80 rounded-md shadow-lg object-contain" />
-        </div>
-      );
-    }
+    // Return null if it's not a recognizable YouTube URL
     return null;
+  } catch (error) {
+    return null; // Invalid URL
+  }
+};
+
+export default function QuizPlayer({ quizId, questions, title }: QuizPlayerProps) {
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [isFinished, setIsFinished] = useState(false);
+  const [score, setScore] = useState(0);
+  const router = useRouter();
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const embedUrl = getYouTubeEmbedUrl(currentQuestion?.video_url);
+
+  const handleOptionSelect = (questionId: string, optionId: string) => {
+    setSelectedOptions((prev) => ({
+      ...prev,
+      [questionId]: optionId,
+    }));
   };
 
+  const goToNext = () => {
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    }
+  };
+
+  const goToPrevious = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex((prev) => prev - 1);
+    }
+  };
+  
+  const handleSubmit = async () => {
+    // Logic to calculate score
+    let finalScore = 0;
+    questions.forEach(q => {
+        const correctOption = q.options.find(opt => opt.is_correct);
+        if (correctOption && selectedOptions[q.id] === correctOption.id) {
+            finalScore += q.points;
+        }
+    });
+    setScore(finalScore);
+    setIsFinished(true);
+
+    // Here you would typically submit the results to your backend
+    try {
+        await fetch(`/api/quizzes/${quizId}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers: selectedOptions }),
+        });
+    } catch (error) {
+        console.error("Failed to submit quiz results", error);
+    }
+  };
+
+  if (isFinished) {
+    return (
+        <div className="text-center p-8">
+            <h2 className="text-2xl font-bold">Quiz Finished!</h2>
+            <p className="mt-4 text-lg">Your score: {score} / {questions.reduce((acc, q) => acc + q.points, 0)}</p>
+            <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
+        </div>
+    )
+  }
+
+  if (!currentQuestion) {
+    return <div>This quiz has no questions.</div>;
+  }
+
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-xl" ref={mainContentRef}>
-      <div className="mb-4 text-sm text-gray-600 px-4 pt-4 md:px-6 md:pt-6 flex-shrink-0">
-        Question {currentQuestionIndex + 1} of {quizData.questions.length}
-        {currentQuestion.points > 0 && ` (${currentQuestion.points} pts)`}
-      </div>
-
-      <div className="flashcard-container flex-grow mx-4 md:mx-6 mb-4">
-        <div className={`flashcard ${isFlipped ? 'is-flipped' : ''}`}>
-          <div className="flashcard-face flashcard-front bg-white">
-            {(currentQuestion.media_position === 'above_text' || (!currentQuestion.media_position && (currentQuestion.image_url || currentQuestion.video_url))) && 
-              <QuestionMedia question={currentQuestion} />
-            }
-            <h2 className="text-xl font-semibold text-neutral-text mb-4 leading-tight flex-shrink-0">
-                {currentQuestion.question_text}
-            </h2>
-            <div className="flashcard-content-scrollable"> 
-                {currentQuestion.question_type === 'multiple-choice' && currentQuestion.options.map((option) => (
-                <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
-                    <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
-                    <span className="text-gray-700">{option.option_text}</span>
-                </label>
-                ))}
-                {currentQuestion.question_type === 'true-false' && (
-                    (currentQuestion.options && currentQuestion.options.length >= 2 ? 
-                        currentQuestion.options.map(option => (
-                            <label key={option.id} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === option.id ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentQuestion.id}`} value={option.id} checked={userAnswers[currentQuestion.id] === option.id} onChange={() => handleOptionSelect(currentQuestion.id, option.id)} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
-                                <span className="text-gray-700">{option.option_text}</span>
-                            </label>
-                        ))
-                    : 
-                        <>
-                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === 'true' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentQuestion.id}`} value="true" checked={userAnswers[currentQuestion.id] === 'true'} onChange={() => handleOptionSelect(currentQuestion.id, 'true')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
-                                <span className="text-gray-700">True</span>
-                            </label>
-                            <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all mb-3 ${userAnswers[currentQuestion.id] === 'false' ? 'bg-sky-100 border-sky-400 ring-2 ring-sky-400' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
-                                <input type="radio" name={`question-${currentQuestion.id}`} value="false" checked={userAnswers[currentQuestion.id] === 'false'} onChange={() => handleOptionSelect(currentQuestion.id, 'false')} className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 mr-3" disabled={isFlipped}/>
-                                <span className="text-gray-700">False</span>
-                            </label>
-                        </>
-                ))}
-            </div>
-            {currentQuestion.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
-          </div>
-
-          <div className="flashcard-face flashcard-back bg-gray-50">
-            {currentAnswerFeedback && (
-                 <div className="text-center w-full p-2">
-                    {currentAnswerFeedback.isCorrect ? <CheckCircleIcon className="h-12 w-12 md:h-16 md:w-16 text-green-500 mx-auto mb-2 md:mb-3" /> : <XCircleIcon className="h-12 w-12 md:h-16 md:w-16 text-red-500 mx-auto mb-2 md:mb-3" />}
-                    <p className={`text-lg md:text-xl font-semibold ${currentAnswerFeedback.isCorrect ? 'text-green-700' : 'text-red-700'}`}>{currentAnswerFeedback.isCorrect ? 'Correct!' : 'Not quite!'}</p>
-                    <p className="text-sm text-gray-600 mt-1">Your answer: {currentAnswerFeedback.selectedOptionText}</p>
-                    {!currentAnswerFeedback.isCorrect && currentAnswerFeedback.correctOptionText && (<p className="text-sm text-gray-600">Correct answer: {currentAnswerFeedback.correctOptionText}</p>)}
-                    {currentQuestion.explanation && (<div className="text-sm text-gray-700 mt-3 pt-3 border-t border-gray-200 max-h-32 overflow-y-auto">{currentQuestion.explanation}</div>)}
+    <div className="p-4 md:p-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-center mb-4">{title}</h1>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-4xl mx-auto">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Question {currentQuestionIndex + 1} of {questions.length} ({currentQuestion.points} pts)
+        </p>
+        
+        {/* Corrected Layout: Use flex-col and remove fixed height constraints */}
+        <div className="mt-4 flex flex-col">
+            {embedUrl && (
+                <div className="w-full aspect-video mb-4">
+                    <iframe
+                        key={embedUrl} // Add key to force re-render on change
+                        width="100%"
+                        height="100%"
+                        src={embedUrl}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                    ></iframe>
                 </div>
             )}
-            <Button onClick={proceedToNextQuestion} variant="primary" className="mt-4 md:mt-6">
-              {currentQuestionIndex < quizData.questions.length - 1 ? 'Next Question' : 'Finish & View Results'}
-            </Button>
-          </div>
-        </div>
-      </div>
+            
+            {currentQuestion.image_url && (
+                <div className="w-full mb-4">
+                    <img src={currentQuestion.image_url} alt="Question media" className="rounded-lg max-w-full h-auto mx-auto" />
+                </div>
+            )}
 
-      <div className="mt-auto pt-4 pb-4 px-4 md:px-6 border-t border-gray-200 flex justify-between items-center flex-shrink-0">
-        <Button onClick={goToPreviousQuestion} disabled={currentQuestionIndex === 0 || quizCompleted || isFlipped} variant="outline">Previous</Button>
-        {!isFlipped && (
-            (currentQuestion && quizData && currentQuestionIndex < quizData.questions.length - 1) ? 
-            (<Button onClick={goToNextQuestion} disabled={quizCompleted || !userAnswers[currentQuestion.id]} variant="primary">Next Question</Button>)
-            : 
-            (<Button onClick={handleSubmitQuiz} disabled={quizCompleted || isSubmitting || !quizData || !currentQuestion || Object.keys(userAnswers).length !== quizData.questions.length} variant="primary" className="bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500">
-              {isSubmitting ? 'Submitting...' : 'Finish Quiz'}
-            </Button>)
-        )}
-        {isFlipped && <div className="w-[88px] h-[38px]"> </div>}
+            <p className="text-lg font-medium my-4">{currentQuestion.question_text}</p>
+            
+            {/* Options Area */}
+            <div className="space-y-3">
+                {currentQuestion.options.map((option) => (
+                    <label
+                        key={option.id}
+                        className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${selectedOptions[currentQuestion.id] === option.id ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    >
+                        <input
+                            type="radio"
+                            name={`question-${currentQuestion.id}`}
+                            checked={selectedOptions[currentQuestion.id] === option.id}
+                            onChange={() => handleOptionSelect(currentQuestion.id, option.id)}
+                            className="mr-4"
+                        />
+                        <span>{option.option_text}</span>
+                    </label>
+                ))}
+            </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between mt-8">
+            <Button onClick={goToPrevious} disabled={currentQuestionIndex === 0}>
+                Previous
+            </Button>
+            {currentQuestionIndex < questions.length - 1 ? (
+                <Button onClick={goToNext}>
+                    Next
+                </Button>
+            ) : (
+                <Button onClick={handleSubmit} disabled={!selectedOptions[currentQuestion.id]}>
+                    Finish Quiz
+                </Button>
+            )}
+        </div>
       </div>
     </div>
   );
