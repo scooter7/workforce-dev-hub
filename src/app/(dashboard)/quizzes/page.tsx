@@ -4,18 +4,17 @@ import { redirect } from 'next/navigation';
 import { workforceTopics, Topic } from '@/lib/constants';
 import QuizCard from '@/components/quizzes/QuizCard';
 import { QuizTeaser } from '@/types/quiz';
-import { QuestionMarkCircleIcon } from '@heroicons/react/24/outline';
 
 export const metadata = {
   title: 'Quizzes',
 };
 
-// Now include userId so we can fetch attempts
+// Annotates quizzes with `completed` based on the current user’s attempts
 async function getQuizzesFromAPI(
   supabaseClient: any,
   userId: string
 ): Promise<(QuizTeaser & { completed: boolean })[]> {
-  // 1️⃣ Fetch all quizzes
+  // 1) Fetch all quizzes
   const { data: quizzes, error: quizErr } = await supabaseClient
     .from('quizzes')
     .select(`
@@ -36,7 +35,7 @@ async function getQuizzesFromAPI(
     return [];
   }
 
-  // 2️⃣ Fetch this user’s completed quiz attempts
+  // 2) Fetch this user’s completed quiz attempts
   const { data: attempts, error: attErr } = await supabaseClient
     .from('quiz_attempts')
     .select('quiz_id')
@@ -48,7 +47,7 @@ async function getQuizzesFromAPI(
   }
   const completedSet = new Set((attempts || []).map((a: any) => a.quiz_id));
 
-  // 3️⃣ Map and annotate
+  // 3) Map, annotate, and return
   return (
     quizzes?.map((q: any) => ({
       id: q.id,
@@ -63,7 +62,7 @@ async function getQuizzesFromAPI(
         q.quiz_questions && q.quiz_questions.length > 0
           ? q.quiz_questions[0].count
           : 0,
-      completed: completedSet.has(q.id),          // ← new flag
+      completed: completedSet.has(q.id),
     })) || []
   );
 }
@@ -76,15 +75,11 @@ export default async function QuizzesPage() {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    return redirect(
-      '/login?message=Please log in to view quizzes.'
-    );
+    return redirect('/login?message=Please log in to view quizzes.');
   }
 
-  // pass user.id so we can annotate completed
   const allQuizzes = await getQuizzesFromAPI(supabase, user.id);
 
-  // rest of your grouping logic remains unchanged...
   const quizzesByTopicAndSubtopic: Record<string, Record<string, typeof allQuizzes>> = {};
   const quizzesByMainTopicOnly: Record<string, typeof allQuizzes> = {};
 
@@ -103,28 +98,40 @@ export default async function QuizzesPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* ... header omitted for brevity ... */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-neutral-text">
+          Power Skills Quizzes
+        </h1>
+        <p className="mt-2 text-lg text-gray-600">
+          Test your knowledge and earn points! Select a topic to see available quizzes.
+        </p>
+      </div>
 
       {workforceTopics.map((topic: Topic) => (
         <section key={topic.id} className="mb-10">
-          {/* ... topic header ... */}
+          <h2
+            className="text-2xl font-semibold text-neutral-text mb-3 border-b-2 pb-2"
+            style={{ borderColor: topic.color || '#cbd5e1' }}
+          >
+            {topic.title}
+          </h2>
 
-          {/* Main-topic quizzes */}
           {quizzesByMainTopicOnly[topic.id]?.length > 0 && (
-            <div className="grid ...">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
               {quizzesByMainTopicOnly[topic.id].map((quiz) => (
                 <QuizCard key={quiz.id} quiz={quiz} />
               ))}
             </div>
           )}
 
-          {/* Subtopic quizzes */}
           {topic.subtopics.map((sub) => {
             const subQs = quizzesByTopicAndSubtopic[topic.id]?.[sub.id] || [];
             return subQs.length > 0 ? (
               <div key={sub.id} className="mt-6">
-                {/* ... subtopic header ... */}
-                <div className="grid ...">
+                <h3 className="text-xl font-medium text-neutral-text-light mb-2 pl-2">
+                  {sub.title}
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                   {subQs.map((quiz) => (
                     <QuizCard key={quiz.id} quiz={quiz} />
                   ))}
@@ -133,13 +140,18 @@ export default async function QuizzesPage() {
             ) : null;
           })}
 
-          {/* No quizzes message */}
-          {/* ... */}
+          {(!quizzesByMainTopicOnly[topic.id] ||
+            quizzesByMainTopicOnly[topic.id].length === 0) &&
+            topic.subtopics.every(
+              (st) =>
+                !quizzesByTopicAndSubtopic[topic.id]?.[st.id]?.length
+            ) && (
+              <p className="text-gray-500 mt-4 italic">
+                No quizzes currently available for this topic or its subtopics.
+              </p>
+            )}
         </section>
       ))}
-
-      {/* no quizzes overall message */}
-      {/* ... */}
     </div>
   );
 }
