@@ -59,6 +59,8 @@ export interface QuizTeaser {
   question_count?: number; // Total number of questions in the quiz
   created_at?: string; // ISO date string, optional for display
   card_image_url?: string | null; // <<< ADDED FOR NETFLIX-STYLE CARDS
+  /** Indicates whether the current user has completed this quiz */
+  completed?: boolean;
 }
 
 // You can add other quiz-related shared types here as needed.
