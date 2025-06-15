@@ -1,54 +1,78 @@
-/* src/app/globals.css */
+/* === CUSTOM FONT-FACE DEFINITIONS === */
+@font-face {
+  font-family: 'HeroNew';
+  src: url('/fonts/HeroNew-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'HeroNew';
+  src: url('/fonts/HeroNew-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'HeroNew';
+  src: url('/fonts/HeroNew-UltraLight.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NewSpirit';
+  src: url('/fonts/NewSpirit-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'NewSpirit';
+  src: url('/fonts/NewSpirit-SemiBold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* Import Tailwind CSS layers */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* CSS Variables:
-  These are useful if you need to access your theme colors from JavaScript 
-  or for CSS properties that don't easily accept Tailwind classes.
-  The `theme()` function requires your CSS to be processed by Tailwind.
-  Ensure 'brand-primary' and 'neutral-text'/'neutral-bg' are defined in your tailwind.config.js.
-*/
+/* CSS Variables: */
 :root {
-  --foreground-rgb: 0, 0, 0; /* Default dark text for non-Tailwind contexts if needed */
-  --background-start-rgb: 243, 244, 246; /* Default light gray for non-Tailwind contexts */
-  --background-end-rgb: 255, 255, 255;   /* Default white for non-Tailwind contexts */
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 243, 244, 246;
+  --background-end-rgb: 255, 255, 255;
 
-  /* Accessing Tailwind theme colors as CSS variables (optional, but can be handy) */
-  /* Make sure these color names match your tailwind.config.js theme extension */
-  /* Example: if you have colors: { 'brand-primary': { DEFAULT: '#HEX', dark: '#HEX' } } */
-  /* If brand-primary is just a single color string, theme('colors.brand-primary') is enough */
-  --brand-primary-color: theme('colors.brand-primary.DEFAULT', #007bff); /* Fallback color */
-  --brand-primary-dark-color: theme('colors.brand-primary.dark', #0056b3); /* Fallback color */
+  --brand-primary-color: theme('colors.brand-primary.DEFAULT', #007bff);
+  --brand-primary-dark-color: theme('colors.brand-primary.dark', #0056b3);
 
-  --neutral-text-color: theme('colors.neutral-text', #1f2937); /* Fallback to gray-800 */
-  --neutral-bg-color: theme('colors.neutral-bg', #f9fafb);   /* Fallback to gray-50 */
+  --neutral-text-color: theme('colors.neutral-text', #1f2937);
+  --neutral-bg-color: theme('colors.neutral-bg', #f9fafb);
 }
 
-/* Basic body styling using Tailwind utility classes via @apply */
+/* Basic body styling */
 body {
-  @apply text-neutral-text bg-neutral-bg antialiased; /* antialiased for smoother fonts */
-  font-family: theme('fontFamily.sans', 'sans-serif'); /* Use default sans-serif from Tailwind config */
+  @apply text-neutral-text bg-neutral-bg antialiased;
+  font-family: 'HeroNew', theme('fontFamily.sans', 'sans-serif');
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-/* Make images and videos responsive by default */
 img,
 video {
   max-width: 100%;
   height: auto;
 }
 
-/* Basic link styling - can be customized further or handled by component-specific styles */
 a {
   @apply text-brand-primary hover:text-brand-primary-dark transition-colors duration-150;
 }
 
-/* Utility class for visually hidden elements (important for accessibility) */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -112,11 +136,4 @@ a {
   overflow-y: auto; 
   min-height: 0; 
 }
-/* === END OF REVISED FLASHCARD STYLES === */
-
-/* Add any other global base styles or component layer customizations here */
-/* For example:
-html {
-  scroll-behavior: smooth;
-}
-*/
+/* === END OF FLASHCARD STYLES === */
