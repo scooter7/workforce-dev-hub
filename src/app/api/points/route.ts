@@ -2,11 +2,11 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export async function GET(request: Request) {
-  // 1) Create the Supabase server client (reads auth cookie)
+export async function GET() {
+  // Initialize Supabase server client (reads auth cookie)
   const supabase = createSupabaseServerClient()
 
-  // 2) Get the current user from the session
+  // Retrieve the current user session
   const {
     data: { user },
     error: userError
@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     )
   }
 
-  // 3) Fetch the point_logs for that user
+  // Fetch point logs for the authenticated user
   const { data, error } = await supabase
     .from('point_logs')
     .select('id, points, description, created_at')
@@ -33,6 +33,5 @@ export async function GET(request: Request) {
     )
   }
 
-  // 4) Return the data
   return NextResponse.json(data)
 }
