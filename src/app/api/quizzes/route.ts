@@ -1,19 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+// src/app/api/quizzes/route.ts
+import { NextRequest, NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
-export const dynamic = 'force-dynamic'; // Ensure fresh data for quiz list
+export const dynamic = 'force-dynamic'  // Always fetch fresh data
 
-export async function GET(_req: NextRequest) { // CHANGED: req to _req
-  const supabase = createSupabaseServerClient();
+export async function GET(_req: NextRequest) {
+  const supabase = createSupabaseServerClient()
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  // 1️⃣ Get current user
+  const {
+    data: { user },
+    error: authError
+  } = await supabase.auth.getUser()
   if (authError || !user) {
-    // Optional: Depending on policy, could restrict or allow.
-    // Page calling this should be authenticated.
+    console.error('Not authenticated')
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
 
   try {
-    let query = supabase
+    // 2️⃣ Fetch all quizzes
+    const { data: quizzes, error: quizErr } = await supabase
       .from('quizzes')
       .select(`
         id,
@@ -25,16 +31,35 @@ export async function GET(_req: NextRequest) { // CHANGED: req to _req
         created_at,
         quiz_questions ( count )
       `)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
 
-    const { data: quizzes, error } = await query;
-
-    if (error) {
-      console.error('Error fetching quizzes:', error);
-      return NextResponse.json({ error: 'Failed to fetch quizzes.', details: error.message }, { status: 500 });
+    if (quizErr) {
+      console.error('Error fetching quizzes:', quizErr)
+      return NextResponse.json(
+        { error: 'Failed to fetch quizzes.', details: quizErr.message },
+        { status: 500 }
+      )
     }
 
-    const formattedQuizzes = quizzes?.map(q => ({
+    // 3️⃣ Fetch this user’s completed quiz attempts
+    const { data: attempts, error: attErr } = await supabase
+      .from('quiz_attempts')
+      .select('quiz_id')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+
+    if (attErr) {
+      console.error('Error fetching quiz attempts:', attErr)
+      return NextResponse.json(
+        { error: 'Failed to fetch attempts.', details: attErr.message },
+        { status: 500 }
+      )
+    }
+
+    const completedSet = new Set<string>(attempts.map(a => a.quiz_id))
+
+    // 4️⃣ Format quizzes and add `completed` flag
+    const formattedQuizzes = (quizzes || []).map(q => ({
       id: q.id,
       topic_id: q.topic_id,
       subtopic_id: q.subtopic_id,
@@ -42,14 +67,17 @@ export async function GET(_req: NextRequest) { // CHANGED: req to _req
       description: q.description,
       difficulty: q.difficulty,
       created_at: q.created_at,
-      // @ts-ignore Supabase TS might struggle with related table count in this simple select
-      question_count: q.quiz_questions && q.quiz_questions.length > 0 ? q.quiz_questions[0].count : 0,
-    })) || [];
+      // @ts-ignore: quiz_questions[0].count
+      question_count: q.quiz_questions?.[0]?.count ?? 0,
+      completed: completedSet.has(q.id),
+    }))
 
-    return NextResponse.json(formattedQuizzes, { status: 200 });
-
+    return NextResponse.json(formattedQuizzes, { status: 200 })
   } catch (error: any) {
-    console.error('GET /api/quizzes - Generic Error:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred.', details: error.message }, { status: 500 });
+    console.error('GET /api/quizzes - Unexpected Error:', error)
+    return NextResponse.json(
+      { error: 'An unexpected error occurred.', details: error.message },
+      { status: 500 }
+    )
   }
 }
