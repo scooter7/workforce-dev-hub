@@ -36,12 +36,15 @@ const config: Config = {
         'neutral-border-hover': '#D1D5DB',
       },
       fontFamily: {
+        // Use your custom HeroNew for body text
         sans: ['HeroNew', ...defaultTheme.fontFamily.sans],
+        // New heading family for <h1> (NewSpirit SemiBold)
         heading: ['NewSpirit', ...defaultTheme.fontFamily.sans],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+        'gradient-conic':
+          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
     },
   },
