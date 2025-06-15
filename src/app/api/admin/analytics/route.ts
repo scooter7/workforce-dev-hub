@@ -1,11 +1,10 @@
-// src/app/api/admin/analytics/route.ts
 import { NextResponse } from 'next/server'
 import supabaseAdmin from '@/lib/supabaseAdminClient'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const domain = searchParams.get('domain') ?? ''
+    const domain = searchParams.get('domain') || ''
 
     // 1) Topics & Subtopics
     const { data: chunks, error: chunksErr } = await supabaseAdmin
@@ -20,14 +19,22 @@ export async function GET(request: Request) {
       if (r.subtopic_id) subtopicSet.add(r.subtopic_id)
     })
 
-    // 2) All users for domain filtering
-    const { data: users, error: usersErr } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email')
+    // 2) List all Auth users (service-role key required)
+    const {
+      data: usersData,
+      error: usersErr
+    } = await supabaseAdmin.auth.admin.listUsers({ /* optional paginationConfig */ })
     if (usersErr) throw usersErr
 
-    const matchesDomain = (email: string) =>
-      domain ? email.endsWith(`@${domain}`) : true
+    // Build a set of user IDs matching the domain (or all if no domain)
+    const allUsers = usersData.users
+    const allowedUserIds = domain
+      ? new Set(
+          allUsers
+            .filter((u) => u.email?.endsWith(`@${domain}`))
+            .map((u) => u.id)
+        )
+      : new Set(allUsers.map((u) => u.id))
 
     // 3) Quizzes Taken
     const { data: attempts, error: attemptsErr } = await supabaseAdmin
@@ -35,10 +42,9 @@ export async function GET(request: Request) {
       .select('user_id')
     if (attemptsErr) throw attemptsErr
 
-    const quizzesTaken = attempts.filter((a) => {
-      const u = users.find((u) => u.id === a.user_id)
-      return u && matchesDomain(u.email)
-    }).length
+    const quizzesTaken = attempts.filter((a) =>
+      allowedUserIds.has(a.user_id)
+    ).length
 
     // 4) Goals Created / Completed
     const { data: goals, error: goalsErr } = await supabaseAdmin
@@ -46,10 +52,9 @@ export async function GET(request: Request) {
       .select('user_id, status')
     if (goalsErr) throw goalsErr
 
-    const filteredGoals = goals.filter((g) => {
-      const u = users.find((u) => u.id === g.user_id)
-      return u && matchesDomain(u.email)
-    })
+    const filteredGoals = goals.filter((g) =>
+      allowedUserIds.has(g.user_id)
+    )
     const goalsCreated = filteredGoals.length
     const goalsCompleted = filteredGoals.filter((g) => g.status === 'completed').length
 
@@ -58,10 +63,10 @@ export async function GET(request: Request) {
       subtopics: subtopicSet.size,
       quizzesTaken,
       goalsCreated,
-      goalsCompleted,
+      goalsCompleted
     })
   } catch (err: any) {
-    console.error('Analytics error', err)
+    console.error('Analytics error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
