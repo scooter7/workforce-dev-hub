@@ -1,20 +1,29 @@
 // src/components/chat/ChatInterface.tsx
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useChat } from 'ai/react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
+import { useChat, type Message as VercelAIMessage } from 'ai/react';
 import { SubTopic, Topic } from '@/lib/constants';
-import { useAuth } from '@/components/providers/AuthProvider'; // Changed from useUser to useAuth
+import { useAuth } from '@/components/providers/AuthProvider';
 import { toast } from 'sonner';
+import Link from 'next/link';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
 
 export default function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: SubTopic }) {
-  const { user } = useAuth(); // Changed from useUser to useAuth
+  const { user, profile } = useAuth();
   const [isInitialPromptSent, setIsInitialPromptSent] = useState(false);
   const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
     api: '/api/chat',
     body: {
-      topicId: topic.id,
-      subtopicId: subtopic.id,
+      knowledgeBaseScope: {
+        topicId: topic.id,
+        subtopicId: subtopic.id,
+      },
+      userId: user?.id,
     },
     onError: (error) => {
       console.error('Chat error:', error);
@@ -29,7 +38,7 @@ export default function ChatInterface({ topic, subtopic }: { topic: Topic, subto
   }, [messages]);
 
   useEffect(() => {
-    if (!isInitialPromptSent && append) {
+    if (!isInitialPromptSent && append && user) {
       const userPrompt = `I'd like to learn about "${subtopic.title}" within the topic of "${topic.title}". Can you give me an overview?`;
       append({
         role: 'user',
@@ -37,75 +46,109 @@ export default function ChatInterface({ topic, subtopic }: { topic: Topic, subto
       });
       setIsInitialPromptSent(true);
     }
-  }, [append, isInitialPromptSent, subtopic.title, topic.title]);
+  }, [append, isInitialPromptSent, subtopic.title, topic.title, user]);
 
+  const customHandleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+    handleSubmit(e);
+  };
+  
+  // A robust avatar function
   const getAvatarUrl = (role: string) => {
-    // The original AuthProvider gives a `profile` object, let's check it for an avatar.
-    // Assuming the profile might have an `avatar_url` property.
-    // If not, we fall back to the user metadata.
     if (role === 'user') {
+      // Assuming profile might have an avatar_url, otherwise check user_metadata
       // @ts-ignore
-      return user?.profile?.avatar_url || user?.user_metadata?.avatar_url || '/user-avatar.png';
+      return profile?.avatar_url || user?.user_metadata?.avatar_url || '/user-avatar.png';
     }
-    return '/logo-bg-white.png';
+    // Using a known working icon from your public folder
+    return '/favicon.ico';
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
-      <header className="bg-white border-b p-4">
-        <h1 className="text-xl font-bold">{topic.title}</h1>
-        <p className="text-sm text-gray-600">{subtopic.title}</p>
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 shadow-sm z-10">
+        <div className="flex items-center space-x-4">
+          <Link href="/" className="text-gray-500 hover:text-gray-800">
+             &larr;
+          </Link>
+          <div>
+            <h1 className="text-lg font-semibold text-neutral-text dark:text-gray-200">{topic.title}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{subtopic.title}</p>
+          </div>
+        </div>
       </header>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((m) => (
-          <div key={m.id} className={`flex items-start gap-3 ${m.role === 'user' ? 'justify-end' : ''}`}>
-            {m.role !== 'user' && (
-              <img src={getAvatarUrl(m.role)} alt="AI" className="w-8 h-8 rounded-full" />
-            )}
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {messages.map((m: VercelAIMessage) => (
+          <div key={m.id} className={`flex items-start gap-3 ${m.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+            <img 
+              src={getAvatarUrl(m.role)} 
+              alt={m.role === 'user' ? 'User' : 'AI'} 
+              className="w-8 h-8 rounded-full bg-white border border-gray-200"
+            />
             <div
-              className={`max-w-xl p-3 rounded-lg ${
+              className={`max-w-xl p-3 rounded-lg shadow-sm prose prose-sm break-words ${
                 m.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-white border'
+                  ? 'bg-brand-primary text-white prose-invert'
+                  : 'bg-white dark:bg-gray-700 dark:text-gray-200'
               }`}
             >
-              <p className="text-sm" style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {m.content}
+              </ReactMarkdown>
             </div>
-            {m.role === 'user' && (
-              <img src={getAvatarUrl(m.role)} alt="User" className="w-8 h-8 rounded-full" />
-            )}
           </div>
         ))}
+
         {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
           <div className="flex items-start gap-3">
             <img src={getAvatarUrl('assistant')} alt="AI" className="w-8 h-8 rounded-full" />
-            <div className="max-w-xl p-3 rounded-lg bg-white border">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-fast"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-medium"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-slow"></div>
+            <div className="max-w-xl p-3 rounded-lg bg-white dark:bg-gray-700 shadow-sm">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.3s]"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse [animation-delay:-0.15s]"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
-      <div className="bg-white border-t p-4">
-        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
-          <input
-            className="flex-1 p-2 border rounded-lg"
+      
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 md:p-4">
+        {/* Restored Action Buttons */}
+        <div className="flex items-center space-x-3 mb-3">
+          <Link href="/goals" className="flex-1">
+            <Button variant="outline" size="sm" className="w-full">
+              <PlusIcon className="h-5 w-5 mr-1.5" />
+              Create Goal
+            </Button>
+          </Link>
+          <Link href="/quizzes" className="flex-1">
+            <Button variant="outline" size="sm" className="w-full">
+              <QuestionMarkCircleIcon className="h-5 w-5 mr-1.5" />
+              Build Knowledge
+            </Button>
+          </Link>
+        </div>
+        
+        <form onSubmit={customHandleSubmit} className="flex items-center space-x-2">
+          <Input
+            type="text"
+            className="flex-grow"
             value={input}
             onChange={handleInputChange}
             placeholder="Type your message..."
             disabled={isLoading || !isInitialPromptSent}
           />
-          <button
+          <Button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-blue-300"
-            disabled={isLoading || !isInitialPromptSent}
+            className="flex-shrink-0"
+            disabled={isLoading || !isInitialPromptSent || !input.trim()}
           >
             Send
-          </button>
+          </Button>
         </form>
       </div>
     </div>
