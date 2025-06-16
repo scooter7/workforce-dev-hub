@@ -1,11 +1,11 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { ToastContainer } from 'react-toastify';
-import { AuthProvider } from '@/components/providers/AuthProvider';
-import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
+import { Toaster } from 'sonner';
+import SupabaseProvider from '@/components/providers/SupabaseProvider';
+import AuthProvider from '@/components/providers/AuthProvider';
+import Sidebar from '@/components/layout/Sidebar';
 import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
-import 'react-toastify/dist/ReactToastify.css';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -24,23 +24,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="h-full">
+      <body className={`${inter.className} flex h-screen bg-neutral-bg antialiased`}>
         <SupabaseProvider>
           <AuthProvider>
-            {children}
-            <ToastContainer
-              position="top-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
+            <Sidebar />
+            <main className="flex-grow flex flex-col overflow-y-auto">
+              {children}
+            </main>
+            <Toaster richColors position="top-right" />
           </AuthProvider>
         </SupabaseProvider>
       </body>
