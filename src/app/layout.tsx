@@ -1,24 +1,21 @@
+// src/app/layout.tsx
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google'; // <<< IMPORT Inter
+import { Inter } from 'next/font/google';
+import { ToastContainer } from 'react-toastify';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
+import { APP_NAME, APP_DESCRIPTION } from '@/lib/constants';
+import 'react-toastify/dist/ReactToastify.css';
 import './globals.css';
-import { Toaster } from 'sonner';
-import SupabaseProvider from '@/components/providers/SupabaseProvider';
-import AuthProvider from '@/components/providers/AuthProvider';
-import Sidebar from '@/components/layout/Sidebar';
 
-// Initialize the Inter font
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap', // Ensures text is visible while font loads
-  variable: '--font-inter', // Optional: if you want to use it as a CSS variable elsewhere
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Power Skills',
-    template: '%s | Power Skills',
+    default: APP_NAME,
+    template: `%s | ${APP_NAME}`,
   },
-  description: 'Your platform for professional growth, AI chat, and goal tracking.',
+  description: APP_DESCRIPTION,
 };
 
 export default function RootLayout({
@@ -27,15 +24,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} h-full font-sans`}> {/* Apply font variable and fallback */}
-      <body className={`flex flex-col md:flex-row h-screen bg-neutral-bg antialiased`}> {/* Removed inter.className directly here as it's on html */}
+    <html lang="en">
+      <body className={inter.className}>
         <SupabaseProvider>
           <AuthProvider>
-            <Sidebar /> 
-            <main className="flex-grow flex flex-col overflow-y-auto">
-              {children}
-            </main>
-            <Toaster richColors position="top-right" />
+            {children}
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+              theme="light"
+            />
           </AuthProvider>
         </SupabaseProvider>
       </body>
