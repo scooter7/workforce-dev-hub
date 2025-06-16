@@ -1,3 +1,4 @@
+// src/components/providers/AuthProvider.tsx
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -11,6 +12,7 @@ interface UserProfile {
   company?: string | null;
   role?: string | null;
   points?: number | null;
+  avatar_url?: string | null; // This is the fix
 }
 
 interface AuthContextType {
@@ -35,13 +37,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
-      // console.log("AuthProvider: Supabase client not yet available.");
       return;
     }
-    // console.log("AuthProvider: Supabase client is available.");
 
     const getSessionAndProfile = async () => {
-      // console.log("AuthProvider: getSessionAndProfile called.");
       setIsLoading(true);
       const { data: { session: currentSession }, error: _sessionError } = await supabase.auth.getSession();
       
@@ -55,12 +54,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       if (currentSession?.user) {
         const currentUserId = currentSession.user.id;
         const adminEnvId = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
-        console.log("[AuthProvider - Initial Load] Current User ID:", currentUserId);
-        console.log("[AuthProvider - Initial Load] NEXT_PUBLIC_ADMIN_USER_ID:", adminEnvId);
-        
         const isAdminUser = currentUserId === adminEnvId;
         setIsAdmin(isAdminUser);
-        console.log("[AuthProvider - Initial Load] isAdmin set to:", isAdminUser);
 
         const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
@@ -75,7 +70,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setIsAdmin(false);
-        console.log("[AuthProvider - Initial Load] No user session, isAdmin set to false.");
       }
       setIsLoading(false);
     };
@@ -84,19 +78,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, newSession) => {
-        console.log('AuthProvider: Auth state changed event:', _event);
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
         if (newSession?.user) {
           const currentUserId = newSession.user.id;
           const adminEnvId = process.env.NEXT_PUBLIC_ADMIN_USER_ID;
-          console.log("[AuthProvider - Auth Change] Current User ID:", currentUserId);
-          console.log("[AuthProvider - Auth Change] NEXT_PUBLIC_ADMIN_USER_ID:", adminEnvId);
-
           const isAdminUser = currentUserId === adminEnvId;
           setIsAdmin(isAdminUser);
-          console.log("[AuthProvider - Auth Change] isAdmin set to:", isAdminUser);
 
           setIsLoading(true);
           const { data: userProfile, error: profileError } = await supabase
@@ -113,7 +102,6 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setProfile(null);
           setIsAdmin(false);
-          console.log("[AuthProvider - Auth Change] No new user session, isAdmin set to false.");
           setIsLoading(false);
         }
       }
@@ -128,8 +116,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
     if (error) console.error("Error signing out:", error.message);
-    // State updates (user, session, profile, isAdmin) will be handled by onAuthStateChange
-    router.push('/login'); 
+    router.push('/login');
   };
 
   const value = { user, session, profile, isLoading, isAdmin, signOut };
