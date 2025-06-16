@@ -25,7 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${inter.className} flex h-screen bg-neutral-bg antialiased`}>
+      {/* The fix is restoring 'flex-col md:flex-row' to the body tag */}
+      <body className={`${inter.className} flex flex-col md:flex-row h-screen bg-neutral-bg antialiased`}>
         <SupabaseProvider>
           <AuthProvider>
             <Sidebar />
