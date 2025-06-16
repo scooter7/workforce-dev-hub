@@ -1,188 +1,108 @@
+// src/components/chat/ChatInterface.tsx
 'use client';
 
-import { useChat, type Message as VercelAIMessage } from 'ai/react';
-import { useState, useEffect, useRef, FormEvent } from 'react';
-import { Topic, SubTopic } from '@/lib/constants';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Link from 'next/link';
-import { PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
+import { useState, useEffect, useRef } from 'react';
+import { useChat } from 'ai/react';
+import { SubTopic, Topic } from '@/lib/constants';
+import { useUser } from '@/components/providers/AuthProvider';
+import { toast } from 'react-toastify';
 
+export function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: SubTopic }) {
+  const { user } = useUser();
+  const [isInitialPromptSent, setIsInitialPromptSent] = useState(false);
+  const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
+    api: '/api/chat',
+    body: {
+      topicId: topic.id,
+      subtopicId: subtopic.id,
+    },
+    onError: (error) => {
+      console.error('Chat error:', error);
+      toast.error('Sorry, something went wrong. Please try again.');
+    },
+  });
 
-interface ChatInterfaceProps {
-  topic: Topic;
-  subtopic?: SubTopic;
-  initialSystemMessage: string;
-  knowledgeBaseScope: { topicId: string; subtopicId?: string };
-  userId: string;
-}
-
-const aiWelcomeMessage = `Welcome to Your LifeRamp AI Coach Concierge!
-
-Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
-
-Think of this as your 24/7 thinking partner — ready to provide smart suggestions, guide you through exercises, answer questions, or help you prepare for your next big step. And when you need a human touch, we’ll connect you with one of our certified LifeRamp coaches.
-
-Let’s build your path forward — one powerful step at a time.`;
-
-export default function ChatInterface({
-  topic,
-  subtopic,
-  initialSystemMessage,
-  knowledgeBaseScope,
-  userId,
-}: ChatInterfaceProps) {
-  const [isMounted, setIsMounted] = useState(false);
-  const initialLoadDoneRef = useRef(false);
-
-  const { messages, input, handleInputChange, handleSubmit, isLoading, error, append } =
-    useChat({
-      api: '/api/chat',
-      body: {
-        knowledgeBaseScope,
-        userId,
-      },
-      initialMessages: [
-        {
-          id: 'system-init', // For the system prompt (invisible to user)
-          role: 'system',
-          content: initialSystemMessage,
-        },
-        {
-          id: 'ai-welcome-message', // Unique ID for the AI's welcome message
-          role: 'assistant',
-          content: aiWelcomeMessage,
-        }
-      ],
-      onFinish: (_message) => {
-        // Optional: console.log('AI finished responding. Message ID:', message.id);
-      },
-      onError: (err) => {
-        console.error("Chat error in useChat hook:", err);
-      }
-    });
-
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Effect to send the initial, auto-generated user prompt
   useEffect(() => {
-    setIsMounted(true);
-    initialLoadDoneRef.current = false; // Reset this when topic/subtopic changes
-  }, [topic.id, subtopic?.id]);
-
-  useEffect(() => {
-    if (isMounted && !initialLoadDoneRef.current && topic?.title) {
-      // Check messages visible to user (assistant and user roles)
-      // We expect the AI welcome message to be present.
-      const actualChatMessages = messages.filter(m => m.role === 'user' || m.role === 'assistant');
-      
-      // If only the AI welcome message is present from the assistant, then append the user's first prompt.
-      if (actualChatMessages.length === 1 && actualChatMessages[0].role === 'assistant') {
-        append({
-          role: 'user',
-          content: `Hi! I'm interested in learning about ${subtopic?.title ? `${subtopic.title} within ${topic.title}` : topic.title}. Can you give me a brief introduction or some key points to start with?`
-        });
-        initialLoadDoneRef.current = true;
-      } else if (actualChatMessages.length === 0) {
-        // This case should be less likely if initialMessages includes the AI welcome.
-        // But as a fallback if something clears messages:
-         append({
-          role: 'user',
-          content: `Hi! I'm interested in learning about ${subtopic?.title ? `${subtopic.title} within ${topic.title}` : topic.title}. Can you give me a brief introduction or some key points to start with?`
-        });
-        initialLoadDoneRef.current = true;
-      }
+    if (!isInitialPromptSent && append) {
+      const userPrompt = `I'd like to learn about "${subtopic.title}" within the topic of "${topic.title}". Can you give me an overview?`;
+      append({
+        role: 'user',
+        content: userPrompt,
+      });
+      setIsInitialPromptSent(true);
     }
-  }, [isMounted, messages, append, topic, subtopic]);
+  }, [append, isInitialPromptSent, subtopic.title, topic.title]);
 
-
-  const customHandleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!input.trim()) return;
-    handleSubmit(e);
+  const getAvatarUrl = (role: string) => {
+    if (role === 'user') {
+      return user?.user_metadata?.avatar_url || '/user-avatar.png';
+    }
+    return '/logo-bg-white.png';
   };
 
-  // Filter out system messages before displaying
-  const displayedMessages = messages.filter(m => m.role !== 'system');
-
   return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-inner overflow-hidden">
-      <div className="flex-grow p-4 md:p-6 space-y-4 overflow-y-auto">
-        {displayedMessages.map((m: VercelAIMessage) => (
-          <div
-            key={m.id}
-            className={`flex ${
-              m.role === 'user' ? 'justify-end' : 'justify-start'
-            }`}
-          >
+    <div className="flex flex-col h-full bg-gray-50">
+      <header className="bg-white border-b p-4">
+        <h1 className="text-xl font-bold">{topic.title}</h1>
+        <p className="text-sm text-gray-600">{subtopic.title}</p>
+      </header>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((m, index) => (
+          <div key={m.id} className={`flex items-start gap-3 ${m.role === 'user' ? 'justify-end' : ''}`}>
+            {m.role !== 'user' && (
+              <img src={getAvatarUrl(m.role)} alt="AI" className="w-8 h-8 rounded-full" />
+            )}
             <div
-              className={`px-4 py-2 rounded-xl shadow prose prose-sm max-w-full break-words ${
+              className={`max-w-xl p-3 rounded-lg ${
                 m.role === 'user'
-                  ? 'bg-brand-primary text-white prose-invert max-w-xs md:max-w-md lg:max-w-lg'
-                  : 'bg-gray-100 text-gray-800 max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white border'
               }`}
             >
-              {m.role === 'assistant' ? (
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {m.content}
-                </ReactMarkdown>
-              ) : (
-                <p className="whitespace-pre-wrap">{m.content}</p>
-              )}
+              <p className="text-sm" style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
             </div>
+            {m.role === 'user' && (
+              <img src={getAvatarUrl(m.role)} alt="User" className="w-8 h-8 rounded-full" />
+            )}
           </div>
         ))}
+        {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
+          <div className="flex items-start gap-3">
+            <img src={getAvatarUrl('assistant')} alt="AI" className="w-8 h-8 rounded-full" />
+            <div className="max-w-xl p-3 rounded-lg bg-white border">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-fast"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-medium"></div>
+                <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse-slow"></div>
+              </div>
+            </div>
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
-
-      {isLoading && (
-        <div className="p-4 text-center text-sm text-gray-500 border-t">
-          AI is thinking...
-        </div>
-      )}
-      {error && (
-        <div className="p-4 text-center text-sm text-red-500 border-t">
-          Error: {error.message || 'An error occurred.'} Please try again or refresh.
-        </div>
-      )}
-
-      <div className="border-t border-gray-200 p-3 md:p-4 bg-gray-50">
-        <div className="flex items-center space-x-3 mb-3">
-            <Link href="/goals" className="flex-1">
-                <Button variant="outline" size="sm" className="w-full">
-                <PlusIcon className="h-5 w-5 mr-1.5" />
-                Create Goal
-                </Button>
-            </Link>
-            <Link href="/quizzes" className="flex-1">
-                <Button variant="outline" size="sm" className="w-full">
-                <QuestionMarkCircleIcon className="h-5 w-5 mr-1.5" />
-                Build Knowledge
-                </Button>
-            </Link>
-        </div>
-        <form onSubmit={customHandleSubmit} className="flex items-center space-x-2">
-          <Input
-            type="text"
+      <div className="bg-white border-t p-4">
+        <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+          <input
+            className="flex-1 p-2 border rounded-lg"
             value={input}
             onChange={handleInputChange}
             placeholder="Type your message..."
-            className="flex-grow !shadow-none !border-gray-300 focus:!border-brand-primary focus:!ring-brand-primary"
-            disabled={isLoading}
-            autoFocus
+            disabled={isLoading || !isInitialPromptSent}
           />
-          <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? 'Sending...' : 'Send'}
-          </Button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg disabled:bg-blue-300"
+            disabled={isLoading || !isInitialPromptSent}
+          >
+            Send
+          </button>
         </form>
       </div>
     </div>
