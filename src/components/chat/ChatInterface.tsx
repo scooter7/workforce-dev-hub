@@ -4,11 +4,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from 'ai/react';
 import { SubTopic, Topic } from '@/lib/constants';
-import { useUser } from '@/components/providers/AuthProvider';
-import { toast } from 'react-toastify';
+import { useAuth } from '@/components/providers/AuthProvider'; // Changed from useUser to useAuth
+import { toast } from 'sonner';
 
-export function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: SubTopic }) {
-  const { user } = useUser();
+export default function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: SubTopic }) {
+  const { user } = useAuth(); // Changed from useUser to useAuth
   const [isInitialPromptSent, setIsInitialPromptSent] = useState(false);
   const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
     api: '/api/chat',
@@ -28,7 +28,6 @@ export function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: Sub
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Effect to send the initial, auto-generated user prompt
   useEffect(() => {
     if (!isInitialPromptSent && append) {
       const userPrompt = `I'd like to learn about "${subtopic.title}" within the topic of "${topic.title}". Can you give me an overview?`;
@@ -41,8 +40,12 @@ export function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: Sub
   }, [append, isInitialPromptSent, subtopic.title, topic.title]);
 
   const getAvatarUrl = (role: string) => {
+    // The original AuthProvider gives a `profile` object, let's check it for an avatar.
+    // Assuming the profile might have an `avatar_url` property.
+    // If not, we fall back to the user metadata.
     if (role === 'user') {
-      return user?.user_metadata?.avatar_url || '/user-avatar.png';
+      // @ts-ignore
+      return user?.profile?.avatar_url || user?.user_metadata?.avatar_url || '/user-avatar.png';
     }
     return '/logo-bg-white.png';
   };
@@ -54,7 +57,7 @@ export function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: Sub
         <p className="text-sm text-gray-600">{subtopic.title}</p>
       </header>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((m, index) => (
+        {messages.map((m) => (
           <div key={m.id} className={`flex items-start gap-3 ${m.role === 'user' ? 'justify-end' : ''}`}>
             {m.role !== 'user' && (
               <img src={getAvatarUrl(m.role)} alt="AI" className="w-8 h-8 rounded-full" />
