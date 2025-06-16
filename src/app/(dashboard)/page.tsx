@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { journeyCategories, workforceTopics, Topic } from '@/lib/constants';
+import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey } from '@/lib/constants';
 import {
   ArrowLeftIcon,
   ChatBubbleLeftRightIcon,
@@ -13,10 +13,11 @@ import {
 } from '@heroicons/react/24/outline';
 
 // A mapping of category keys to icons for the journey selection screen.
-const categoryIcons: { [key: string]: React.ElementType } = {
-  'skill-development': LightBulbIcon,
+// Updated to match the new HighLevelCategoryKeys
+const categoryIcons: { [key in HighLevelCategoryKey]: React.ElementType } = {
   'career-growth': RocketLaunchIcon,
-  'personal-effectiveness': UserGroupIcon,
+  'interpersonal-skills': UserGroupIcon,
+  'personal-well-being': LightBulbIcon,
 };
 
 
@@ -52,12 +53,12 @@ export default function DashboardPage() {
   const [filteredTopics, setFilteredTopics] = useState<Topic[]>([]);
   const [selectedCategoryTitle, setSelectedCategoryTitle] = useState<string>('');
 
-  const handleCategorySelect = (categoryKey: string) => {
-    const selectedCategory = journeyCategories.find(c => c.key === categoryKey);
+  const handleCategorySelect = (categoryKey: HighLevelCategoryKey) => {
+    const selectedCategory = highLevelCategories.find(c => c.id === categoryKey);
     if (!selectedCategory) return;
 
     const topicsForCategory = workforceTopics.filter(
-      (topic) => topic.category === categoryKey
+      (topic) => topic.highLevelCategoryKey === categoryKey
     );
 
     setFilteredTopics(topicsForCategory);
@@ -77,12 +78,12 @@ export default function DashboardPage() {
         <h1 className="text-3xl sm:text-4xl font-bold text-neutral-text mb-3">Launch Your Journey</h1>
         <p className="text-lg sm:text-xl text-gray-600 mb-10">Select a path to focus your development.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
-          {journeyCategories.map((category) => {
-            const Icon = categoryIcons[category.key] || LightBulbIcon;
+          {highLevelCategories.map((category) => {
+            const Icon = categoryIcons[category.id] || LightBulbIcon;
             return (
               <button
-                key={category.key}
-                onClick={() => handleCategorySelect(category.key)}
+                key={category.id}
+                onClick={() => handleCategorySelect(category.id)}
                 className="group p-6 text-center bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-2 border-transparent hover:border-brand-primary"
               >
                 <Icon className="h-12 w-12 mx-auto text-brand-secondary transition-colors group-hover:text-brand-primary" />

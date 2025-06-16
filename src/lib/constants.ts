@@ -17,7 +17,7 @@ export interface Topic {
   icon?: any; // Placeholder for now
   subtopics: SubTopic[];
   // New field to categorize this topic under a high-level theme
-  highLevelCategoryKey?: HighLevelCategoryKey; 
+  highLevelCategoryKey?: HighLevelCategoryKey;
 }
 
 // Define keys for your high-level categories
@@ -33,21 +33,21 @@ export interface HighLevelCategory {
 
 // Define your high-level categories
 export const highLevelCategories: HighLevelCategory[] = [
-  { 
-    id: 'career-growth', 
-    title: 'Career Growth', 
+  {
+    id: 'career-growth',
+    title: 'Career Growth',
     description: 'Develop skills and strategies to advance your professional journey.',
     // illustration: '/images/career-growth.svg', // Example
   },
-  { 
-    id: 'interpersonal-skills', 
-    title: 'Interpersonal Skills', 
+  {
+    id: 'interpersonal-skills',
+    title: 'Interpersonal Skills',
     description: 'Enhance your ability to communicate and collaborate effectively.',
     // illustration: '/images/interpersonal-skills.svg', // Example
   },
-  { 
-    id: 'personal-well-being', 
-    title: 'Personal Well-being', 
+  {
+    id: 'personal-well-being',
+    title: 'Personal Well-being',
     description: 'Cultivate resilience and a healthy work-life integration.',
     // illustration: '/images/personal-well-being.svg', // Example
   },
@@ -76,7 +76,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'resilience', title: 'Resilience', highLevelCategoryKey: 'personal-well-being',
     description: 'Building mental and emotional strength.', color: '#10B981', // emerald-500
-    subtopics: [ /* ... your resilience subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Growth Mindset', 'resilience'), title: 'Growth Mindset' },
         { id: createKebabCaseId('Imposter Syndrome', 'resilience'), title: 'Imposter Syndrome' },
         { id: createKebabCaseId('Time Blocking', 'resilience'), title: 'Time Blocking' },
@@ -88,7 +88,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'collaboration', title: 'Collaboration', highLevelCategoryKey: 'interpersonal-skills',
     description: 'Working effectively with others.', color: '#F59E0B', // amber-500
-    subtopics: [ /* ... your collaboration subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Active Listening', 'collaboration'), title: 'Active Listening' },
         { id: createKebabCaseId('Empathy & Understanding', 'collaboration'), title: 'Empathy & Understanding' },
         { id: createKebabCaseId('Team Dynamics', 'collaboration'), title: 'Team Dynamics' },
@@ -100,7 +100,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'communication', title: 'Communication', highLevelCategoryKey: 'interpersonal-skills',
     description: 'Mastering clear and impactful communication.', color: '#8B5CF6', // violet-500
-    subtopics: [ /* ... your communication subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Storytelling & Messaging', 'communication'), title: 'Storytelling & Messaging' },
         { id: createKebabCaseId('Negotiation', 'communication'), title: 'Negotiation' },
         { id: createKebabCaseId('Personal Branding', 'communication'), title: 'Personal Branding' },
@@ -112,7 +112,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'personal-well-being-topic', title: 'Personal Well Being', highLevelCategoryKey: 'personal-well-being', // Renamed ID to avoid clash
     description: 'Focusing on holistic health and balance.', color: '#EC4899', // pink-500
-    subtopics: [ /* ... your personal well-being subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Physical Health', 'pwb'), title: 'Physical Health' },
         { id: createKebabCaseId('Emotional Health', 'pwb'), title: 'Emotional Health' },
         { id: createKebabCaseId('Work-Life Balance', 'pwb'), title: 'Work-Life Balance' },
@@ -124,7 +124,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'critical-thinking', title: 'Critical Thinking', highLevelCategoryKey: 'career-growth',
     description: 'Developing analytical abilities.', color: '#6366F1', // indigo-500
-    subtopics: [ /* ... your critical thinking subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Data-Driven Decision Making', 'ct'), title: 'Data-Driven Decision Making' },
         { id: createKebabCaseId('Visioning', 'ct'), title: 'Visioning' },
         { id: createKebabCaseId('Strategy & Planning', 'ct'), title: 'Strategy & Planning' }, // Kept one
@@ -134,7 +134,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'career-development', title: 'Career Development', highLevelCategoryKey: 'career-growth',
     description: 'Navigating your professional journey.', color: '#06B6D4', // cyan-500
-    subtopics: [ /* ... your career development subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Personal Branding', 'cd'), title: 'Personal Branding' },
         { id: createKebabCaseId('Career Transitioning', 'cd'), title: 'Career Transitioning' },
         { id: createKebabCaseId('Presentation Skills', 'cd'), title: 'Presentation Skills' },
@@ -145,7 +145,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'global-fluency', title: 'Global Fluency', highLevelCategoryKey: 'interpersonal-skills',
     description: 'Understanding global contexts.', color: '#D97706', // amber-600
-    subtopics: [ /* ... your global fluency subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('World Views', 'gf'), title: 'World Views' },
         { id: createKebabCaseId('Understanding Global Markets & Trends', 'gf'), title: 'Understanding Global Markets & Trends' },
         { id: createKebabCaseId('Intercultural Competency', 'gf'), title: 'Intercultural Competency' },
@@ -157,7 +157,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'creativity', title: 'Creativity', highLevelCategoryKey: 'interpersonal-skills', // Or 'Career Growth'? You decide.
     description: 'Fostering innovation.', color: '#EF4444', // red-500
-    subtopics: [ /* ... your creativity subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Innovation & Experimentation', 'creativity'), title: 'Innovation & Experimentation' },
         { id: createKebabCaseId('Cross-Disciplinary Collaboration', 'creativity'), title: 'Cross-Disciplinary Collaboration' },
         { id: createKebabCaseId('Empowerment & Autonomy', 'creativity'), title: 'Empowerment & Autonomy' },
@@ -166,7 +166,7 @@ export const workforceTopics: Topic[] = [
   {
     id: 'technology', title: 'Technology', highLevelCategoryKey: 'career-growth',
     description: 'Leveraging technology effectively.', color: '#6B7280', // gray-500
-    subtopics: [ /* ... your technology subtopics ... */ 
+    subtopics: [
         { id: createKebabCaseId('Data-Driven Decision Making', 'tech'), title: 'Data-Driven Decision Making' },
         { id: createKebabCaseId('Innovation & Change Management', 'tech'), title: 'Innovation & Change Management' },
         { id: createKebabCaseId('Vision & Strategy Alignment', 'tech'), title: 'Vision & Strategy Alignment' },
