@@ -1,7 +1,7 @@
 // src/app/(dashboard)/quizzes/[quizId]/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { workforceTopics } from '@/lib/constants';
+// The unused 'workforceTopics' import has been removed.
 import QuizPlayer from '@/components/quizzes/QuizPlayer';
 import { QuizWithQuestionsAndAnswers } from '@/types/quiz';
 import Link from 'next/link';
