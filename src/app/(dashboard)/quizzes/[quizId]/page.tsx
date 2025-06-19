@@ -2,7 +2,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import QuizPlayer from '@/components/quizzes/QuizPlayer';
-import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
+import { QuizData, QuizQuestion } from '@/types/quiz'; // 'QuestionOption' has been removed
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 
@@ -30,8 +30,6 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
   if (!user) {
     redirect('/login');
   }
-
-  // --- NEW, MORE ROBUST DATA FETCHING ---
 
   // 1. Fetch the main quiz data
   const { data: quizInfo, error: quizError } = await supabase
@@ -62,7 +60,6 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
     .order('order_num', { ascending: true });
 
   if (questionsError || !questions || questions.length === 0) {
-    // This case handles a quiz that exists but has no questions.
     quizInfo.questions = [];
     return (
         <div className="h-full w-full">
@@ -71,7 +68,7 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
     );
   }
 
-  // 3. Fetch all options for all of those questions in a single query
+  // 3. Fetch all options for all of those questions
   const questionIds = questions.map(q => q.id);
   const { data: options, error: optionsError } = await supabase
     .from('question_options')
@@ -80,7 +77,6 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
 
   if (optionsError) {
     console.error("Error fetching options:", optionsError.message);
-    // Proceed with questions but no options; the player will show the error.
   }
   
   // 4. Combine the questions with their options
