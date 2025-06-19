@@ -2,7 +2,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import QuizPlayer from '@/components/quizzes/QuizPlayer';
-import { QuizData } from '@/types/quiz';
+import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 
@@ -31,38 +31,16 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
     redirect('/login');
   }
 
-  // This query is now updated to select all necessary fields, including media URLs.
-  const { data: quizData, error: quizError } = await supabase
+  // --- NEW, MORE ROBUST DATA FETCHING ---
+
+  // 1. Fetch the main quiz data
+  const { data: quizInfo, error: quizError } = await supabase
     .from('quizzes')
-    .select(`
-      id,
-      title,
-      description,
-      topic_id,
-      subtopic_id,
-      difficulty,
-      questions:quiz_questions (
-        id,
-        question_text,
-        question_type,
-        explanation,
-        points,
-        order_num,
-        image_url,
-        video_url,
-        media_position,
-        options:question_options (
-          id,
-          option_text,
-          is_correct
-        )
-      )
-    `)
+    .select('*')
     .eq('id', params.quizId)
-    .order('order_num', { referencedTable: 'quiz_questions', ascending: true })
     .single();
 
-  if (quizError || !quizData) {
+  if (quizError || !quizInfo) {
     console.error('Error fetching quiz:', quizError?.message);
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-4">
@@ -70,17 +48,58 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
         <h1 className="text-2xl font-bold">Quiz Not Found</h1>
         <p className="text-gray-600 mt-2">Sorry, we couldn't find the quiz you're looking for.</p>
         <Link href="/quizzes" className="mt-4 text-brand-primary hover:underline">
-          &larr; Back to Quizzes
+          ← Back to Quizzes
         </Link>
       </div>
     );
   }
 
-  const typedQuizData = quizData as unknown as QuizData;
+  // 2. Fetch all questions for this quiz
+  const { data: questions, error: questionsError } = await supabase
+    .from('quiz_questions')
+    .select('*')
+    .eq('quiz_id', params.quizId)
+    .order('order_num', { ascending: true });
+
+  if (questionsError || !questions || questions.length === 0) {
+    // This case handles a quiz that exists but has no questions.
+    quizInfo.questions = [];
+    return (
+        <div className="h-full w-full">
+            <QuizPlayer quiz={quizInfo as QuizData} />
+        </div>
+    );
+  }
+
+  // 3. Fetch all options for all of those questions in a single query
+  const questionIds = questions.map(q => q.id);
+  const { data: options, error: optionsError } = await supabase
+    .from('question_options')
+    .select('*')
+    .in('question_id', questionIds);
+
+  if (optionsError) {
+    console.error("Error fetching options:", optionsError.message);
+    // Proceed with questions but no options; the player will show the error.
+  }
+  
+  // 4. Combine the questions with their options
+  const questionsWithPopulatedOptions = questions.map((question): QuizQuestion => {
+    return {
+      ...question,
+      options: options?.filter(opt => opt.question_id === question.id) || [],
+    };
+  });
+
+  // 5. Assemble the final data object for the component
+  const finalQuizData: QuizData = {
+    ...quizInfo,
+    questions: questionsWithPopulatedOptions,
+  };
 
   return (
     <div className="h-full w-full">
-      <QuizPlayer quiz={typedQuizData} />
+      <QuizPlayer quiz={finalQuizData} />
     </div>
   );
 }
