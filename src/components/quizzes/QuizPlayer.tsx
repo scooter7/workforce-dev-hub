@@ -13,6 +13,41 @@ interface QuizPlayerProps {
   quiz: QuizData;
 }
 
+// Helper component to render media (video or image)
+const QuestionMedia = ({ question }: { question: QuizData['questions'][0] }) => {
+  if (question.video_url) {
+    return (
+      <div className="w-full aspect-video mb-4 rounded-lg overflow-hidden">
+        <iframe
+          key={question.id} // Use key to force re-render on question change
+          width="100%"
+          height="100%"
+          src={question.video_url}
+          title="Question Video"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        ></iframe>
+      </div>
+    );
+  }
+
+  if (question.image_url) {
+    return (
+      <div className="w-full mb-4">
+        <img 
+          src={question.image_url} 
+          alt="Question context" 
+          className="rounded-lg max-w-full h-auto mx-auto"
+        />
+      </div>
+    );
+  }
+
+  return null;
+};
+
+
 export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   const router = useRouter();
   const { user } = useAuth();
@@ -23,6 +58,16 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   const [isFinished, setIsFinished] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userAnswers, setUserAnswers] = useState<{ questionId: string; answerId: string; isCorrect: boolean }[]>([]);
+
+  if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+    return (
+        <div className="text-center p-8">
+            <h2 className="text-2xl font-bold">Quiz Not Available</h2>
+            <p className="mt-4 text-lg">This quiz does not have any questions loaded.</p>
+            <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
+        </div>
+    );
+  }
 
   const currentQuestion = quiz.questions[currentQuestionIndex];
 
@@ -65,9 +110,7 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           answers: userAnswers,
-          finalScore: score,
         }),
       });
       
@@ -82,36 +125,35 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   };
 
   const getButtonClass = (option: QuestionOption) => {
-    // Default state: Add text-gray-800 to ensure visibility on white background
     if (!isAnswered) {
       return selectedOptionId === option.id 
         ? 'bg-blue-500 text-white border-blue-500' 
-        : 'bg-white hover:bg-gray-100 text-gray-800';
+        : 'bg-white hover:bg-gray-100 text-gray-800 border-gray-300';
     }
-    
-    // Answered states
     if (option.is_correct) {
       return 'bg-green-500 text-white border-green-500';
     }
     if (selectedOptionId === option.id && !option.is_correct) {
       return 'bg-red-500 text-white border-red-500';
     }
-    
-    // Default for incorrect, unselected options after answering
-    return 'bg-white opacity-60 text-gray-800';
+    return 'bg-white opacity-60 text-gray-800 border-gray-300';
   };
 
   return (
-    <div 
-      className="min-h-screen w-full flex items-center justify-center p-4 bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: "url('/quizbackground.png')" }}
-    >
-      <div className="bg-white bg-opacity-95 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-3xl">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-xl shadow-2xl w-full max-w-3xl">
         {!isFinished ? (
           <>
             <div className="mb-4">
-              <p className="text-sm text-gray-500">Question {currentQuestionIndex + 1} of {quiz.questions.length}</p>
-              <h2 className="text-2xl font-bold mt-1">{currentQuestion.question_text}</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Question {currentQuestionIndex + 1} of {quiz.questions.length}
+              </p>
+              
+              {currentQuestion.media_position !== 'below_text' && <QuestionMedia question={currentQuestion} />}
+
+              <h2 className="text-2xl font-bold mt-4">{currentQuestion.question_text}</h2>
+
+              {currentQuestion.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
             </div>
             
             <div className="space-y-3">
@@ -128,6 +170,12 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
                 </button>
               ))}
             </div>
+
+            {isAnswered && currentQuestion.explanation && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-800">
+                    <strong>Explanation:</strong> {currentQuestion.explanation}
+                </div>
+            )}
 
             <div className="mt-6 flex justify-end">
               {isAnswered ? (
