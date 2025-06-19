@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { QuizData, QuestionOption } from '@/types/quiz'; // Use new types
+import { QuizData, QuestionOption } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
@@ -61,7 +61,6 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
     setIsSubmitting(true);
     
     try {
-      // This API endpoint might need to be created or updated
       const response = await fetch(`/api/quizzes/${quiz.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,18 +82,23 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   };
 
   const getButtonClass = (option: QuestionOption) => {
+    // Default state: Add text-gray-800 to ensure visibility on white background
     if (!isAnswered) {
       return selectedOptionId === option.id 
         ? 'bg-blue-500 text-white border-blue-500' 
-        : 'bg-white hover:bg-gray-100';
+        : 'bg-white hover:bg-gray-100 text-gray-800';
     }
+    
+    // Answered states
     if (option.is_correct) {
       return 'bg-green-500 text-white border-green-500';
     }
     if (selectedOptionId === option.id && !option.is_correct) {
       return 'bg-red-500 text-white border-red-500';
     }
-    return 'bg-white opacity-60';
+    
+    // Default for incorrect, unselected options after answering
+    return 'bg-white opacity-60 text-gray-800';
   };
 
   return (

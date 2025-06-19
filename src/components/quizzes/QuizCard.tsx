@@ -10,13 +10,10 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/solid';
 
-interface QuizCardProps {
-  quiz: QuizTeaser & { completed?: boolean };
-}
+// The path to the background image has been updated here.
+const STATIC_CARD_BACKGROUND_IMAGE = '/quizbackground.png';
 
-const STATIC_CARD_BACKGROUND_IMAGE = '/LifeRamp_Connect.jpg';
-
-export default function QuizCard({ quiz }: QuizCardProps) {
+export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean }) {
   const primaryTextColor = 'text-white';
   const secondaryTextColor = 'text-gray-200';
 
@@ -32,14 +29,14 @@ export default function QuizCard({ quiz }: QuizCardProps) {
       >
         {/* COMPLETION BADGE */}
         {quiz.completed && (
-          <div className="absolute top-3 right-3 z-20">
+          <div className="absolute top-3 right-3 z-20" title="Completed">
             <CheckCircleIcon className="h-6 w-6 text-green-400 drop-shadow-lg" />
           </div>
         )}
 
         {/* Background Image */}
         <Image
-          src={STATIC_CARD_BACKGROUND_IMAGE}
+          src={quiz.card_image_url || STATIC_CARD_BACKGROUND_IMAGE}
           alt={`${quiz.title} background`}
           fill
           style={{ objectFit: 'cover' }}
