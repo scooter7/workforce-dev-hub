@@ -2,7 +2,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import QuizPlayer from '@/components/quizzes/QuizPlayer';
-import { QuizData, QuizQuestion } from '@/types/quiz'; // 'QuestionOption' has been removed
+import { QuizData, QuizQuestion } from '@/types/quiz';
 import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 
@@ -60,6 +60,8 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
     .order('order_num', { ascending: true });
 
   if (questionsError || !questions || questions.length === 0) {
+    // This case handles a quiz that exists but has no questions.
+    // @ts-ignore
     quizInfo.questions = [];
     return (
         <div className="h-full w-full">
@@ -68,10 +70,12 @@ export default async function QuizPage({ params }: { params: { quizId: string } 
     );
   }
 
-  // 3. Fetch all options for all of those questions
+  // 3. Fetch all options for those questions from the correct table
   const questionIds = questions.map(q => q.id);
+  // --- THIS IS THE KEY CHANGE ---
+  // Querying the 'quiz_question_options' table instead of 'question_options'
   const { data: options, error: optionsError } = await supabase
-    .from('question_options')
+    .from('quiz_question_options')
     .select('*')
     .in('question_id', questionIds);
 
