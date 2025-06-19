@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { QuizData, QuestionOption } from '@/types/quiz';
+import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
@@ -14,15 +14,19 @@ interface QuizPlayerProps {
 }
 
 // Helper component to render media (video or image)
-const QuestionMedia = ({ question }: { question: QuizData['questions'][0] }) => {
+const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
   if (question.video_url) {
+    // Basic check for embed URL format
+    const isEmbed = question.video_url.includes('embed');
+    const videoSrc = isEmbed ? question.video_url : `https://www.youtube.com/embed/${question.video_url.split('v=')[1]}`;
+    
     return (
-      <div className="w-full aspect-video mb-4 rounded-lg overflow-hidden">
+      <div className="w-full aspect-video my-4 rounded-lg overflow-hidden shadow-md">
         <iframe
-          key={question.id} // Use key to force re-render on question change
+          key={question.id}
           width="100%"
           height="100%"
-          src={question.video_url}
+          src={videoSrc}
           title="Question Video"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -34,11 +38,11 @@ const QuestionMedia = ({ question }: { question: QuizData['questions'][0] }) => 
 
   if (question.image_url) {
     return (
-      <div className="w-full mb-4">
+      <div className="w-full my-4">
         <img 
           src={question.image_url} 
           alt="Question context" 
-          className="rounded-lg max-w-full h-auto mx-auto"
+          className="rounded-lg max-w-full h-auto mx-auto shadow-md"
         />
       </div>
     );
@@ -61,11 +65,11 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
 
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
-        <div className="text-center p-8">
-            <h2 className="text-2xl font-bold">Quiz Not Available</h2>
-            <p className="mt-4 text-lg">This quiz does not have any questions loaded.</p>
-            <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
-        </div>
+      <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <h2 className="text-2xl font-bold">Quiz Not Available</h2>
+        <p className="mt-4 text-lg">This quiz does not have any questions loaded.</p>
+        <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
+      </div>
     );
   }
 
@@ -104,17 +108,12 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   const submitQuizResults = async () => {
     if (!user) return;
     setIsSubmitting(true);
-    
     try {
-      const response = await fetch(`/api/quizzes/${quiz.id}/submit`, {
+      await fetch(`/api/quizzes/${quiz.id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          answers: userAnswers,
-        }),
+        body: JSON.stringify({ answers: userAnswers }),
       });
-      
-      if (!response.ok) throw new Error('Failed to submit quiz results.');
       toast.success('Quiz completed and results saved!');
     } catch (error) {
       console.error('Submission error:', error);
@@ -125,18 +124,19 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   };
 
   const getButtonClass = (option: QuestionOption) => {
+    const baseClass = "w-full text-left p-4 rounded-lg border-2 transition-all duration-200 flex items-center justify-between";
     if (!isAnswered) {
-      return selectedOptionId === option.id 
+      return `${baseClass} ${selectedOptionId === option.id 
         ? 'bg-blue-500 text-white border-blue-500' 
-        : 'bg-white hover:bg-gray-100 text-gray-800 border-gray-300';
+        : 'bg-white hover:bg-gray-100 text-gray-800 border-gray-300'}`;
     }
     if (option.is_correct) {
-      return 'bg-green-500 text-white border-green-500';
+      return `${baseClass} bg-green-500 text-white border-green-500`;
     }
     if (selectedOptionId === option.id && !option.is_correct) {
-      return 'bg-red-500 text-white border-red-500';
+      return `${baseClass} bg-red-500 text-white border-red-500`;
     }
-    return 'bg-white opacity-60 text-gray-800 border-gray-300';
+    return `${baseClass} bg-white opacity-60 text-gray-800 border-gray-300`;
   };
 
   return (
@@ -150,9 +150,7 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
               </p>
               
               {currentQuestion.media_position !== 'below_text' && <QuestionMedia question={currentQuestion} />}
-
               <h2 className="text-2xl font-bold mt-4">{currentQuestion.question_text}</h2>
-
               {currentQuestion.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
             </div>
             
@@ -162,11 +160,11 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
                   key={option.id}
                   onClick={() => handleAnswerSelect(option.id)}
                   disabled={isAnswered}
-                  className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-200 flex items-center justify-between ${getButtonClass(option)}`}
+                  className={getButtonClass(option)}
                 >
-                  <span className="flex-grow">{option.option_text}</span>
-                  {isAnswered && option.is_correct && <CheckCircleIcon className="h-6 w-6 text-white" />}
-                  {isAnswered && selectedOptionId === option.id && !option.is_correct && <XCircleIcon className="h-6 w-6 text-white" />}
+                  <span className="flex-grow mr-4">{option.option_text}</span>
+                  {isAnswered && option.is_correct && <CheckCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
+                  {isAnswered && selectedOptionId === option.id && !option.is_correct && <XCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
                 </button>
               ))}
             </div>
