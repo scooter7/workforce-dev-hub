@@ -1,3 +1,5 @@
+// src/types/quiz.ts
+
 /**
  * Defines the possible positions for media (image/video) relative to the question text.
  */
@@ -62,5 +64,3 @@ export interface QuizTeaser {
   /** Indicates whether the current user has completed this quiz */
   completed?: boolean;
 }
-
-// You can add other quiz-related shared types here as needed.
