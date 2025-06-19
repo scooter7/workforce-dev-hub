@@ -10,15 +10,22 @@ import {
   CheckCircleIcon,
 } from '@heroicons/react/24/solid';
 
-// The path to the background image has been updated here.
 const STATIC_CARD_BACKGROUND_IMAGE = '/quizbackground.png';
 
-export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean }) {
+export default function QuizCard({
+  id,
+  title,
+  description,
+  difficulty,
+  question_count,
+  card_image_url,
+  completed,
+}: QuizTeaser & { completed?: boolean }) {
   const primaryTextColor = 'text-white';
   const secondaryTextColor = 'text-gray-200';
 
   return (
-    <Link href={`/quizzes/${quiz.id}`} legacyBehavior>
+    <Link href={`/quizzes/${id}`} legacyBehavior>
       <a
         className={`
           group relative flex flex-col justify-between rounded-lg shadow-lg 
@@ -28,7 +35,7 @@ export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean })
         `}
       >
         {/* COMPLETION BADGE */}
-        {quiz.completed && (
+        {completed && (
           <div className="absolute top-3 right-3 z-20" title="Completed">
             <CheckCircleIcon className="h-6 w-6 text-green-400 drop-shadow-lg" />
           </div>
@@ -36,8 +43,8 @@ export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean })
 
         {/* Background Image */}
         <Image
-          src={quiz.card_image_url || STATIC_CARD_BACKGROUND_IMAGE}
-          alt={`${quiz.title} background`}
+          src={card_image_url || STATIC_CARD_BACKGROUND_IMAGE}
+          alt={`${title} background`}
           fill
           style={{ objectFit: 'cover' }}
           className="transition-transform duration-300 group-hover:scale-110 z-0"
@@ -60,16 +67,16 @@ export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean })
               />
               <h3
                 className={`text-sm sm:text-base font-semibold leading-tight line-clamp-3 ${primaryTextColor}`}
-                title={quiz.title}
+                title={title}
               >
-                {quiz.title}
+                {title}
               </h3>
             </div>
-            {quiz.description && (
+            {description && (
               <p
                 className={`text-xs ${secondaryTextColor} line-clamp-2 sm:line-clamp-3`}
               >
-                {quiz.description}
+                {description}
               </p>
             )}
           </div>
@@ -81,10 +88,10 @@ export default function QuizCard({ quiz }: QuizTeaser & { completed?: boolean })
             `}
           >
             <span className="capitalize">
-              {quiz.difficulty || 'N/A'} | {quiz.question_count || 0} Qs
+              {difficulty || 'N/A'} | {question_count || 0} Qs
             </span>
             <span className={`inline-flex items-center font-medium ${primaryTextColor}`}>
-              {quiz.completed ? 'Review' : 'Start'}{' '}
+              {completed ? 'Review' : 'Start'}{' '}
               <ChevronRightIcon className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
             </span>
           </div>
