@@ -7,7 +7,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
-import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ArrowPathIcon, AlertTriangleIcon } from '@heroicons/react/24/solid';
 
 interface QuizPlayerProps {
   quiz: QuizData;
@@ -16,12 +16,14 @@ interface QuizPlayerProps {
 // Helper component to render media (video or image)
 const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
   if (question.video_url) {
-    // Basic check for embed URL format
-    const isEmbed = question.video_url.includes('embed');
-    const videoSrc = isEmbed ? question.video_url : `https://www.youtube.com/embed/${question.video_url.split('v=')[1]}`;
-    
+    // This logic helps construct a valid embeddable URL for YouTube videos
+    let videoSrc = question.video_url;
+    if (videoSrc.includes('youtube.com/watch?v=')) {
+      const videoId = videoSrc.split('v=')[1].split('&')[0];
+      videoSrc = `https://www.youtube.com/embed/${videoId}`;
+    }
     return (
-      <div className="w-full aspect-video my-4 rounded-lg overflow-hidden shadow-md">
+      <div className="w-full aspect-video my-4 rounded-lg overflow-hidden shadow-md bg-black">
         <iframe
           key={question.id}
           width="100%"
@@ -63,9 +65,11 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userAnswers, setUserAnswers] = useState<{ questionId: string; answerId: string; isCorrect: boolean }[]>([]);
 
+  // Guard against missing or empty questions array
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
+        <AlertTriangleIcon className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-2xl font-bold">Quiz Not Available</h2>
         <p className="mt-4 text-lg">This quiz does not have any questions loaded.</p>
         <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
@@ -85,7 +89,7 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
       toast.error('Please select an answer.');
       return;
     }
-    const selectedOption = currentQuestion.options.find(o => o.id === selectedOptionId);
+    const selectedOption = currentQuestion.options?.find(o => o.id === selectedOptionId);
     const isCorrect = selectedOption?.is_correct || false;
     if (isCorrect) {
       setScore(prev => prev + (currentQuestion.points || 1));
@@ -148,25 +152,34 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Question {currentQuestionIndex + 1} of {quiz.questions.length}
               </p>
-              
-              {currentQuestion.media_position !== 'below_text' && <QuestionMedia question={currentQuestion} />}
-              <h2 className="text-2xl font-bold mt-4">{currentQuestion.question_text}</h2>
-              {currentQuestion.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
+              {currentQuestion?.media_position !== 'below_text' && <QuestionMedia question={currentQuestion} />}
+              <h2 className="text-2xl font-bold mt-4">{currentQuestion?.question_text || 'Loading question...'}</h2>
+              {currentQuestion?.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
             </div>
             
             <div className="space-y-3">
-              {currentQuestion.options.map(option => (
-                <button
-                  key={option.id}
-                  onClick={() => handleAnswerSelect(option.id)}
-                  disabled={isAnswered}
-                  className={getButtonClass(option)}
-                >
-                  <span className="flex-grow mr-4">{option.option_text}</span>
-                  {isAnswered && option.is_correct && <CheckCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
-                  {isAnswered && selectedOptionId === option.id && !option.is_correct && <XCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
-                </button>
-              ))}
+              {/* --- THIS IS THE KEY FIX --- */}
+              {/* Check if options exist and are an array before trying to map them */}
+              {(currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ? (
+                currentQuestion.options.map(option => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleAnswerSelect(option.id)}
+                    disabled={isAnswered}
+                    className={getButtonClass(option)}
+                  >
+                    <span className="flex-grow mr-4">{option.option_text}</span>
+                    {isAnswered && option.is_correct && <CheckCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
+                    {isAnswered && selectedOptionId === option.id && !option.is_correct && <XCircleIcon className="h-6 w-6 text-white flex-shrink-0" />}
+                  </button>
+                ))
+              ) : (
+                // If options are missing, display a clear error message
+                <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
+                  <p className="font-bold">Error: Response options are missing for this question.</p>
+                  <p className="text-sm mt-1">Please check the quiz data in the admin panel.</p>
+                </div>
+              )}
             </div>
 
             {isAnswered && currentQuestion.explanation && (
