@@ -8,7 +8,7 @@ import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
-import { AlertTriangleIcon } from '@heroicons/react/24/outline'; // Correctly imported from outline
+import { AlertTriangle } from 'lucide-react'; // Correctly imported from lucide-react
 
 interface QuizPlayerProps {
   quiz: QuizData;
@@ -69,7 +69,7 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <AlertTriangleIcon className="h-12 w-12 text-red-500 mb-4" />
+        <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
         <h2 className="text-2xl font-bold">Quiz Not Available</h2>
         <p className="mt-4 text-lg">This quiz does not have any questions loaded.</p>
         <Button onClick={() => router.push('/quizzes')} className="mt-6">Back to Quizzes</Button>
