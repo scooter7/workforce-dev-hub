@@ -7,7 +7,8 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { QuizData, QuestionOption, QuizQuestion } from '@/types/quiz';
 import Button from '@/components/ui/Button';
 import { toast } from 'sonner';
-import { CheckCircleIcon, XCircleIcon, ArrowPathIcon, AlertTriangleIcon } from '@heroicons/react/24/solid';
+import { CheckCircleIcon, XCircleIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { AlertTriangleIcon } from '@heroicons/react/24/outline'; // Correctly imported from outline
 
 interface QuizPlayerProps {
   quiz: QuizData;
@@ -16,7 +17,6 @@ interface QuizPlayerProps {
 // Helper component to render media (video or image)
 const QuestionMedia = ({ question }: { question: QuizQuestion }) => {
   if (question.video_url) {
-    // This logic helps construct a valid embeddable URL for YouTube videos
     let videoSrc = question.video_url;
     if (videoSrc.includes('youtube.com/watch?v=')) {
       const videoId = videoSrc.split('v=')[1].split('&')[0];
@@ -152,14 +152,13 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Question {currentQuestionIndex + 1} of {quiz.questions.length}
               </p>
+              
               {currentQuestion?.media_position !== 'below_text' && <QuestionMedia question={currentQuestion} />}
               <h2 className="text-2xl font-bold mt-4">{currentQuestion?.question_text || 'Loading question...'}</h2>
               {currentQuestion?.media_position === 'below_text' && <QuestionMedia question={currentQuestion} />}
             </div>
             
             <div className="space-y-3">
-              {/* --- THIS IS THE KEY FIX --- */}
-              {/* Check if options exist and are an array before trying to map them */}
               {(currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ? (
                 currentQuestion.options.map(option => (
                   <button
@@ -174,7 +173,6 @@ export default function QuizPlayer({ quiz }: QuizPlayerProps) {
                   </button>
                 ))
               ) : (
-                // If options are missing, display a clear error message
                 <div className="text-red-500 p-4 border border-red-200 rounded-md bg-red-50">
                   <p className="font-bold">Error: Response options are missing for this question.</p>
                   <p className="text-sm mt-1">Please check the quiz data in the admin panel.</p>
