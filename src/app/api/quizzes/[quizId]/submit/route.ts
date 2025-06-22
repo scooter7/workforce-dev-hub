@@ -1,111 +1,94 @@
 // src/app/api/quizzes/[quizId]/submit/route.ts
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
 
-// Zod schema for the incoming answers payload
-const AnswersSchema = z.object({
-  answers: z.record(z.string().uuid(), z.string().uuid()),
-});
+import { NextResponse } from 'next/server';
+import { createRouteHandlerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '@/lib/database.types';
 
 export async function POST(
-  req: NextRequest,
+  request: Request,
   { params }: { params: { quizId: string } }
 ) {
-  try {
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  // Initialize Supabase client bound to this route
+  const supabase = createRouteHandlerSupabaseClient<Database>({ request });
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const parsed = AnswersSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Invalid payload', issues: parsed.error.issues },
-        { status: 400 }
-      );
-    }
-    const { answers } = parsed.data;
-
-    // Fetch all questions and their options
-    const { data: questionsWithOptions, error: questionsError } =
-      await supabase
-        .from('quiz_questions')
-        .select('id, points, options:quiz_question_options(id, is_correct)')
-        .eq('quiz_id', params.quizId);
-
-    if (questionsError) {
-      return NextResponse.json(
-        { error: 'Could not retrieve quiz questions.' },
-        { status: 500 }
-      );
-    }
-
-    // Calculate score
-    let score = 0;
-    for (const question of questionsWithOptions) {
-      const correctOption = question.options.find((o) => o.is_correct);
-      if (correctOption && correctOption.id === answers[question.id]) {
-        score += question.points;
-      }
-    }
-
-    // Insert a record of the attempt, now including status
-    const { data: attempt, error: attemptError } = await supabase
-      .from('quiz_attempts')
-      .insert({
-        quiz_id: params.quizId,
-        user_id: user.id,
-        score: score,
-        status: 'completed',        // ✨ mark it completed
-      })
-      .select('id')
-      .single();
-
-    if (attemptError) {
-      return NextResponse.json(
-        { error: 'Failed to save quiz attempt.' },
-        { status: 500 }
-      );
-    }
-
-    // Award points via your RPC if score > 0
-    if (score > 0) {
-      const { error: pointsError } = await supabase.rpc('award_points', {
-        user_id_input: user.id,
-        points_to_add: score,
-      });
-      if (pointsError) {
-        console.error('Failed to award points:', pointsError);
-      }
-    }
-
-    // Insert individual answers for review
-    const userAnswers = Object.entries(answers).map(
-      ([question_id, option_id]) => ({
-        attempt_id: attempt.id,
-        question_id,
-        selected_option_id: option_id,
-        user_id: user.id,
-      })
-    );
-    await supabase.from('user_answers').insert(userAnswers);
-
-    return NextResponse.json({
-      message: 'Quiz submitted successfully',
-      score,
-      quizAttemptId: attempt.id,
-    });
-  } catch (e: any) {
-    console.error('Unexpected error in quiz submission:', e);
+  // Authenticate user
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
     return NextResponse.json(
-      { error: 'An unexpected error occurred.' },
+      { error: 'Not authenticated' },
+      { status: 401 }
+    );
+  }
+
+  // Parse submitted answers
+  const { answers } = await request.json();
+
+  // Fetch correct answers for this quiz
+  const { data: questions, error: fetchError } = await supabase
+    .from('quiz_questions')
+    .select('id, correct_answer')
+    .eq('quiz_id', params.quizId);
+  if (fetchError || !questions) {
+    console.error('Error fetching quiz questions:', fetchError);
+    return NextResponse.json(
+      { error: 'Failed to fetch quiz questions' },
       { status: 500 }
     );
   }
+
+  // Compute score
+  let score = 0;
+  questions.forEach((q, idx) => {
+    if (answers[idx] === q.correct_answer) {
+      score++;
+    }
+  });
+
+  // Log the quiz attempt
+  const { data: attempt, error: insertError } = await supabase
+    .from('quiz_attempts')
+    .insert({
+      user_id: user.id,
+      quiz_id: params.quizId,
+      score,
+      status: 'completed',
+    })
+    .select()
+    .single();
+  if (insertError) {
+    console.error('Error inserting quiz_attempt:', insertError);
+  }
+
+  // Award points for taking the quiz (unconditional)
+  const pointsToAward = 10;
+
+  // 1) Increment the user's point total
+  const { error: rpcError } = await supabase.rpc('increment_user_points', {
+    user_id_param: user.id,
+    points_to_add: pointsToAward,
+  });
+  if (rpcError) {
+    console.error('Error incrementing user points:', rpcError);
+  }
+
+  // 2) Insert a log entry
+  const { error: logError } = await supabase
+    .from('point_logs')
+    .insert({
+      user_id: user.id,
+      points_awarded: pointsToAward,
+      reason_code: 'QUIZ_TAKEN',
+      reason_message: `Completed quiz ${params.quizId}`,
+      related_entity_id: params.quizId,
+      related_entity_type: 'quiz',
+    });
+  if (logError) {
+    console.error('Error inserting point_log:', logError);
+  }
+
+  // Return the user’s score (and attempt record if needed)
+  return NextResponse.json({ score, attempt });
 }

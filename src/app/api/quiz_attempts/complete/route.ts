@@ -1,42 +1,74 @@
 // src/app/api/quiz_attempts/complete/route.ts
-import { NextResponse } from 'next/server'
-import supabaseAdmin from '@/lib/supabaseAdminClient'
+
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createServerActionClient } from '@supabase/auth-helpers-nextjs';
+import type { Database } from '@/lib/database.types';
 
 export async function POST(request: Request) {
-  const body = await request.json()
-  const { userId, quizId } = body
+  // Supabase admin client for server actions
+  const supabaseAdmin = createServerActionClient<Database>({ cookies });
 
-  try {
-    // 1️⃣ Mark attempt completed
-    const { error: attErr } = await supabaseAdmin
-      .from('quiz_attempts')
-      .insert({ user_id: userId, quiz_id: quizId, status: 'completed' })
-    if (attErr) throw attErr
-
-    // 2️⃣ Fetch the quiz description
-    const { data: quiz, error: quizErr } = await supabaseAdmin
-      .from('quizzes')
-      .select('description')
-      .eq('id', quizId)
-      .single()
-    if (quizErr) throw quizErr
-
-    // 3️⃣ Award points (static 10 pts; adjust as desired)
-    const pointsToAward = 10
-    const description = quiz.description || `Quiz ${quizId}`
-
-    const { error: logErr } = await supabaseAdmin
-      .from('point_logs')
-      .insert({
-        user_id: userId,
-        points: pointsToAward,
-        description,
-      })
-    if (logErr) throw logErr
-
-    return NextResponse.json({ success: true })
-  } catch (err: any) {
-    console.error('complete quiz error', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  // Authenticate
+  const {
+    data: { user },
+    error: userError,
+  } = await supabaseAdmin.auth.getUser();
+  if (userError || !user) {
+    return NextResponse.json(
+      { error: 'Not authenticated' },
+      { status: 401 }
+    );
   }
+
+  // Expecting { quizId, pointsToAward?, description? }
+  const {
+    quizId,
+    pointsToAward = 10,
+    description = `Completed quiz ${quizId}`,
+  } = await request.json();
+
+  // 1) Insert the quiz attempt record
+  const { data: attempt, error: attemptError } = await supabaseAdmin
+    .from('quiz_attempts')
+    .insert({
+      user_id: user.id,
+      quiz_id: quizId,
+      score: 0,
+      status: 'completed',
+    })
+    .select()
+    .single();
+  if (attemptError) {
+    console.error('Error inserting quiz_attempt:', attemptError);
+  }
+
+  // 2) Increment user’s total points
+  const { error: rpcError } = await supabaseAdmin.rpc(
+    'increment_user_points',
+    {
+      user_id_param: user.id,
+      points_to_add: pointsToAward,
+    }
+  );
+  if (rpcError) {
+    console.error('Error incrementing user points:', rpcError);
+  }
+
+  // 3) Log the point award
+  const { error: logError } = await supabaseAdmin
+    .from('point_logs')
+    .insert({
+      user_id: user.id,
+      points_awarded: pointsToAward,
+      reason_code: 'QUIZ_TAKEN',
+      reason_message: description,
+      related_entity_id: quizId,
+      related_entity_type: 'quiz',
+    });
+  if (logError) {
+    console.error('Error inserting point_log:', logError);
+  }
+
+  return NextResponse.json({ attempt });
 }
