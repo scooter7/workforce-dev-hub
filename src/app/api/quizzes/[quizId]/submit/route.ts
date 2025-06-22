@@ -1,7 +1,6 @@
 // src/app/api/quizzes/[quizId]/submit/route.ts
 import { NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { Database } from '@/types/db';
 import { z } from 'zod';
 
 // Schema to validate the incoming request body
