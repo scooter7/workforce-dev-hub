@@ -1,5 +1,4 @@
 // src/app/api/quiz_attempts/complete/route.ts
-
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
@@ -11,31 +10,18 @@ export async function POST(request: Request) {
   if (userError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
-
-  const {
-    quizId,
-    pointsToAward = 10,
-    description = `Completed quiz ${quizId}`
-  } = await request.json()
-
+  const { quizId, pointsToAward = 10, description = `Completed quiz ${quizId}` } = await request.json()
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('quiz_attempts')
-    .insert({
-      user_id: user.id,
-      quiz_id: quizId,
-      score: 0,
-      status: 'completed'
-    })
+    .insert({ user_id: user.id, quiz_id: quizId, score: 0, status: 'completed' })
     .select()
     .single()
   if (attemptError) console.error(attemptError)
-
   const { error: rpcError } = await supabaseAdmin.rpc('increment_user_points', {
     user_id_param: user.id,
     points_to_add: pointsToAward
   })
   if (rpcError) console.error(rpcError)
-
   const { error: logError } = await supabaseAdmin
     .from('point_logs')
     .insert({
@@ -47,6 +33,5 @@ export async function POST(request: Request) {
       related_entity_type: 'quiz'
     })
   if (logError) console.error(logError)
-
   return NextResponse.json({ attempt })
 }
