@@ -1,15 +1,23 @@
 // src/app/api/quizzes/[quizId]/submit/route.ts
 
 import { NextResponse } from 'next/server'
-import { createRouteHandlerSupabaseClient } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 import type { Database } from '@/types/db'
 
 export async function POST(
   request: Request,
   { params }: { params: { quizId: string } }
 ) {
-  const supabase = createRouteHandlerSupabaseClient<Database>({ request })
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies }
+  )
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
   if (userError || !user) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
   }
@@ -23,18 +31,11 @@ export async function POST(
   }
   let score = 0
   questions.forEach((q, idx) => {
-    if (answers[idx] === q.correct_answer) {
-      score++
-    }
+    if (answers[idx] === q.correct_answer) score++
   })
   const { data: attempt, error: insertError } = await supabase
     .from('quiz_attempts')
-    .insert({
-      user_id: user.id,
-      quiz_id: params.quizId,
-      score,
-      status: 'completed',
-    })
+    .insert({ user_id: user.id, quiz_id: params.quizId, score, status: 'completed' })
     .select()
     .single()
   if (insertError) console.error(insertError)
