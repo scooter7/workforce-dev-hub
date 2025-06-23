@@ -44,10 +44,10 @@ interface MindMapProps {
 }
 
 const nodeOrigin: NodeOrigin = [0.5, 0.5];
-const ESTIMATED_MAIN_NODE_WIDTH = 250;
-const ESTIMATED_MAIN_NODE_HEIGHT = 120; // Adjusted height for new card design
-const ESTIMATED_SUB_NODE_WIDTH = 220;
-const ESTIMATED_SUB_NODE_HEIGHT = 90; // Adjusted height for new card design
+const ESTIMATED_MAIN_NODE_WIDTH = 361;
+const ESTIMATED_MAIN_NODE_HEIGHT = 160;
+const ESTIMATED_SUB_NODE_WIDTH = 240;
+const ESTIMATED_SUB_NODE_HEIGHT = 100;
 
 const nodeTypes = {
   modernTopic: ModernTopicNode,
@@ -199,9 +199,6 @@ function MindMapContent({ topics }: MindMapProps) {
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
-      // Navigate to chat for the topic/subtopic
-      // The individual action links inside the node will handle their own specific navigation
-      // This click handler is for clicking the main body of the node
       const topicData = node.data.topic;
       const subtopicData = node.data.subtopic;
       const topicId = node.data.topicId || topicData?.id;
