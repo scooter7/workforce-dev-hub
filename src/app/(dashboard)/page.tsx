@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // Import the Next.js Image component
 import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey, SubTopic } from '@/lib/constants';
 import {
   ArrowLeftIcon,
@@ -10,22 +11,19 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
-// --- REVISED GRADIENTS (MAGENTA/PINKS REMOVED) ---
 const gradients = [
-  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
-  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
-  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
-  'transparent linear-gradient(284deg, #4CB0EF 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Sky Blue to Green
-  'transparent linear-gradient(284deg, #00D6F6 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Cyan to Blue
-  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
-  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
-  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box', // Light Blue to Sky Blue
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CB0EF 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00D6F6 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
 ];
 
-
-// Card component remains the same, it just uses the new gradients array
 interface SubtopicCardProps {
   topicId: string;
   subtopic: SubTopic;
@@ -60,8 +58,6 @@ function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
   );
 }
 
-
-// --- Main Page Component (No changes needed here) ---
 const categoryIcons: { [key in HighLevelCategoryKey]: React.ElementType } = {
   'career-growth': RocketLaunchIcon,
   'interpersonal-skills': UserGroupIcon,
@@ -129,17 +125,23 @@ export default function DashboardPage() {
       {stage === 'choice' && (
         <div className="flex-grow flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-5xl text-center">
-            <div className="bg-blue-50 border border-blue-200 text-blue-900 p-6 rounded-lg mb-10 text-left">
-              <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
-              <p className="mb-4">
-                Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
-              </p>
-              <p className="mb-4">
-                Think of this as your 24/7 thinking partner — ready to provide smart suggestions, guide you through exercises, answer questions, or help you prepare for your next big step. And when you need a human touch, we’ll connect you with one of our certified LifeRamp coaches.
-              </p>
-              <p className="font-semibold">
-                Let’s build your path forward — one powerful step at a time.
-              </p>
+            
+            {/* --- THIS IS THE UPDATED WELCOME SECTION --- */}
+            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-8">
+              <Image
+                src="/kai-float-1.gif"
+                alt="Kai AI Coach Mascot"
+                width={150}
+                height={150}
+                unoptimized={true} // Use this prop for GIFs to prevent them from becoming static
+                className="hidden sm:block" // Hide on small screens to save space
+              />
+              <div className="text-left text-blue-900">
+                <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
+                <p>
+                  Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
+                </p>
+              </div>
             </div>
             
             <h1 className="text-3xl sm:text-4xl font-bold text-neutral-text mb-3">Launch Your Journey</h1>
