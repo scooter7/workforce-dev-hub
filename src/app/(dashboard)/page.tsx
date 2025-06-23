@@ -1,4 +1,3 @@
-// src/app/(dashboard)/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,7 +5,6 @@ import Link from 'next/link';
 import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey, SubTopic } from '@/lib/constants';
 import {
   ArrowLeftIcon,
-  ChatBubbleLeftRightIcon,
   LightBulbIcon,
   RocketLaunchIcon,
   UserGroupIcon,
