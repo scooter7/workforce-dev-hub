@@ -62,7 +62,6 @@ export default async function QuizzesPage() {
     } as QuizTeaser & { completed: boolean };
   });
 
-  // This helper function makes the code much cleaner than the old version.
   const { quizzesBySubtopic, quizzesByMainTopicOnly } = groupQuizzesByTopic(quizzesWithDynamicData, workforceTopics);
 
   return (
@@ -80,8 +79,10 @@ export default async function QuizzesPage() {
           const hasMainTopicQuizzes = quizzesByMainTopicOnly[topic.id]?.length > 0;
 
           if (!hasSubtopicQuizzes && !hasMainTopicQuizzes) {
-            return null; // Don't render the topic section if there are no quizzes for it
+            return null;
           }
+          
+          const topicIndex = workforceTopics.findIndex(t => t.id === topic.id);
 
           return (
             <section key={topic.id}>
@@ -92,28 +93,25 @@ export default async function QuizzesPage() {
                 {topic.title}
               </h2>
               
-              {/* Render quizzes associated with subtopics */}
               {topic.subtopics.map((subtopic) => (
                 quizzesBySubtopic[subtopic.id] && quizzesBySubtopic[subtopic.id].length > 0 && (
                   <div key={subtopic.id} className="mt-6">
                     <h3 className="text-lg font-semibold text-neutral-text mb-1">{subtopic.title}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
                       {quizzesBySubtopic[subtopic.id].map((quiz) => (
-                        <QuizCard key={quiz.id} {...quiz} />
+                        <QuizCard key={quiz.id} {...quiz} topicIndex={topicIndex} />
                       ))}
                     </div>
                   </div>
                 )
               ))}
 
-              {/* Render quizzes associated with the main topic (no subtopic) */}
               {quizzesByMainTopicOnly[topic.id] && quizzesByMainTopicOnly[topic.id].length > 0 && (
                 <div className="mt-6">
-                   {/* This checks if there are also subtopic quizzes to determine if a header is needed */}
                   {hasSubtopicQuizzes && <h3 className="text-lg font-semibold text-neutral-text mb-1">General</h3>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
                     {quizzesByMainTopicOnly[topic.id].map((quiz) => (
-                      <QuizCard key={quiz.id} {...quiz} />
+                      <QuizCard key={quiz.id} {...quiz} topicIndex={topicIndex} />
                     ))}
                   </div>
                 </div>

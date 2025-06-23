@@ -2,15 +2,19 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { QuizTeaser } from '@/types/quiz';
 import {
-  PuzzlePieceIcon,
-  ChevronRightIcon,
   CheckCircleIcon,
-} from '@heroicons/react/24/solid';
+  SignalIcon,
+  QuestionMarkCircleIcon,
+  SparklesIcon,
+} from '@heroicons/react/24/outline';
+import { gradients } from '@/lib/constants';
 
-const STATIC_CARD_BACKGROUND_IMAGE = '/quizbackground.png';
+interface QuizCardProps extends QuizTeaser {
+  completed?: boolean;
+  topicIndex: number;
+}
 
 export default function QuizCard({
   id,
@@ -18,82 +22,48 @@ export default function QuizCard({
   description,
   difficulty,
   question_count,
-  card_image_url,
   completed,
-}: QuizTeaser & { completed?: boolean }) {
-  const primaryTextColor = 'text-white';
-  const secondaryTextColor = 'text-gray-200';
+  topicIndex,
+}: QuizCardProps) {
+  const topicGradient = gradients[topicIndex >= 0 ? topicIndex % gradients.length : 0];
 
   return (
     <Link href={`/quizzes/${id}`} legacyBehavior>
-      <a
-        className={`
-          group relative flex flex-col justify-between rounded-lg shadow-lg 
-          hover:shadow-xl transition-all duration-300 ease-in-out overflow-hidden 
-          aspect-[2/3] md:aspect-[3/4] transform hover:-translate-y-1 hover:scale-[1.03]
-          bg-gray-700
-        `}
-      >
-        {/* COMPLETION BADGE */}
-        {completed && (
-          <div className="absolute top-3 right-3 z-20" title="Completed">
-            <CheckCircleIcon className="h-6 w-6 text-green-400 drop-shadow-lg" />
-          </div>
-        )}
-
-        {/* Background Image */}
-        <Image
-          src={card_image_url || STATIC_CARD_BACKGROUND_IMAGE}
-          alt={`${title} background`}
-          fill
-          style={{ objectFit: 'cover' }}
-          className="transition-transform duration-300 group-hover:scale-110 z-0"
-          priority
-        />
-
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/10 z-10" />
-
-        {/* Content */}
+      <a className="group block rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 ease-in-out transform hover:-translate-y-1.5 focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2">
+        {/* Top Colored Section */}
         <div
-          className={`
-            relative flex flex-col justify-end h-full p-3 sm:p-4 z-20 ${primaryTextColor}
-          `}
+          className="relative text-white p-5 rounded-t-xl flex flex-col justify-between h-40"
+          style={{ background: topicGradient }}
         >
-          <div className="mb-2">
-            <div className="flex items-start mb-1 sm:mb-2">
-              <PuzzlePieceIcon
-                className={`h-5 w-5 sm:h-6 sm:w-6 mr-2 mt-0.5 flex-shrink-0 ${primaryTextColor}`}
-              />
-              <h3
-                className={`text-sm sm:text-base font-semibold leading-tight line-clamp-3 ${primaryTextColor}`}
-                title={title}
-              >
-                {title}
-              </h3>
+          {completed && (
+            <div className="absolute top-2 right-2 z-10" title="Completed">
+              <CheckCircleIcon className="h-6 w-6 text-white drop-shadow-lg" />
             </div>
-            {description && (
-              <p
-                className={`text-xs ${secondaryTextColor} line-clamp-2 sm:line-clamp-3`}
-              >
-                {description}
-              </p>
-            )}
-          </div>
+          )}
+          <h3 className="text-lg font-bold leading-tight line-clamp-3" title={title}>
+            {title}
+          </h3>
+          <p className="text-xs text-white/80 mt-1 line-clamp-2" title={description}>
+            {description}
+          </p>
+        </div>
 
-          <div
-            className={`
-              mt-auto flex justify-between items-center text-xs pt-2 border-t border-white/30 
-              ${secondaryTextColor}
-            `}
-          >
-            <span className="capitalize">
-              {difficulty || 'N/A'} | {question_count || 0} Qs
-            </span>
-            <span className={`inline-flex items-center font-medium ${primaryTextColor}`}>
-              {completed ? 'Review' : 'Start'}{' '}
-              <ChevronRightIcon className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />
-            </span>
+        {/* Bottom White Section */}
+        <div className="bg-white p-4 rounded-b-xl space-y-3 text-sm">
+          <div className="flex items-center text-gray-600">
+            <SignalIcon className="h-5 w-5 mr-2 text-gray-400" />
+            <span className="font-medium">Difficulty:</span>
+            <span className="ml-auto font-semibold text-neutral-text capitalize">{difficulty || 'N/A'}</span>
+          </div>
+          <div className="flex items-center text-gray-600">
+            <QuestionMarkCircleIcon className="h-5 w-5 mr-2 text-gray-400" />
+            <span className="font-medium">Questions:</span>
+            <span className="ml-auto font-semibold text-neutral-text">{question_count || 0}</span>
+          </div>
+          <div className="flex items-center text-gray-600">
+            <SparklesIcon className="h-5 w-5 mr-2 text-gray-400" />
+            <span className="font-medium">Points:</span>
+            <span className="ml-auto font-semibold text-neutral-text">{(question_count || 0) * 2}</span>
           </div>
         </div>
       </a>

@@ -3,67 +3,74 @@
 export const APP_NAME = 'Power Skills';
 export const APP_DESCRIPTION = 'Your platform for professional growth, AI chat, and goal tracking.';
 
+// --- ADD THIS GRADIENTS ARRAY ---
+export const gradients = [
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
+  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Pink to Purple
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Magenta to Purple
+  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #FF1994 100%) 0% 0% no-repeat padding-box', // Magenta to Pink
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
+];
+// --- END OF ADDITION ---
+
 export interface SubTopic {
   id: string;
   title: string;
   description?: string;
 }
 
+// ... (the rest of the file remains the same) ...
+
 export interface Topic {
   id: string;
   title: string;
   description?: string;
   color?: string;
-  icon?: any; // Placeholder for now
+  icon?: any;
   subtopics: SubTopic[];
-  // New field to categorize this topic under a high-level theme
   highLevelCategoryKey?: HighLevelCategoryKey;
 }
 
-// Define keys for your high-level categories
 export type HighLevelCategoryKey = 'career-growth' | 'interpersonal-skills' | 'personal-well-being';
 
 export interface HighLevelCategory {
   id: HighLevelCategoryKey;
   title: string;
   description: string;
-  // Add an icon or image path if you want visual representation for these choices
-  // illustration?: string; // e.g., path to an image in /public
 }
 
-// Define your high-level categories
 export const highLevelCategories: HighLevelCategory[] = [
   {
     id: 'career-growth',
     title: 'Career Growth',
     description: 'Develop skills and strategies to advance your professional journey.',
-    // illustration: '/images/career-growth.svg', // Example
   },
   {
     id: 'interpersonal-skills',
     title: 'Interpersonal Skills',
     description: 'Enhance your ability to communicate and collaborate effectively.',
-    // illustration: '/images/interpersonal-skills.svg', // Example
   },
   {
     id: 'personal-well-being',
     title: 'Personal Well-being',
     description: 'Cultivate resilience and a healthy work-life integration.',
-    // illustration: '/images/personal-well-being.svg', // Example
   },
 ];
 
-// Helper to create kebab-case IDs (remains the same)
 const createKebabCaseId = (title: string, prefix: string = ''): string => {
   const baseId = title.toLowerCase().replace(/\s+/g, '-').replace(/[&']/g, '').replace(/[^a-z0-9-]/g, '');
   return prefix ? `${prefix}-${baseId}` : baseId;
 };
 
-// Your detailed topics, now with an optional 'highLevelCategoryKey'
 export const workforceTopics: Topic[] = [
   {
     id: 'leadership', title: 'Leadership', highLevelCategoryKey: 'interpersonal-skills',
-    description: 'Exploring various facets of effective leadership.', color: '#3B82F6', // blue-500
+    description: 'Exploring various facets of effective leadership.', color: '#3B82F6',
     subtopics: [
       { id: createKebabCaseId('Transformational Leadership', 'leadership'), title: 'Transformational Leadership' },
       { id: createKebabCaseId('Emotional Intelligence', 'leadership'), title: 'Emotional Intelligence' },
@@ -75,7 +82,7 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'resilience', title: 'Resilience', highLevelCategoryKey: 'personal-well-being',
-    description: 'Building mental and emotional strength.', color: '#10B981', // emerald-500
+    description: 'Building mental and emotional strength.', color: '#10B981',
     subtopics: [
         { id: createKebabCaseId('Growth Mindset', 'resilience'), title: 'Growth Mindset' },
         { id: createKebabCaseId('Imposter Syndrome', 'resilience'), title: 'Imposter Syndrome' },
@@ -87,7 +94,7 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'collaboration', title: 'Collaboration', highLevelCategoryKey: 'interpersonal-skills',
-    description: 'Working effectively with others.', color: '#F59E0B', // amber-500
+    description: 'Working effectively with others.', color: '#F59E0B',
     subtopics: [
         { id: createKebabCaseId('Active Listening', 'collaboration'), title: 'Active Listening' },
         { id: createKebabCaseId('Empathy & Understanding', 'collaboration'), title: 'Empathy & Understanding' },
@@ -99,7 +106,7 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'communication', title: 'Communication', highLevelCategoryKey: 'interpersonal-skills',
-    description: 'Mastering clear and impactful communication.', color: '#8B5CF6', // violet-500
+    description: 'Mastering clear and impactful communication.', color: '#8B5CF6',
     subtopics: [
         { id: createKebabCaseId('Storytelling & Messaging', 'communication'), title: 'Storytelling & Messaging' },
         { id: createKebabCaseId('Negotiation', 'communication'), title: 'Negotiation' },
@@ -110,8 +117,8 @@ export const workforceTopics: Topic[] = [
     ],
   },
   {
-    id: 'personal-well-being-topic', title: 'Personal Well Being', highLevelCategoryKey: 'personal-well-being', // Renamed ID to avoid clash
-    description: 'Focusing on holistic health and balance.', color: '#EC4899', // pink-500
+    id: 'personal-well-being-topic', title: 'Personal Well Being', highLevelCategoryKey: 'personal-well-being',
+    description: 'Focusing on holistic health and balance.', color: '#EC4899',
     subtopics: [
         { id: createKebabCaseId('Physical Health', 'pwb'), title: 'Physical Health' },
         { id: createKebabCaseId('Emotional Health', 'pwb'), title: 'Emotional Health' },
@@ -123,17 +130,17 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'critical-thinking', title: 'Critical Thinking', highLevelCategoryKey: 'career-growth',
-    description: 'Developing analytical abilities.', color: '#6366F1', // indigo-500
+    description: 'Developing analytical abilities.', color: '#6366F1',
     subtopics: [
         { id: createKebabCaseId('Data-Driven Decision Making', 'ct'), title: 'Data-Driven Decision Making' },
         { id: createKebabCaseId('Visioning', 'ct'), title: 'Visioning' },
-        { id: createKebabCaseId('Strategy & Planning', 'ct'), title: 'Strategy & Planning' }, // Kept one
+        { id: createKebabCaseId('Strategy & Planning', 'ct'), title: 'Strategy & Planning' },
         { id: createKebabCaseId('Ethics', 'ct'), title: 'Ethics' },
     ],
   },
   {
     id: 'career-development', title: 'Career Development', highLevelCategoryKey: 'career-growth',
-    description: 'Navigating your professional journey.', color: '#06B6D4', // cyan-500
+    description: 'Navigating your professional journey.', color: '#06B6D4',
     subtopics: [
         { id: createKebabCaseId('Personal Branding', 'cd'), title: 'Personal Branding' },
         { id: createKebabCaseId('Career Transitioning', 'cd'), title: 'Career Transitioning' },
@@ -144,7 +151,7 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'global-fluency', title: 'Global Fluency', highLevelCategoryKey: 'interpersonal-skills',
-    description: 'Understanding global contexts.', color: '#D97706', // amber-600
+    description: 'Understanding global contexts.', color: '#D97706',
     subtopics: [
         { id: createKebabCaseId('World Views', 'gf'), title: 'World Views' },
         { id: createKebabCaseId('Understanding Global Markets & Trends', 'gf'), title: 'Understanding Global Markets & Trends' },
@@ -155,8 +162,8 @@ export const workforceTopics: Topic[] = [
     ],
   },
   {
-    id: 'creativity', title: 'Creativity', highLevelCategoryKey: 'interpersonal-skills', // Or 'Career Growth'? You decide.
-    description: 'Fostering innovation.', color: '#EF4444', // red-500
+    id: 'creativity', title: 'Creativity', highLevelCategoryKey: 'interpersonal-skills',
+    description: 'Fostering innovation.', color: '#EF4444',
     subtopics: [
         { id: createKebabCaseId('Innovation & Experimentation', 'creativity'), title: 'Innovation & Experimentation' },
         { id: createKebabCaseId('Cross-Disciplinary Collaboration', 'creativity'), title: 'Cross-Disciplinary Collaboration' },
@@ -165,7 +172,7 @@ export const workforceTopics: Topic[] = [
   },
   {
     id: 'technology', title: 'Technology', highLevelCategoryKey: 'career-growth',
-    description: 'Leveraging technology effectively.', color: '#6B7280', // gray-500
+    description: 'Leveraging technology effectively.', color: '#6B7280',
     subtopics: [
         { id: createKebabCaseId('Data-Driven Decision Making', 'tech'), title: 'Data-Driven Decision Making' },
         { id: createKebabCaseId('Innovation & Change Management', 'tech'), title: 'Innovation & Change Management' },
@@ -177,9 +184,8 @@ export const workforceTopics: Topic[] = [
   },
 ];
 
-// Constants for points system
 export const POINTS_FOR_CHAT_MESSAGE = 1;
-export const POINTS_FOR_QUIZ_QUESTION_CORRECT = 2; // Default if question.points is not set
+export const POINTS_FOR_QUIZ_QUESTION_CORRECT = 2;
 export const POINTS_FOR_GOAL_ADD = 5;
-export const POINTS_FOR_GOAL_STATUS_CHANGE = 2; // For moving to in_progress
+export const POINTS_FOR_GOAL_STATUS_CHANGE = 2;
 export const POINTS_FOR_COMPLETING_GOAL = 10;
