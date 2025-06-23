@@ -24,11 +24,29 @@ const gradients = [
   'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
 ];
 
+/**
+ * Creates a numeric hash from a string.
+ * This is a simple, non-cryptographic hash function to convert a string ID (like a UUID)
+ * into a number that can be used for style selection.
+ * @param str The string to hash.
+ * @returns A number representing the hash.
+ */
+const stringToNumericHash = (str: string): number => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return Math.abs(hash);
+};
+
 const ModernTopicNode = ({ data }: ModernTopicNodeProps) => {
   const { label, topic, onTopicClick } = data;
 
-  // Use the topic ID to cycle through the gradients
-  const gradient = gradients[topic.id % gradients.length];
+  // Use a hash of the topic ID string to cycle through the gradients
+  const numericId = stringToNumericHash(topic.id);
+  const gradient = gradients[numericId % gradients.length];
 
   return (
     <motion.div
