@@ -10,30 +10,29 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
-// Array of gradient styles based on your provided CSS and color palette
+// --- REVISED GRADIENTS (MAGENTA/PINKS REMOVED) ---
 const gradients = [
-  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #FF2FC7 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #00D6F6 0%, #FF2FC7 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4CB0EF 0%, #FF1994 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
+  'transparent linear-gradient(284deg, #4CB0EF 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Sky Blue to Green
+  'transparent linear-gradient(284deg, #00D6F6 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Cyan to Blue
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
+  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box', // Light Blue to Sky Blue
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
 ];
 
 
-// --- THIS IS THE NEW CARD COMPONENT ---
+// Card component remains the same, it just uses the new gradients array
 interface SubtopicCardProps {
   topicId: string;
   subtopic: SubTopic;
-  index: number; // Used to pick a gradient
+  index: number;
 }
 
 function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
-  // Use the index to cycle through the available gradients
   const gradientStyle = gradients[index % gradients.length];
 
   return (
@@ -62,7 +61,7 @@ function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
 }
 
 
-// --- Main Page Component ---
+// --- Main Page Component (No changes needed here) ---
 const categoryIcons: { [key in HighLevelCategoryKey]: React.ElementType } = {
   'career-growth': RocketLaunchIcon,
   'interpersonal-skills': UserGroupIcon,
@@ -74,7 +73,6 @@ export default function DashboardPage() {
   const [filteredTopics, setFilteredTopics] = useState<Topic[]>([]);
   const [selectedCategoryTitle, setSelectedCategoryTitle] = useState<string>('');
   
-  // This counter ensures each card gets a unique index for its gradient
   let subtopicCounter = 0;
 
   useEffect(() => {
@@ -194,10 +192,9 @@ export default function DashboardPage() {
                 >
                   {topic.title}
                 </h2>
-                {/* Updated to use a flex-wrap container for responsive layout */}
                 <div className="flex flex-wrap gap-6">
                   {topic.subtopics.map((subtopic) => {
-                    const cardIndex = subtopicCounter++; // Use and increment counter for a unique index
+                    const cardIndex = subtopicCounter++;
                     return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
                   })}
                 </div>
