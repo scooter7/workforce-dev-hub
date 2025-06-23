@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey } from '@/lib/constants';
+import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey, SubTopic } from '@/lib/constants';
 import {
   ArrowLeftIcon,
   ChatBubbleLeftRightIcon,
@@ -12,39 +12,72 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
+// Array of gradient styles based on your provided CSS and color palette
+const gradients = [
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00D6F6 0%, #FF2FC7 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CB0EF 0%, #FF1994 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
+];
+
+
+// --- THIS IS THE NEW CARD COMPONENT ---
+interface SubtopicCardProps {
+  topicId: string;
+  subtopic: SubTopic;
+  index: number; // Used to pick a gradient
+}
+
+function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
+  // Use the index to cycle through the available gradients
+  const gradientStyle = gradients[index % gradients.length];
+
+  return (
+    <Link
+      href={`/chat/${topicId}?subtopic=${subtopic.id}`}
+      className="group block rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105"
+      style={{
+        width: '361px',
+        height: '160px',
+        background: gradientStyle,
+      }}
+      title={`Chat about ${subtopic.title}`}
+    >
+      <div className="flex flex-col items-center justify-center h-full p-5 text-center text-white">
+        <h3 className="text-2xl font-bold">
+          {subtopic.title}
+        </h3>
+        {subtopic.description && (
+          <p className="text-base text-white/80 mt-2 line-clamp-2">
+            {subtopic.description}
+          </p>
+        )}
+      </div>
+    </Link>
+  );
+}
+
+
+// --- Main Page Component ---
 const categoryIcons: { [key in HighLevelCategoryKey]: React.ElementType } = {
   'career-growth': RocketLaunchIcon,
   'interpersonal-skills': UserGroupIcon,
   'personal-well-being': LightBulbIcon,
 };
 
-function SubtopicCard({ topicId, subtopic }: { topicId: string, subtopic: { id: string, title: string, description?: string }}) {
-  return (
-    <Link
-      href={`/chat/${topicId}?subtopic=${subtopic.id}`}
-      className="group block p-4 bg-white rounded-lg shadow-md hover:shadow-xl hover:border-brand-primary border-2 border-transparent transition-all duration-300 transform hover:-translate-y-1"
-      title={`Chat about ${subtopic.title}`}
-    >
-      <h3 className="font-semibold text-neutral-text group-hover:text-brand-primary transition-colors">
-        {subtopic.title}
-      </h3>
-      {subtopic.description && (
-        <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-          {subtopic.description}
-        </p>
-      )}
-      <div className="flex items-center text-xs text-brand-primary-dark opacity-0 group-hover:opacity-100 transition-opacity duration-300 mt-3">
-        <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1.5" />
-        <span>Start Conversation</span>
-      </div>
-    </Link>
-  );
-}
-
 export default function DashboardPage() {
   const [stage, setStage] = useState<'intro' | 'choice' | 'explore'>('intro');
   const [filteredTopics, setFilteredTopics] = useState<Topic[]>([]);
   const [selectedCategoryTitle, setSelectedCategoryTitle] = useState<string>('');
+  
+  // This counter ensures each card gets a unique index for its gradient
+  let subtopicCounter = 0;
 
   useEffect(() => {
     const introTimer = setTimeout(() => {
@@ -163,10 +196,12 @@ export default function DashboardPage() {
                 >
                   {topic.title}
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {topic.subtopics.map((subtopic) => (
-                    <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} />
-                  ))}
+                {/* Updated to use a flex-wrap container for responsive layout */}
+                <div className="flex flex-wrap gap-6">
+                  {topic.subtopics.map((subtopic) => {
+                    const cardIndex = subtopicCounter++; // Use and increment counter for a unique index
+                    return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
+                  })}
                 </div>
               </section>
             ))}
