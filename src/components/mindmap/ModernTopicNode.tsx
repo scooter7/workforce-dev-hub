@@ -1,60 +1,57 @@
-'use client';
+import { memo } from 'react';
+import { Handle, Position } from 'reactflow';
+import { motion } from 'framer-motion';
+import { Topic } from '@/types/db';
 
-import React, { memo } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
-import { Topic as TopicType } from '@/lib/constants';
-import { ChatBubbleLeftEllipsisIcon } from '@heroicons/react/24/solid';
-import Link from 'next/link';
-
-export interface ModernTopicNodeData {
-  label: string;
-  topic: TopicType;
+interface ModernTopicNodeProps {
+  data: {
+    label: string;
+    topic: Topic;
+    onTopicClick: (topic: Topic) => void;
+  };
 }
 
-const ModernTopicNode: React.FC<NodeProps<ModernTopicNodeData>> = ({ data, isConnectable, id: nodeId }) => {
-  const { label, topic } = data;
-  const nodeColor = topic.color || '#3B82F6'; // Default blue-500
+const gradients = [
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00D6F6 0%, #FF2FC7 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CB0EF 0%, #FF1994 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
+];
 
-  const handleActionClick = (event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent node click (navigation) when an action icon is clicked
-  };
+const ModernTopicNode = ({ data }: ModernTopicNodeProps) => {
+  const { label, topic, onTopicClick } = data;
+
+  // Use the topic ID to cycle through the gradients
+  const gradient = gradients[topic.id % gradients.length];
 
   return (
-    <div
-      style={{ backgroundColor: nodeColor }}
-      className="text-white rounded-xl shadow-xl min-w-[240px] max-w-[300px] transition-all duration-300 ease-in-out group"
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3 }}
+      className="rounded-lg shadow-lg overflow-hidden cursor-pointer flex items-center justify-center text-white"
+      style={{
+        width: '361px',
+        height: '160px',
+        background: gradient,
+      }}
+      onClick={() => onTopicClick(topic)}
     >
-      {/* Main content part of the node - clicking this (not buttons) navigates to chat */}
-      <div className="p-4 relative">
-        <div
-          className="cursor-pointer"
-          title={`Explore ${label}`}
-          // onNodeClick in ReactFlow component will handle navigation for this node ID
-        >
-          <h3 className="text-lg font-semibold truncate" title={label}>
-            {label}
-          </h3>
-          {topic.description && (
-            <p className="text-xs text-white text-opacity-80 mt-1 max-h-10 overflow-hidden truncate" title={topic.description}>
-              {topic.description}
-            </p>
-          )}
-        </div>
-
-        {/* Action Links/Buttons */}
-        <div className="mt-3 pt-3 border-t border-white/20 flex justify-around items-center">
-          <Link href={`/chat/${topic.id}`} passHref legacyBehavior>
-            <a onClick={handleActionClick} title="Explore this topic" className="flex flex-col items-center text-white/80 hover:text-white transition-colors">
-              <ChatBubbleLeftEllipsisIcon className="h-5 w-5 mb-0.5" />
-              <span className="text-xs">Explore</span>
-            </a>
-          </Link>
-        </div>
+      <div className="p-5 text-center">
+        <h3 className="text-2xl font-bold">{label}</h3>
+        {topic.description && (
+          <p className="text-base mt-2">{topic.description}</p>
+        )}
       </div>
-
-      <Handle type="source" position={Position.Bottom} id={`${nodeId}-source`} isConnectable={isConnectable} className="!bg-gray-300 !w-2.5 !h-2.5 !border-2 !border-white" style={{ bottom: -5 }}/>
-      <Handle type="target" position={Position.Top} id={`${nodeId}-target`} isConnectable={isConnectable} className="!bg-gray-300 !w-2.5 !h-2.5 !border-2 !border-white" style={{ top: -5 }}/>
-    </div>
+      <Handle type="source" position={Position.Right} className="!bg-transparent" style={{border: 'none'}} />
+      <Handle type="target" position={Position.Left} className="!bg-transparent" style={{border: 'none'}} />
+    </motion.div>
   );
 };
 
