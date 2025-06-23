@@ -1,4 +1,3 @@
-// src/components/quizzes/QuizCard.tsx
 'use client';
 
 import Link from 'next/link';
@@ -43,7 +42,8 @@ export default function QuizCard({
           <h3 className="text-lg font-bold leading-tight line-clamp-3" title={title}>
             {title}
           </h3>
-          <p className="text-xs text-white/80 mt-1 line-clamp-2" title={description}>
+          {/* --- THIS LINE IS CORRECTED --- */}
+          <p className="text-xs text-white/80 mt-1 line-clamp-2" title={description ?? undefined}>
             {description}
           </p>
         </div>
