@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Import the Next.js Image component
+import Image from 'next/image';
 import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey, SubTopic } from '@/lib/constants';
 import {
   ArrowLeftIcon,
@@ -11,18 +11,20 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
+// --- REVISED GRADIENTS (MAGENTA RE-INTRODUCED) ---
 const gradients = [
-  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4CB0EF 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #00D6F6 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #4CB0EF 100%) 0% 0% no-repeat padding-box',
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
+  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Pink to Purple
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Magenta to Purple
+  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #FF1994 100%) 0% 0% no-repeat padding-box', // Magenta to Pink
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
 ];
+
 
 interface SubtopicCardProps {
   topicId: string;
@@ -126,15 +128,14 @@ export default function DashboardPage() {
         <div className="flex-grow flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-5xl text-center">
             
-            {/* --- THIS IS THE UPDATED WELCOME SECTION --- */}
             <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-8">
               <Image
                 src="/kai-float-1.gif"
                 alt="Kai AI Coach Mascot"
                 width={150}
                 height={150}
-                unoptimized={true} // Use this prop for GIFs to prevent them from becoming static
-                className="hidden sm:block" // Hide on small screens to save space
+                unoptimized={true} 
+                className="hidden sm:block"
               />
               <div className="text-left text-blue-900">
                 <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
