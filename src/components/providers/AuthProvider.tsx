@@ -1,22 +1,21 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { type User, type SupabaseClient } from '@supabase/supabase-js';
+import { useSupabase } from './SupabaseProvider';
 
-// Define a reusable function to fetch the user profile.
+// Reusable function to fetch the user profile
 async function getProfile(supabase: SupabaseClient, userId: string) {
-    const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-    return data;
+  const { data } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  return data;
 }
 
-// Infer the ProfileType directly from our function's return type.
-// This is robust and always in sync with the database query.
-type ProfileType = Awaited<ReturnType<typeof getProfile>>
+// Infer the ProfileType from our function’s return type
+type ProfileType = Awaited<ReturnType<typeof getProfile>>;
 
 interface AuthContextType {
   user: User | null;
@@ -26,14 +25,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const supabase = useSupabase();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<ProfileType | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    const getSessionAndProfile = async () => {
+    if (!supabase) return;
+
+    // Load initial session & profile
+    const loadSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
 
@@ -43,15 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setLoading(false);
     };
+    loadSession();
 
-    getSessionAndProfile();
-
+    // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setUser(session?.user ?? null);
+
         if (session?.user) {
-            const userProfile = await getProfile(supabase, session.user.id);
-            setProfile(userProfile);
+          const userProfile = await getProfile(supabase, session.user.id);
+          setProfile(userProfile);
         } else {
           setProfile(null);
         }
@@ -64,9 +67,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [supabase]);
 
-  const value = { user, profile, loading };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, profile, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export const useAuth = () => {
