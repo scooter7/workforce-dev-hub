@@ -1,8 +1,7 @@
-'use client'; // For handling user interactions
+'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
 import { Bars3Icon } from '@heroicons/react/24/outline';
