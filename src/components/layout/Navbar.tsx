@@ -1,8 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -12,13 +10,8 @@ export default function Navbar({
 }: {
   toggleMobileMenu: () => void;
 }) {
-  const router = useRouter();
-  const { user, profile } = useAuth();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login?message=You have been logged out.');
-  };
+  // Now getting signOut from the context
+  const { user, profile, signOut } = useAuth();
 
   const userName = profile?.full_name || user?.email;
   const isAdmin = profile?.role === 'admin';
@@ -28,7 +21,6 @@ export default function Navbar({
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            {/* Mobile Hamburger (only on small screens) */}
             <button
               onClick={toggleMobileMenu}
               className="p-2 mr-2 md:hidden text-gray-700 hover:text-gray-900"
@@ -37,7 +29,6 @@ export default function Navbar({
               <Bars3Icon className="h-6 w-6" />
             </button>
 
-            {/* Logo / App Name */}
             <div className="flex-shrink-0">
               <Link
                 href="/"
@@ -48,8 +39,6 @@ export default function Navbar({
             </div>
           </div>
 
-
-          {/* Right side: Admin link, Welcome, Logout/Login */}
           <div className="ml-auto flex items-center space-x-4">
             {user && isAdmin && (
               <Link href="/admin/ingest">
@@ -64,7 +53,8 @@ export default function Navbar({
                 <span className="text-sm text-gray-600 hidden sm:block">
                   Welcome, {userName}!
                 </span>
-                <Button onClick={handleLogout} variant="ghost" size="sm">
+                {/* The button now calls the signOut function from the context */}
+                <Button onClick={signOut} variant="ghost" size="sm">
                   Logout
                 </Button>
               </>
