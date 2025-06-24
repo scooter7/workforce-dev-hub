@@ -38,7 +38,6 @@ function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
   return (
     <Link
       href={`/chat/${topicId}?subtopic=${subtopic.id}`}
-      // The fixed width style is removed and responsive classes are added.
       className="group block rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 w-full max-w-[361px]"
       style={{
         height: '160px',
@@ -128,19 +127,35 @@ export default function DashboardPage() {
         <div className="flex-grow flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-5xl text-center">
             
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-4 sm:gap-x-8">
-              <Image
-                src="/kai-float-1.gif"
-                alt="Kai AI Coach Mascot"
-                width={150}
-                height={150}
-                unoptimized={true}
-                // The className is updated to ensure the image is always visible
-                // and has a smaller size on mobile.
-                className="w-24 h-24 sm:w-[150px] sm:h-[150px]"
-              />
-              <div className="text-left text-blue-900">
-                <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
+            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10">
+              {/* --- DESKTOP VIEW --- */}
+              <div className="hidden sm:flex items-center gap-x-8">
+                <Image
+                  src="/kai-float-1.gif"
+                  alt="Kai AI Coach Mascot"
+                  width={150}
+                  height={150}
+                  unoptimized={true}
+                />
+                <div className="text-left text-blue-900">
+                  <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
+                  <p>
+                    Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
+                  </p>
+                </div>
+              </div>
+
+              {/* --- MOBILE VIEW --- */}
+              <div className="sm:hidden text-center text-blue-900">
+                <h2 className="text-2xl font-bold mb-4">Welcome to Your LifeRamp AI Coach Concierge!</h2>
+                <Image
+                  src="/kai-float-1.gif"
+                  alt="Kai AI Coach Mascot"
+                  width={144}
+                  height={144}
+                  unoptimized={true}
+                  className="mx-auto my-4"
+                />
                 <p>
                   Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
                 </p>
@@ -197,7 +212,6 @@ export default function DashboardPage() {
                 >
                   {topic.title}
                 </h2>
-                {/* This container is updated to stack cards vertically on mobile. */}
                 <div className="flex flex-col items-center gap-6 md:flex-row md:flex-wrap md:items-stretch md:justify-start">
                   {topic.subtopics.map((subtopic) => {
                     const cardIndex = subtopicCounter++;
