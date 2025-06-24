@@ -1,7 +1,7 @@
 import { Inter } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { AuthProvider } from '@/components/providers/AuthProvider';
-import { SupabaseProvider } from '@/components/providers/SupabaseProvider';
+import SupabaseProvider from '@/components/providers/SupabaseProvider'; // Corrected: Default import
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
