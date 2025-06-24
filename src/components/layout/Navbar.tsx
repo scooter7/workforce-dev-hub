@@ -24,20 +24,35 @@ export default function Navbar({
   };
 
   const userName = profile?.full_name || user?.email;
-  // This check is now aligned with the middleware and sidebar.
-  const isAdmin = user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
 
-          {/* ... (mobile hamburger and logo remain the same) */}
-          
+          {/* Mobile Hamburger (only on small screens) */}
+          <button
+            onClick={toggleMobileMenu}
+            className="p-2 mr-4 md:hidden text-gray-700 hover:text-gray-900"
+            aria-label="Toggle menu"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
+
+          {/* Logo / App Name */}
+          <div className="flex-shrink-0">
+            <Link
+              href="/"
+              className="text-2xl font-bold text-brand-primary hover:text-brand-primary-dark"
+            >
+              Power Skills
+            </Link>
+          </div>
+
+          {/* Right side: Admin link, Welcome, Logout/Login */}
           <div className="ml-auto flex items-center space-x-4">
-            {/* The admin button now appears based on the consistent admin check. */}
             {user && isAdmin && (
-              // The link now correctly points to the analytics page to avoid the 404 error.
               <Link href="/admin/analytics">
                 <Button variant="outline" size="sm">
                   Admin
