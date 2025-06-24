@@ -38,14 +38,14 @@ const navItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
-  // This line is corrected from "name:g" to "name:".
   { name: 'Quizzes', href: '/admin/quizzes', icon: CircleStackIcon },
   { name: 'Ingest', href: '/admin/ingest', icon: DocumentArrowUpIcon },
 ];
 
 export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
   const pathname = usePathname();
-  const { user, profile } = useAuth();
+  // The unused 'user' variable has been removed from this line.
+  const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
   let isUserSection = navItems.some(item => pathname.startsWith(item.href) && item.href !== '/');
