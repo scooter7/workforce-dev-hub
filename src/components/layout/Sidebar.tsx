@@ -99,10 +99,10 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
       <div className="h-16 flex items-center justify-center border-b border-brand-primary-medium flex-shrink-0 px-4">
         <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Power Skills Home">
           <Image
-            src="/logo.png" // Using the main logo now
+            src="/favicon.ico" // Using favicon.ico as requested.
             alt="LifeRamp Logo"
-            width={150} // Increased size
-            height={40} // Increased size
+            width={128} // Displaying at a larger size.
+            height={128} // Note: This may cause pixelation.
             priority
           />
         </Link>
@@ -133,7 +133,7 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
             {profile?.full_name || user.email}
           </p>
           <button
-            onClick={handleLogout} // This now calls the local logout handler.
+            onClick={handleLogout}
             className="mt-2 w-full text-left text-xs text-blue-200 hover:text-white flex items-center"
           >
             <ArrowRightOnRectangleIcon className="h-4 w-4 mr-1.5" />
