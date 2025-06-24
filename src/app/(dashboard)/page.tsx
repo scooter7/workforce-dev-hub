@@ -11,18 +11,18 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
-// --- REVISED GRADIENTS (MAGENTA RE-INTRODUCED) ---
+// --- GRADIENTS ARRAY (remains the same) ---
 const gradients = [
-  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
-  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
-  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
-  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
-  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
-  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Pink to Purple
-  'transparent linear-gradient(284deg, #FF2FC7 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Magenta to Purple
-  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
-  'transparent linear-gradient(284deg, #FF2FC7 0%, #FF1994 100%) 0% 0% no-repeat padding-box', // Magenta to Pink
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
+  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #856DEA 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #FF2FC7 0%, #FF1994 100%) 0% 0% no-repeat padding-box',
+  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box',
 ];
 
 
@@ -38,9 +38,9 @@ function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
   return (
     <Link
       href={`/chat/${topicId}?subtopic=${subtopic.id}`}
-      className="group block rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105"
+      // The fixed width style is removed and responsive classes are added.
+      className="group block rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 w-full max-w-[361px]"
       style={{
-        width: '361px',
         height: '160px',
         background: gradientStyle,
       }}
@@ -128,14 +128,16 @@ export default function DashboardPage() {
         <div className="flex-grow flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-5xl text-center">
             
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-8">
+            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-4 sm:gap-x-8">
               <Image
                 src="/kai-float-1.gif"
                 alt="Kai AI Coach Mascot"
                 width={150}
                 height={150}
-                unoptimized={true} 
-                className="hidden sm:block"
+                unoptimized={true}
+                // The className is updated to ensure the image is always visible
+                // and has a smaller size on mobile.
+                className="w-24 h-24 sm:w-[150px] sm:h-[150px]"
               />
               <div className="text-left text-blue-900">
                 <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
@@ -195,7 +197,8 @@ export default function DashboardPage() {
                 >
                   {topic.title}
                 </h2>
-                <div className="flex flex-wrap gap-6">
+                {/* This container is updated to stack cards vertically on mobile. */}
+                <div className="flex flex-col items-center gap-6 md:flex-row md:flex-wrap md:items-stretch md:justify-start">
                   {topic.subtopics.map((subtopic) => {
                     const cardIndex = subtopicCounter++;
                     return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
