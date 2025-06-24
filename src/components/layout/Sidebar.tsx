@@ -22,7 +22,6 @@ interface NavItem {
   icon: React.ElementType;
 }
 
-// Define the props that the Sidebar will accept.
 interface SidebarProps {
   isMobileMenuOpen: boolean;
   setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
@@ -39,7 +38,8 @@ const navItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { name: 'Analytics', href: '/admin/analytics', icon: ChartBarIcon },
-  { name:g 'Quizzes', href: '/admin/quizzes', icon: CircleStackIcon },
+  // This line is corrected from "name:g" to "name:".
+  { name: 'Quizzes', href: '/admin/quizzes', icon: CircleStackIcon },
   { name: 'Ingest', href: '/admin/ingest', icon: DocumentArrowUpIcon },
 ];
 
@@ -48,16 +48,16 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
 
-  const isUserSection = navItems.some(item => pathname.startsWith(item.href) && item.href !== '/');
-  if (pathname === '/') isUserSection = true;
-
+  let isUserSection = navItems.some(item => pathname.startsWith(item.href) && item.href !== '/');
+  if (pathname === '/') {
+    isUserSection = true;
+  }
 
   const handleLinkClick = () => {
     setMobileMenuOpen(false);
   };
 
   return (
-    // The className is updated to conditionally show/hide the sidebar on mobile.
     <div
       className={`bg-gray-800 text-white w-64 space-y-6 py-7 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
