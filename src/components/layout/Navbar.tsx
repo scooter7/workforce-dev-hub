@@ -3,7 +3,7 @@
 import { useAuth } from '@/components/providers/AuthProvider';
 import { LogOut, Menu as MenuIcon } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createBrowserClient } from '@supabase/ssr'; // Corrected Supabase import
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -12,7 +12,11 @@ export default function Navbar({ toggleMobileMenu }: { toggleMobileMenu: () => v
   const router = useRouter();
 
   const handleSignOut = async () => {
-    const supabase = createClient();
+    // Note: It's better to create the client once, perhaps in a context or a singleton module
+    const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
     await supabase.auth.signOut();
     router.push('/login');
   };

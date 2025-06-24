@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import MindMap from '@/components/mindmap/MindMap';
@@ -10,7 +9,6 @@ import { useAuth } from '@/components/providers/AuthProvider';
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const { user, profile } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     // Simulate a loading period
