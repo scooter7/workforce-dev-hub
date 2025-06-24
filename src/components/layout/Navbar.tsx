@@ -1,32 +1,44 @@
-'use client'; // For handling user interactions like logout and router usage
+'use client'; // For handling user interactions
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User } from '@supabase/supabase-js'; // Type for the user object
-import { supabase } from '@/lib/supabase/client'; // Client-side Supabase for signOut
+import { User } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
+import { Bars3Icon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/components/providers/AuthProvider';
 
-export default function Navbar({ user }: { user: User | null }) {
+export default function Navbar({
+  toggleMobileMenu,
+}: {
+  toggleMobileMenu: () => void;
+}) {
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error.message);
-    }
+    if (error) console.error('Error logging out:', error.message);
     router.push('/login?message=You have been logged out.');
   };
 
   const userName = user?.user_metadata?.full_name || user?.email;
-
-  // Now checking against your NEXT_PUBLIC_ADMIN_USER_ID
   const isAdmin = user?.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID;
 
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          
+
+          {/* Mobile Hamburger (only on small screens) */}
+          <button
+            onClick={toggleMobileMenu}
+            className="p-2 mr-4 md:hidden text-gray-700 hover:text-gray-900"
+            aria-label="Toggle menu"
+          >
+            <Bars3Icon className="h-6 w-6" />
+          </button>
+
           {/* Logo / App Name */}
           <div className="flex-shrink-0">
             <Link
@@ -37,7 +49,7 @@ export default function Navbar({ user }: { user: User | null }) {
             </Link>
           </div>
 
-          {/* Right side: optional Admin link, User Info & Logout */}
+          {/* Right side: Admin link, Welcome, Logout/Login */}
           <div className="ml-auto flex items-center space-x-4">
             {user && isAdmin && (
               <Link href="/admin">
