@@ -20,6 +20,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.className} bg-gray-50 dark:bg-gray-900`}>
         <SupabaseProvider>
+          {/* This named import now works because AuthProvider.tsx is fixed */}
           <AuthProvider>
             {children}
           </AuthProvider>
