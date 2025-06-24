@@ -1,211 +1,68 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { highLevelCategories, workforceTopics, Topic, HighLevelCategoryKey, SubTopic } from '@/lib/constants';
-import {
-  ArrowLeftIcon,
-  LightBulbIcon,
-  RocketLaunchIcon,
-  UserGroupIcon,
-} from '@heroicons/react/24/outline';
-
-// --- REVISED GRADIENTS (MAGENTA RE-INTRODUCED) ---
-const gradients = [
-  'transparent linear-gradient(284deg, #856DEA 0%, #00D6F6 100%) 0% 0% no-repeat padding-box', // Purple to Cyan
-  'transparent linear-gradient(284deg, #4C78EF 0%, #00F1C3 100%) 0% 0% no-repeat padding-box', // Blue to Teal
-  'transparent linear-gradient(284deg, #10CC53 0%, #4CBDEF 100%) 0% 0% no-repeat padding-box', // Green to Light Blue
-  'transparent linear-gradient(284deg, #190548 0%, #4C78EF 100%) 0% 0% no-repeat padding-box', // Dark Purple to Blue
-  'transparent linear-gradient(284deg, #00F1C3 0%, #10CC53 100%) 0% 0% no-repeat padding-box', // Teal to Green
-  'transparent linear-gradient(284deg, #FF1994 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Pink to Purple
-  'transparent linear-gradient(284deg, #FF2FC7 0%, #856DEA 100%) 0% 0% no-repeat padding-box', // Magenta to Purple
-  'transparent linear-gradient(284deg, #856DEA 0%, #190548 100%) 0% 0% no-repeat padding-box', // Purple to Dark Purple
-  'transparent linear-gradient(284deg, #FF2FC7 0%, #FF1994 100%) 0% 0% no-repeat padding-box', // Magenta to Pink
-  'transparent linear-gradient(284deg, #4CBDEF 0%, #160644 100%) 0% 0% no-repeat padding-box', // Light Blue to Darkest Purple
-];
-
-
-interface SubtopicCardProps {
-  topicId: string;
-  subtopic: SubTopic;
-  index: number;
-}
-
-function SubtopicCard({ topicId, subtopic, index }: SubtopicCardProps) {
-  const gradientStyle = gradients[index % gradients.length];
-
-  return (
-    <Link
-      href={`/chat/${topicId}?subtopic=${subtopic.id}`}
-      className="group block rounded-lg shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105"
-      style={{
-        width: '361px',
-        height: '160px',
-        background: gradientStyle,
-      }}
-      title={`Chat about ${subtopic.title}`}
-    >
-      <div className="flex flex-col items-center justify-center h-full p-5 text-center text-white">
-        <h3 className="text-2xl font-bold">
-          {subtopic.title}
-        </h3>
-        {subtopic.description && (
-          <p className="text-base text-white/80 mt-2 line-clamp-2">
-            {subtopic.description}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
-const categoryIcons: { [key in HighLevelCategoryKey]: React.ElementType } = {
-  'career-growth': RocketLaunchIcon,
-  'interpersonal-skills': UserGroupIcon,
-  'personal-well-being': LightBulbIcon,
-};
+import Link from 'next/link';
+import MindMap from '@/components/mindmap/MindMap';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export default function DashboardPage() {
-  const [stage, setStage] = useState<'intro' | 'choice' | 'explore'>('intro');
-  const [filteredTopics, setFilteredTopics] = useState<Topic[]>([]);
-  const [selectedCategoryTitle, setSelectedCategoryTitle] = useState<string>('');
-  
-  let subtopicCounter = 0;
+  const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
-    const introTimer = setTimeout(() => {
-      setStage('choice');
-    }, 2500);
+    // Simulate a loading period
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 3000); // 3-second loading screen
 
-    return () => clearTimeout(introTimer);
+    return () => clearTimeout(timer);
   }, []);
 
-  const handleCategorySelect = (categoryKey: HighLevelCategoryKey) => {
-    const selectedCategory = highLevelCategories.find(c => c.id === categoryKey);
-    if (!selectedCategory) return;
-
-    const topicsForCategory = workforceTopics.filter(
-      (topic) => topic.highLevelCategoryKey === categoryKey
-    );
-
-    setFilteredTopics(topicsForCategory);
-    setSelectedCategoryTitle(selectedCategory.title);
-    setStage('explore');
-  };
-
-  const handleGoBack = () => {
-    setStage('choice');
-    setFilteredTopics([]);
-    setSelectedCategoryTitle('');
-  };
-
-  if (stage === 'intro') {
+  if (loading || !user) {
     return (
-      <div
-        className="fixed inset-0 flex flex-col items-center justify-center transition-opacity duration-1000 ease-in-out z-50"
-        style={{
-          backgroundImage: `url(/LifeRamp_LifeRamp.jpg)`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="animate-pulse">
-          <h1 className="text-4xl md:text-6xl font-bold text-white text-center mb-4 [text-shadow:_2px_2px_4px_rgb(0_0_0_/_50%)]">
-            Launching Your Journey...
-          </h1>
-          <p className="text-xl text-white/80 text-center [text-shadow:_1px_1px_2px_rgb(0_0_0_/_50%)]">
-            Prepare for exploration!
-          </p>
+      <div className="flex flex-col items-center justify-center h-full bg-white dark:bg-gray-800 absolute inset-0">
+        <div className="text-center p-4">
+            <Image
+                src="/LifeRamp_LifeRamp.jpg"
+                alt="LifeRamp Logo"
+                width={500}
+                height={500}
+                priority
+                className="w-11/12 max-w-xs sm:max-w-sm md:max-w-md h-auto object-contain inline-block"
+            />
+            <h1 className="text-2xl font-bold mt-4 text-gray-800 dark:text-gray-200">Preparing your journey...</h1>
+            <div className="mt-4">
+                <Image 
+                    unoptimized 
+                    src="https://workforce-dev-hub.vercel.app/kai-float-1.gif" 
+                    alt="Kai floating" 
+                    width={100} 
+                    height={100} 
+                    className="inline-block"
+                />
+            </div>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="w-full h-full flex flex-col">
-      {stage === 'choice' && (
-        <div className="flex-grow flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-5xl text-center">
-            
-            <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg mb-10 flex items-center gap-x-8">
-              <Image
-                src="/kai-float-1.gif"
-                alt="Kai AI Coach Mascot"
-                width={150}
-                height={150}
-                unoptimized={true} 
-                className="hidden sm:block"
-              />
-              <div className="text-left text-blue-900">
-                <h2 className="text-2xl font-bold mb-3">Welcome to Your LifeRamp AI Coach Concierge!</h2>
-                <p>
-                  Meet your personal AI-powered coach — always here to support your growth, career moves, and personal well-being. Whether you're navigating a career transition, seeking to level up your leadership skills, or just need help staying focused and balanced, your concierge is just a tap away.
-                </p>
-              </div>
-            </div>
-            
-            <h1 className="text-3xl sm:text-4xl font-bold text-neutral-text mb-3">Launch Your Journey</h1>
-            <p className="text-lg sm:text-xl text-gray-600 mb-10">Select a path to focus your development.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {highLevelCategories.map((category) => {
-                const Icon = categoryIcons[category.id] || LightBulbIcon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className="group p-6 text-center bg-white rounded-lg shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border-2 border-transparent hover:border-brand-primary"
-                  >
-                    <Icon className="h-12 w-12 mx-auto text-brand-secondary transition-colors group-hover:text-brand-primary" />
-                    <h2 className="text-xl font-semibold text-neutral-text mt-4">{category.title}</h2>
-                    <p className="text-gray-600 mt-2 text-sm">{category.description}</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+  // Check if user has a selected domain
+  const hasSelectedDomain = profile?.selected_domain_id;
 
-      {stage === 'explore' && (
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <button
-              onClick={handleGoBack}
-              className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-primary mb-4 transition-colors"
-            >
-              <ArrowLeftIcon className="h-4 w-4" />
-              Back to Journeys
-            </button>
-            <h1 className="text-3xl font-bold text-neutral-text">
-              {selectedCategoryTitle} Topics
-            </h1>
-            <p className="mt-2 text-lg text-gray-600">
-              Select a topic below to start a conversation with your AI coach.
-            </p>
-          </div>
+  if (!hasSelectedDomain) {
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-2xl font-semibold mb-4">Welcome to LifeRamp!</h2>
+        <p className="mb-4">Please select a domain from your profile to get started.</p>
+        <Link href="/profile" className="inline-block bg-brand-primary text-white px-6 py-2 rounded-md hover:bg-brand-primary-dark transition-colors">
+          Go to Profile
+        </Link>
+      </div>
+    )
+  }
 
-          <div className="space-y-10">
-            {filteredTopics.map((topic) => (
-              <section key={topic.id}>
-                <h2
-                  className="text-2xl font-semibold text-neutral-text mb-4 border-b-2 pb-2"
-                  style={{ borderColor: topic.color || '#cbd5e1' }}
-                >
-                  {topic.title}
-                </h2>
-                <div className="flex flex-wrap gap-6">
-                  {topic.subtopics.map((subtopic) => {
-                    const cardIndex = subtopicCounter++;
-                    return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
-                  })}
-                </div>
-              </section>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <MindMap />;
 }

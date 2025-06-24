@@ -1,33 +1,26 @@
-// src/app/(dashboard)/layout.tsx
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
-import React from 'react'; // Suspense was removed as per previous build fix
+'use client';
 
-// Sidebar is rendered by RootLayout
+import { useState } from 'react';
+import Sidebar from '@/components/layout/Sidebar';
+import Navbar from '@/components/layout/Navbar';
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createSupabaseServerClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    console.log('No user session found in DashboardLayout, redirecting to login.');
-    return redirect('/login?message=Please log in to access the dashboard.');
-  }
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    // This div needs to allow its child (the page) to take full height if needed
-    <div className="flex flex-col flex-1 min-h-0"> {/* flex-1 and min-h-0 for proper growth in flex parent */}
-      {/* Optional Header could go here */}
-      {/* <Header /> */}
-      
-      {/* The page content itself will often handle its own padding and internal scrolling if complex */}
-      {/* Adding p-0 here and letting pages define their own top-level padding/scrolling */}
-      <div className="flex-1 p-0"> 
-        {children}
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 overflow-hidden">
+      <Sidebar isMobileMenuOpen={isMobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
+      <div className="flex-1 flex flex-col">
+        <Navbar toggleMobileMenu={() => setMobileMenuOpen(o => !o)} />
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          <div className="container mx-auto px-4 sm:px-6 py-8">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
