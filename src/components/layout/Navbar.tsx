@@ -1,5 +1,3 @@
-// src/components/layout/Navbar.tsx
-
 'use client';
 
 import Link from 'next/link';
@@ -18,8 +16,7 @@ export default function Navbar({
   const { user, profile } = useAuth();
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) console.error('Error logging out:', error.message);
+    await supabase.auth.signOut();
     router.push('/login?message=You have been logged out.');
   };
 
@@ -27,33 +24,35 @@ export default function Navbar({
   const isAdmin = profile?.role === 'admin';
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
+    <nav className="bg-white shadow-md sticky top-0 z-20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-
-          {/* Mobile Hamburger (only on small screens) */}
-          <button
-            onClick={toggleMobileMenu}
-            className="p-2 mr-4 md:hidden text-gray-700 hover:text-gray-900"
-            aria-label="Toggle menu"
-          >
-            <Bars3Icon className="h-6 w-6" />
-          </button>
-
-          {/* Logo / App Name */}
-          <div className="flex-shrink-0">
-            <Link
-              href="/"
-              className="text-2xl font-bold text-brand-primary hover:text-brand-primary-dark"
+          <div className="flex items-center">
+            {/* Mobile Hamburger (only on small screens) */}
+            <button
+              onClick={toggleMobileMenu}
+              className="p-2 mr-2 md:hidden text-gray-700 hover:text-gray-900"
+              aria-label="Toggle menu"
             >
-              Power Skills
-            </Link>
+              <Bars3Icon className="h-6 w-6" />
+            </button>
+
+            {/* Logo / App Name */}
+            <div className="flex-shrink-0">
+              <Link
+                href="/"
+                className="text-2xl font-bold text-brand-primary hover:text-brand-primary-dark"
+              >
+                Power Skills
+              </Link>
+            </div>
           </div>
+
 
           {/* Right side: Admin link, Welcome, Logout/Login */}
           <div className="ml-auto flex items-center space-x-4">
             {user && isAdmin && (
-              <Link href="/admin/analytics">
+              <Link href="/admin/ingest">
                 <Button variant="outline" size="sm">
                   Admin
                 </Button>
