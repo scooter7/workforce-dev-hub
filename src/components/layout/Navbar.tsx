@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 import Button from '@/components/ui/Button';
 import { Bars3Icon } from '@heroicons/react/24/outline';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -10,8 +12,15 @@ export default function Navbar({
 }: {
   toggleMobileMenu: () => void;
 }) {
-  // Now getting signOut from the context
-  const { user, profile, signOut } = useAuth();
+  const router = useRouter();
+  // We no longer get signOut from the context.
+  const { user, profile } = useAuth();
+
+  // The logout logic is now handled directly in the component.
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login?message=You have been logged out.');
+  };
 
   const userName = profile?.full_name || user?.email;
   const isAdmin = profile?.role === 'admin';
@@ -53,8 +62,8 @@ export default function Navbar({
                 <span className="text-sm text-gray-600 hidden sm:block">
                   Welcome, {userName}!
                 </span>
-                {/* The button now calls the signOut function from the context */}
-                <Button onClick={signOut} variant="ghost" size="sm">
+                {/* This button now calls the local handleLogout function. */}
+                <Button onClick={handleLogout} variant="ghost" size="sm">
                   Logout
                 </Button>
               </>

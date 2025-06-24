@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import type { Dispatch, SetStateAction } from 'react';
 import {
@@ -16,6 +16,7 @@ import {
   ArrowUpTrayIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { supabase } from '@/lib/supabase/client';
 
 interface NavItem {
   name: string;
@@ -24,13 +25,11 @@ interface NavItem {
   exact?: boolean;
 }
 
-// Props for the sidebar component
 interface SidebarProps {
   isMobileMenuOpen: boolean;
   setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-// Link definitions from your previous file
 const navigationItems: NavItem[] = [
   { name: 'Explore', href: '/', icon: HomeIcon, exact: true },
   { name: 'Goals', href: '/goals', icon: ClipboardDocumentListIcon },
@@ -40,22 +39,23 @@ const navigationItems: NavItem[] = [
 ];
 
 const adminBaseLinks: NavItem[] = [
-    { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
+  { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
+  { name: 'Analytics', href: '/admin/analytics', icon: HomeIcon },
+  { name: 'Manage Quizzes', href: '/admin/quizzes', icon: ClipboardDocumentListIcon },
 ];
 
 const quizAdminSpecificLinks: NavItem[] = [
-    { name: 'Create New Quiz', href: '/admin/quizzes/new', icon: DocumentPlusIcon },
-    { name: 'Bulk Upload Questions', href: '/admin/quizzes/bulk-upload', icon: ArrowUpTrayIcon },
+  { name: 'Create New Quiz', href: '/admin/quizzes/new', icon: DocumentPlusIcon },
+  { name: 'Bulk Upload Questions', href: '/admin/quizzes/bulk-upload', icon: ArrowUpTrayIcon },
 ];
-
 
 export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
   const pathname = usePathname();
-  const { user, profile, signOut } = useAuth();
+  const router = useRouter();
+  const { user, profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
   const isAdminPage = pathname.startsWith('/admin');
 
-  // --- Re-introducing your more specific styling and active link logic ---
   const iconSharedClass = "h-6 w-6";
   const commonLinkClasses = "transition-colors duration-150 group flex items-center";
   const activeLinkStyle = "bg-sky-700 text-white shadow-inner";
@@ -67,7 +67,12 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
   };
 
   const handleLinkClick = () => {
-    setMobileMenuOpen(false); // Close mobile menu on navigation
+    setMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login?message=You have been logged out.');
   };
 
   const renderLink = (item: NavItem) => {
@@ -92,9 +97,15 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
       }`}
     >
       <div className="h-16 flex items-center justify-center border-b border-brand-primary-medium flex-shrink-0 px-4">
-          <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Power Skills Home">
-              <Image src="/favicon.ico" alt="Power Skills Logo" width={36} height={36} priority />
-          </Link>
+        <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="Power Skills Home">
+          <Image
+            src="/logo.png" // Using the main logo now
+            alt="LifeRamp Logo"
+            width={150} // Increased size
+            height={40} // Increased size
+            priority
+          />
+        </Link>
       </div>
 
       <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
@@ -122,7 +133,7 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
             {profile?.full_name || user.email}
           </p>
           <button
-            onClick={signOut}
+            onClick={handleLogout} // This now calls the local logout handler.
             className="mt-2 w-full text-left text-xs text-blue-200 hover:text-white flex items-center"
           >
             <ArrowRightOnRectangleIcon className="h-4 w-4 mr-1.5" />
