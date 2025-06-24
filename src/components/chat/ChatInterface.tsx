@@ -12,7 +12,8 @@ import Input from '@/components/ui/Input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { PlusIcon, QuestionMarkCircleIcon } from '@heroicons/react/24/solid';
-import { Bot, UserCircle2 } from 'lucide-react'; // Import new icons
+import Image from 'next/image'; // Import the Next.js Image component
+import { UserCircle2 } from 'lucide-react'; // Bot icon is no longer needed
 
 export default function ChatInterface({ topic, subtopic }: { topic: Topic, subtopic: SubTopic }) {
   const { user, profile } = useAuth();
@@ -66,8 +67,16 @@ export default function ChatInterface({ topic, subtopic }: { topic: Topic, subto
       );
     }
     
-    // For the assistant
-    return <Bot className="w-8 h-8 text-brand-primary" />;
+    // For the assistant, return the custom image
+    return (
+      <Image
+        src="/chatavatar.png" // Path to your image in the /public directory
+        alt="AI Assistant"
+        width={32}
+        height={32}
+        className="rounded-full"
+      />
+    );
   };
 
   return (
@@ -107,7 +116,14 @@ export default function ChatInterface({ topic, subtopic }: { topic: Topic, subto
         {isLoading && messages.length > 0 && messages[messages.length - 1].role === 'user' && (
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white flex items-center justify-center border border-gray-200">
-              <Bot className="w-8 h-8 text-brand-primary" />
+               {/* Use the custom image for the loading indicator as well */}
+              <Image
+                src="/chatavatar.png"
+                alt="AI Assistant"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
             </div>
             <div className="max-w-xl p-3 rounded-lg bg-white dark:bg-gray-700 shadow-sm">
               <div className="flex items-center space-x-1">

@@ -20,10 +20,10 @@ const iconSharedClass = "h-6 w-6";
 
 const navigationItems = [
   { name: 'Explore', href: '/', icon: HomeIcon, exact: true },
-  { name: 'My Goals', href: '/goals', icon: ClipboardDocumentListIcon },
-  { name: 'Build Knowledge', href: '/quizzes', icon: QuestionMarkCircleIcon },
-  { name: 'My Points', href: '/points', icon: TrophyIcon },
-  { name: 'My Profile', href: '/profile', icon: UserCircleIcon },
+  { name: 'Goals', href: '/goals', icon: ClipboardDocumentListIcon },
+  { name: 'Learn', href: '/quizzes', icon: QuestionMarkCircleIcon },
+  { name: 'Points', href: '/points', icon: TrophyIcon },
+  { name: 'Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
 const adminBaseLinks = [
