@@ -1,3 +1,5 @@
+// src/middleware.ts
+
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
@@ -34,33 +36,37 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
   const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const authRoutes = ['/login', '/register', '/forgot-password'];
-  const dashboardRoutes = ['/goals', '/quizzes', '/points', '/profile', '/chat'];
-
-  // --- Redirect logged-in users from auth pages ---
-  if (session && authRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/', request.url));
-  }
 
   // --- Protect Admin Routes ---
   if (pathname.startsWith('/admin')) {
-    if (!session) {
-      return NextResponse.redirect(new URL('/login?message=Please log in to access admin features.&redirect=/admin', request.url));
+    if (!user) {
+      return NextResponse.redirect(new URL('/login?message=Please log in to access admin features.', request.url));
     }
-    if (user?.id !== process.env.ADMIN_USER_ID) {
+
+    // This check now uses the ADMIN_USER_ID environment variable for authentication.
+    const isAdmin = user.id === process.env.ADMIN_USER_ID;
+
+    if (!isAdmin) {
+      // If the user is not the designated admin, redirect them.
       return NextResponse.redirect(new URL('/?message=Admin access required.', request.url));
     }
   }
 
+  // --- Redirect logged-in users from auth pages ---
+  const authRoutes = ['/login', '/register', '/forgot-password'];
+  if (user && authRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+  
   // --- Protect Dashboard Routes for logged-out users ---
+  const dashboardRoutes = ['/goals', '/quizzes', 'points', '/profile', '/chat'];
   const isDashboardRoute = dashboardRoutes.some(route => pathname.startsWith(route));
   const isRootRoute = pathname === '/';
 
-  if (!session && (isRootRoute || isDashboardRoute)) {
+  if (!user && (isRootRoute || isDashboardRoute)) {
       let redirectUrl = '/login?message=Please log in to access this page.';
       if (pathname !== '/') {
         redirectUrl += `&redirect=${pathname}`;
@@ -73,15 +79,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - auth/callback (Supabase auth callback)
-     * - error (error page)
-     * - And specific files in /public like favicons, site.webmanifest, images etc.
-     */
     '/((?!api|_next/static|_next/image|auth/callback|error|.*\\..*\\w{2,4}$).*)',
   ],
 };
