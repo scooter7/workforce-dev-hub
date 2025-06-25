@@ -1,69 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { createSupabaseAdminClient } from '@/lib/supabaseAdminClient';
 
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
+
+// Re-add all the fields to the validation schema
 const quizCreateSchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  // Note: I'm removing topic_id, subtopic_id, and difficulty as they
-  // were not in your CreateQuizForm.tsx component. If you need them,
-  // you can add them back here and to the form.
-  
-  // 1. Add card_image_url to the validation schema
-  card_image_url: z.string().url().nullable().optional(),
+  title: z.string().min(1, "Title is required").max(255),
+  description: z.string().max(1000).nullable().optional(),
+  topic_id: z.string().min(1, "Topic ID is required"),
+  subtopic_id: z.string().nullable().optional(),
+  difficulty: z.enum(['easy', 'medium', 'hard'] as const),
+  card_image_url: z.string().url().nullable().optional(), // Keep our new image url
 });
 
 export async function POST(req: NextRequest) {
-  const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const supabaseAuth = createSupabaseServerClient();
+  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
 
-  if (!user) {
+  if (authError || !user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-
-  // Assuming you might want more robust role-based access later,
-  // but for now just checking for a logged-in user.
-
-  let body;
-  try {
-    body = await req.json();
-  } catch (error) {
-    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  // This admin check is good, let's keep it.
+  if (!ADMIN_USER_ID || user.id !== ADMIN_USER_ID) {
+    return NextResponse.json({ error: 'Forbidden: Admin access required.' }, { status: 403 });
   }
 
+  const body = await req.json();
   const validation = quizCreateSchema.safeParse(body);
 
   if (!validation.success) {
-    return NextResponse.json({ error: 'Invalid input', details: validation.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid quiz data.', details: validation.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const { title, description, card_image_url } = validation.data;
-
   const supabaseAdmin = createSupabaseAdminClient();
+
   try {
-    const { data: newQuiz, error } = await supabaseAdmin
+    // Insert all the data from the form, including the new card_image_url
+    const { data: newQuiz, error: insertError } = await supabaseAdmin
       .from('quizzes')
       .insert({
-        title,
-        description: description || null,
-        user_id: user.id, // Associate the quiz with the creator
-        // 2. Add the card_image_url to the insert data
-        card_image_url: card_image_url || null,
+        ...validation.data,
+        user_id: user.id // Also good to associate the quiz with the creator
       })
-      // 3. Select the new card_image_url to return it to the client
-      .select('id, title, description, card_image_url')
+      .select('id, title, topic_id, description, difficulty, card_image_url') // Return the created quiz data
       .single();
 
-    if (error) {
-      console.error('Error creating quiz:', error);
-      return NextResponse.json({ error: 'Failed to create quiz', details: error.message }, { status: 500 });
+    if (insertError) {
+      console.error("Error creating quiz:", insertError);
+      return NextResponse.json({ error: 'Failed to create quiz.', details: insertError.message }, { status: 500 });
     }
 
-    return NextResponse.json(newQuiz, { status: 201 });
+    return NextResponse.json({ message: 'Quiz created successfully!', quiz: newQuiz }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Unexpected error creating quiz:', error);
-    return NextResponse.json({ error: 'An unexpected error occurred', details: error.message }, { status: 500 });
+    console.error('POST /api/admin/quizzes - Generic Error:', error);
+    return NextResponse.json({ error: 'An unexpected error occurred.', details: error.message }, { status: 500 });
   }
 }

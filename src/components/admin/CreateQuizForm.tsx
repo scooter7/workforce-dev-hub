@@ -1,87 +1,102 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-// V-- CHANGES ARE HERE --V
-import { Input } from '@/components/ui/Input'; // Reverted to uppercase
-import { Button } from '@/components/ui/Button'; // Reverted to uppercase
-// ^-- CHANGES ARE HERE --^
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Topic, Subtopic } from '@/types/quiz';
 import Image from 'next/image';
 
-interface CreateQuizFormValues {
-  title: string;
-  description: string;
+// --- Using relative paths to fix build errors ---
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
+
+
+interface CreateQuizFormProps {
+  topics: Topic[];
 }
 
-const CreateQuizForm = () => {
+interface FormValues {
+  title: string;
+  description: string;
+  topicId: string;
+  subtopicId: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+}
+
+const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // State for the new image selector
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
+  // State for the dependent subtopic dropdown
+  const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
+  
   const {
     register,
     handleSubmit,
+    control,
+    watch,
     formState: { errors },
-  } = useForm<CreateQuizFormValues>();
+  } = useForm<FormValues>({
+    defaultValues: {
+      difficulty: 'medium',
+      subtopicId: '',
+    },
+  });
+
+  const selectedTopicId = watch('topicId');
+
+  useEffect(() => {
+    const selectedTopic = topics.find(t => t.id === selectedTopicId);
+    setSubtopics(selectedTopic?.subtopics || []);
+  }, [selectedTopicId, topics]);
 
   useEffect(() => {
     const fetchImages = async () => {
-      const { data: files, error } = await supabase.storage
-        .from('quiz-card-images')
-        .list();
-
+      const { data: files, error } = await supabase.storage.from('quiz-card-images').list();
       if (error) {
         console.error('Error fetching images:', error);
         return;
       }
-
       if (files) {
-        const urls = files.map((file) => {
-          const { data: { publicUrl } } = supabase.storage
-            .from('quiz-card-images')
-            .getPublicUrl(file.name);
-          return publicUrl;
-        });
+        const urls = files.map(file => supabase.storage.from('quiz-card-images').getPublicUrl(file.name).data.publicUrl);
         setImageUrls(urls);
       }
     };
-
     fetchImages();
   }, [supabase]);
 
-  const onSubmit = async (data: CreateQuizFormValues) => {
+  const onSubmit = async (data: FormValues) => {
     if (!selectedImageUrl) {
-      setError('You must select an image for the quiz card.');
-      return;
+        setError("Please select a card image.");
+        return;
     }
     setIsSubmitting(true);
     setError(null);
-
     try {
       const response = await fetch('/api/admin/quizzes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...data,
+          title: data.title,
+          description: data.description,
+          topic_id: data.topicId,
+          subtopic_id: data.subtopicId || null,
+          difficulty: data.difficulty,
           card_image_url: selectedImageUrl,
         }),
       });
-
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create quiz');
+        throw new Error('Failed to create quiz');
       }
-
       const newQuiz = await response.json();
-      router.push(`/admin/quizzes/${newQuiz.id}/manage`); 
+      router.push(`/admin/quizzes/${newQuiz.quiz.id}/manage`);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -91,50 +106,47 @@ const CreateQuizForm = () => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
-      <div className="space-y-2">
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
-          Quiz Title
-        </label>
-        <Input
-          id="title"
-          {...register('title', { required: 'Title is required' })}
-          className="w-full"
-          placeholder="e.g., Introduction to JavaScript"
-        />
-        {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
+      {/* --- Re-integrated Topic and Subtopic Dropdowns --- */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label htmlFor="topicId" className="block text-sm font-medium text-gray-700">Topic</label>
+          <select id="topicId" {...register('topicId', { required: 'Topic is required' })} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+            <option value="">Select a topic...</option>
+            {topics.map(topic => <option key={topic.id} value={topic.id}>{topic.title}</option>)}
+          </select>
+          {errors.topicId && <p className="text-sm text-red-600 mt-1">{errors.topicId.message}</p>}
+        </div>
+        <div>
+          <label htmlFor="subtopicId" className="block text-sm font-medium text-gray-700">Subtopic (Optional)</label>
+          <select id="subtopicId" {...register('subtopicId')} disabled={!selectedTopicId || subtopics.length === 0} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md disabled:bg-gray-50">
+            <option value="">Select a subtopic...</option>
+            {subtopics.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
+          </select>
+        </div>
+      </div>
+      
+      {/* --- Title and Description --- */}
+      <div>
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700">Quiz Title</label>
+        <Input id="title" {...register('title', { required: 'Title is required' })} className="mt-1 w-full" />
+        {errors.title && <p className="text-sm text-red-600 mt-1">{errors.title.message}</p>}
+      </div>
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+        <Input id="description" {...register('description')} className="mt-1 w-full" />
       </div>
 
-      <div className="space-y-2">
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-          Description
-        </label>
-        <Input
-          id="description"
-          {...register('description')}
-          className="w-full"
-          placeholder="A brief summary of the quiz"
-        />
-      </div>
-
+      {/* --- Image Selector --- */}
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-700">Select a Card Image</label>
-        {imageUrls.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {imageUrls.map((url) => (
-              <div
-                key={url}
-                onClick={() => setSelectedImageUrl(url)}
-                className={`relative h-32 w-full rounded-lg cursor-pointer overflow-hidden border-4 transition-all ${
-                  selectedImageUrl === url ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'
-                }`}
-              >
+              <div key={url} onClick={() => setSelectedImageUrl(url)} className={`relative h-32 w-full rounded-lg cursor-pointer overflow-hidden border-4 transition-all ${selectedImageUrl === url ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'}`}>
                 <Image src={url} alt="Quiz card image option" layout="fill" objectFit="cover" />
               </div>
             ))}
-          </div>
-        ) : (
-          <p className="text-sm text-gray-500">Loading images...</p>
-        )}
+        </div>
+        {!selectedImageUrl && <p className="text-sm text-red-600 mt-1">Please select an image.</p>}
       </div>
 
       <div className="flex justify-end pt-4">
