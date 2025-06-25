@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-// V-- FINAL CHANGE IS HERE --V
-import { useForm } from 'react-hook-form'; // 'Controller' has been removed
-// ^-- FINAL CHANGE IS HERE --^
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { Topic, Subtopic } from '@/types/quiz';
+// V-- THE FINAL FIX IS HERE --V
+import { Topic, Subtopic } from '../../lib/constants'; // Correct path for Topic types
+// ^-- THE FINAL FIX IS HERE --^
 import Image from 'next/image';
 
 import { Input } from '../ui/Input';
