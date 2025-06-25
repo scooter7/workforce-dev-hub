@@ -1,14 +1,15 @@
-'use client'; // <-- Add this line at the very top
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+// V-- CHANGE IS HERE --V
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'; // Use your project's client helper
+// ^-- CHANGE IS HERE --^
 import Image from 'next/image';
 
-// The form will now only manage title and description directly.
 interface CreateQuizFormValues {
   title: string;
   description: string;
@@ -16,13 +17,13 @@ interface CreateQuizFormValues {
 
 const CreateQuizForm = () => {
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  // V-- CHANGE IS HERE --V
+  const supabase = createSupabaseBrowserClient(); // And here
+  // ^-- CHANGE IS HERE --^
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State to hold the image URLs from Supabase Storage
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  // State to track which image is currently selected
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   const {
@@ -31,11 +32,10 @@ const CreateQuizForm = () => {
     formState: { errors },
   } = useForm<CreateQuizFormValues>();
 
-  // This effect runs once to fetch the list of available images from your bucket.
   useEffect(() => {
     const fetchImages = async () => {
       const { data: files, error } = await supabase.storage
-        .from('quiz-card-images') // Your bucket name
+        .from('quiz-card-images')
         .list();
 
       if (error) {
@@ -73,7 +73,7 @@ const CreateQuizForm = () => {
         },
         body: JSON.stringify({
           ...data,
-          card_image_url: selectedImageUrl, // Send the selected image URL to the API
+          card_image_url: selectedImageUrl,
         }),
       });
 
@@ -83,7 +83,6 @@ const CreateQuizForm = () => {
       }
 
       const newQuiz = await response.json();
-      // Redirect to the page to manage the new quiz's questions
       router.push(`/admin/quizzes/${newQuiz.id}/manage`); 
     } catch (err: any) {
       setError(err.message);
@@ -119,7 +118,6 @@ const CreateQuizForm = () => {
         />
       </div>
 
-      {/* --- New Image Selector Section --- */}
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-700">Select a Card Image</label>
         {imageUrls.length > 0 ? (
@@ -140,7 +138,6 @@ const CreateQuizForm = () => {
           <p className="text-sm text-gray-500">Loading images...</p>
         )}
       </div>
-      {/* --- End Image Selector Section --- */}
 
       <div className="flex justify-end pt-4">
         <Button type="submit" disabled={isSubmitting || !selectedImageUrl}>
