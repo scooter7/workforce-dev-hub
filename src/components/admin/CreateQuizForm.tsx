@@ -1,122 +1,154 @@
-'use client';
-
-import { useState, FormEvent } from 'react';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import { Topic } from '@/lib/constants';
+import React, { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import Image from 'next/image';
 
-interface CreateQuizFormProps {
-  topics: Topic[];
+// The form will now only manage title and description directly.
+interface CreateQuizFormValues {
+  title: string;
+  description: string;
 }
 
-type DifficultyLevel = 'easy' | 'medium' | 'hard';
-
-export default function CreateQuizForm({ topics }: CreateQuizFormProps) {
+const CreateQuizForm = () => {
   const router = useRouter();
-  const [title, setTitle] = useState('');
-  // ... (other state variables as before) ...
-  const [description, setDescription] = useState('');
-  const [topicId, setTopicId] = useState<string>(topics[0]?.id || '');
-  const [subtopicId, setSubtopicId] = useState<string>('');
-  const [difficulty, setDifficulty] = useState<DifficultyLevel>('medium');
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const supabase = createClientComponentClient();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedTopic = topics.find(t => t.id === topicId);
+  // State to hold the image URLs from Supabase Storage
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  // State to track which image is currently selected
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsLoading(true);
-    setMessage(null);
-    setError(null);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateQuizFormValues>();
 
-    // ... (validation logic as before) ...
-    if (!title.trim()) { /* ... */ return; }
-    if (!topicId) { /* ... */ return; }
+  // This effect runs once to fetch the list of available images from your bucket.
+  useEffect(() => {
+    const fetchImages = async () => {
+      const { data: files, error } = await supabase.storage
+        .from('quiz-card-images') // Your bucket name
+        .list();
 
+      if (error) {
+        console.error('Error fetching images:', error);
+        return;
+      }
 
-    const payload = {
-      title: title.trim(),
-      description: description.trim() || null,
-      topic_id: topicId,
-      subtopic_id: subtopicId || null,
-      difficulty,
+      if (files) {
+        const urls = files.map((file) => {
+          const { data: { publicUrl } } = supabase.storage
+            .from('quiz-card-images')
+            .getPublicUrl(file.name);
+          return publicUrl;
+        });
+        setImageUrls(urls);
+      }
     };
 
+    fetchImages();
+  }, [supabase]);
+
+  const onSubmit = async (data: CreateQuizFormValues) => {
+    if (!selectedImageUrl) {
+      setError('You must select an image for the quiz card.');
+      return;
+    }
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      const response = await fetch('/api/admin/quizzes', { // API endpoint path remains the same
+      const response = await fetch('/api/admin/quizzes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          card_image_url: selectedImageUrl, // Send the selected image URL to the API
+        }),
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.error || `Failed to create quiz (Status: ${response.status})`);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create quiz');
       }
-      
-      // Redirect to the quiz management page for the new quiz WITH /admin/ prefix
-      router.push(`/admin/quizzes/${result.quiz.id}/manage`); // <<< CORRECTED REDIRECT PATH
 
+      const newQuiz = await response.json();
+      // Redirect to the page to manage the new quiz's questions
+      router.push(`/admin/quizzes/${newQuiz.id}/manage`); 
     } catch (err: any) {
-      console.error('Create quiz error:', err);
-      setError(err.message || 'An unexpected error occurred.');
+      setError(err.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // ... (rest of the form JSX remains the same as the last version I provided) ...
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow-md max-w-2xl">
-      {/* Quiz Title */}
-      <div>
-        <label htmlFor="quizTitle" className="block text-sm font-medium text-gray-700 mb-1">Quiz Title <span className="text-red-500">*</span></label>
-        <Input type="text" id="quizTitle" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Leadership Fundamentals" required disabled={isLoading} />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
+      <div className="space-y-2">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+          Quiz Title
+        </label>
+        <Input
+          id="title"
+          {...register('title', { required: 'Title is required' })}
+          className="w-full"
+          placeholder="e.g., Introduction to JavaScript"
+        />
+        {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
       </div>
-      {/* Description */}
-      <div>
-        <label htmlFor="quizDescription" className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-xs text-gray-500">(Optional)</span></label>
-        <textarea id="quizDescription" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="A brief overview of what this quiz covers." disabled={isLoading} className="block w-full px-3 py-2 border border-neutral-border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm"/>
+
+      <div className="space-y-2">
+        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+          Description
+        </label>
+        <Input
+          id="description"
+          {...register('description')}
+          className="w-full"
+          placeholder="A brief summary of the quiz"
+        />
       </div>
-      {/* Topic and Subtopic Selectors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="topicId" className="block text-sm font-medium text-gray-700 mb-1">Main Topic <span className="text-red-500">*</span></label>
-          <select id="topicId" value={topicId} onChange={(e) => { setTopicId(e.target.value); setSubtopicId(''); }} required disabled={isLoading} className="mt-1 block w-full p-2 border border-neutral-border rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
-            <option value="" disabled>Select a main topic</option>
-            {topics.map(topic => (<option key={topic.id} value={topic.id}>{topic.title}</option>))}
-          </select>
-        </div>
-        {selectedTopic && selectedTopic.subtopics.length > 0 && (
-          <div>
-            <label htmlFor="subtopicId" className="block text-sm font-medium text-gray-700 mb-1">Subtopic (Optional)</label>
-            <select id="subtopicId" value={subtopicId} onChange={(e) => setSubtopicId(e.target.value)} disabled={isLoading || !topicId} className="mt-1 block w-full p-2 border border-neutral-border rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
-              <option value="">None (general to main topic)</option>
-              {selectedTopic.subtopics.map(sub => (<option key={sub.id} value={sub.id}>{sub.title}</option>))}
-            </select>
+
+      {/* --- New Image Selector Section --- */}
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-gray-700">Select a Card Image</label>
+        {imageUrls.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {imageUrls.map((url) => (
+              <div
+                key={url}
+                onClick={() => setSelectedImageUrl(url)}
+                className={`relative h-32 w-full rounded-lg cursor-pointer overflow-hidden border-4 transition-all ${
+                  selectedImageUrl === url ? 'border-indigo-600 ring-2 ring-indigo-300' : 'border-gray-200'
+                }`}
+              >
+                <Image src={url} alt="Quiz card image option" layout="fill" objectFit="cover" />
+              </div>
+            ))}
           </div>
+        ) : (
+          <p className="text-sm text-gray-500">Loading images...</p>
         )}
       </div>
-      {/* Difficulty Selector */}
-      <div>
-        <label htmlFor="difficulty" className="block text-sm font-medium text-gray-700 mb-1">Difficulty Level</label>
-        <select id="difficulty" value={difficulty} onChange={(e) => setDifficulty(e.target.value as DifficultyLevel)} disabled={isLoading} className="mt-1 block w-full p-2 border border-neutral-border rounded-md shadow-sm focus:outline-none focus:ring-brand-primary focus:border-brand-primary sm:text-sm">
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
+      {/* --- End Image Selector Section --- */}
+
+      <div className="flex justify-end pt-4">
+        <Button type="submit" disabled={isSubmitting || !selectedImageUrl}>
+          {isSubmitting ? 'Creating...' : 'Create Quiz and Add Questions'}
+        </Button>
       </div>
-      {/* Messages and Submit Button */}
-      {message && (<p className="text-sm text-green-600 bg-green-100 p-3 rounded-md text-center">{message}</p>)}
-      {error && (<p className="text-sm text-red-600 bg-red-100 p-3 rounded-md text-center">{error}</p>)}
-      <div className="pt-2 flex justify-end">
-        <Button type="submit" disabled={isLoading}>{isLoading ? 'Creating Quiz...' : 'Create Quiz & Add Questions'}</Button>
-      </div>
+
+      {error && <p className="mt-4 text-center text-red-600">{error}</p>}
     </form>
   );
-}
+};
+
+export default CreateQuizForm;
