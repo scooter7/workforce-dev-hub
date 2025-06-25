@@ -3,12 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { Topic, SubTopic } from '../../lib/constants'; // Corrected import
+import { Topic, SubTopic } from '../../lib/constants';
 import Image from 'next/image';
 
-import Input from '../ui/Input'; // Corrected import
-import Button from '../ui/Button'; // Corrected import
-import { supabase as createSupabaseBrowserClient } from '../../lib/supabase/client'; // Corrected import
+import Input from '../ui/Input';
+import Button from '../ui/Button';
+import { createSupabaseBrowserClient } from '../../lib/supabase/client';
 
 
 interface CreateQuizFormProps {
