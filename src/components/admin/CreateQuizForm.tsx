@@ -4,10 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 // V-- CHANGES ARE HERE --V
-import { Input } from '@/components/ui/input'; // Correct path is lowercase
-import { Button } from '@/components/ui/button'; // Correct path is lowercase
-import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Input } from '@/components/ui/Input'; // Reverted to uppercase
+import { Button } from '@/components/ui/Button'; // Reverted to uppercase
 // ^-- CHANGES ARE HERE --^
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import Image from 'next/image';
 
 interface CreateQuizFormValues {
