@@ -81,7 +81,7 @@ export default async function QuizzesPage() {
             return null;
           }
           
-          const topicIndex = workforceTopics.findIndex(t => t.id === topic.id);
+          // The 'topicIndex' constant that was here has been removed.
 
           return (
             <section key={topic.id}>

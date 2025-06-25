@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-// V-- CHANGE IS HERE --V
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'; // Use your project's client helper
-// ^-- CHANGE IS HERE --^
+// V-- CHANGES ARE HERE --V
+import { Input } from '@/components/ui/input'; // Correct path is lowercase
+import { Button } from '@/components/ui/button'; // Correct path is lowercase
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+// ^-- CHANGES ARE HERE --^
 import Image from 'next/image';
 
 interface CreateQuizFormValues {
@@ -17,9 +17,7 @@ interface CreateQuizFormValues {
 
 const CreateQuizForm = () => {
   const router = useRouter();
-  // V-- CHANGE IS HERE --V
-  const supabase = createSupabaseBrowserClient(); // And here
-  // ^-- CHANGE IS HERE --^
+  const supabase = createSupabaseBrowserClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
