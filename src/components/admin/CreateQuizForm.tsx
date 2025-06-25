@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+// V-- FINAL CHANGE IS HERE --V
+import { useForm } from 'react-hook-form'; // 'Controller' has been removed
+// ^-- FINAL CHANGE IS HERE --^
 import { useRouter } from 'next/navigation';
 import { Topic, Subtopic } from '@/types/quiz';
 import Image from 'next/image';
 
-// --- Using relative paths to fix build errors ---
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { createSupabaseBrowserClient } from '../../lib/supabase/client';
@@ -30,17 +31,14 @@ const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // State for the new image selector
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-  // State for the dependent subtopic dropdown
   const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
   
   const {
     register,
     handleSubmit,
-    control,
     watch,
     formState: { errors },
   } = useForm<FormValues>({
@@ -106,7 +104,6 @@ const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 rounded-lg shadow-md">
-      {/* --- Re-integrated Topic and Subtopic Dropdowns --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="topicId" className="block text-sm font-medium text-gray-700">Topic</label>
@@ -125,7 +122,6 @@ const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
         </div>
       </div>
       
-      {/* --- Title and Description --- */}
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">Quiz Title</label>
         <Input id="title" {...register('title', { required: 'Title is required' })} className="mt-1 w-full" />
@@ -136,7 +132,6 @@ const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
         <Input id="description" {...register('description')} className="mt-1 w-full" />
       </div>
 
-      {/* --- Image Selector --- */}
       <div className="space-y-3">
         <label className="block text-sm font-medium text-gray-700">Select a Card Image</label>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
