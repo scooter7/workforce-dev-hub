@@ -1,4 +1,3 @@
-// src/app/(dashboard)/quizzes/page.tsx
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { workforceTopics } from '@/lib/constants';
@@ -99,7 +98,7 @@ export default async function QuizzesPage() {
                     <h3 className="text-lg font-semibold text-neutral-text mb-1">{subtopic.title}</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
                       {quizzesBySubtopic[subtopic.id].map((quiz) => (
-                        <QuizCard key={quiz.id} {...quiz} topicIndex={topicIndex} />
+                        <QuizCard key={quiz.id} quiz={quiz} />
                       ))}
                     </div>
                   </div>
@@ -111,7 +110,7 @@ export default async function QuizzesPage() {
                   {hasSubtopicQuizzes && <h3 className="text-lg font-semibold text-neutral-text mb-1">General</h3>}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mt-4">
                     {quizzesByMainTopicOnly[topic.id].map((quiz) => (
-                      <QuizCard key={quiz.id} {...quiz} topicIndex={topicIndex} />
+                      <QuizCard key={quiz.id} quiz={quiz} />
                     ))}
                   </div>
                 </div>
