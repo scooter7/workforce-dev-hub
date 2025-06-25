@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-// V-- THE FINAL FIX IS HERE --V
-import { Topic, Subtopic } from '../../lib/constants'; // Correct path for Topic types
-// ^-- THE FINAL FIX IS HERE --^
+import { Topic, SubTopic } from '../../lib/constants'; // Corrected import
 import Image from 'next/image';
 
-import { Input } from '../ui/Input';
-import { Button } from '../ui/Button';
-import { createSupabaseBrowserClient } from '../../lib/supabase/client';
+import Input from '../ui/Input'; // Corrected import
+import Button from '../ui/Button'; // Corrected import
+import { supabase as createSupabaseBrowserClient } from '../../lib/supabase/client'; // Corrected import
 
 
 interface CreateQuizFormProps {
@@ -34,7 +32,7 @@ const CreateQuizForm: React.FC<CreateQuizFormProps> = ({ topics }) => {
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
-  const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
+  const [subtopics, setSubtopics] = useState<SubTopic[]>([]);
   
   const {
     register,
