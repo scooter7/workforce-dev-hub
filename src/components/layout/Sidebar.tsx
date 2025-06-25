@@ -1,3 +1,4 @@
+// scooter7/workforce-dev-hub/workforce-dev-hub-664dcb65bf6188fb247406ce2e6c515de2d28cc4/src/components/layout/Sidebar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -15,6 +16,7 @@ import {
   DocumentPlusIcon,
   ArrowUpTrayIcon,
   ArrowRightOnRectangleIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase/client';
 
@@ -36,6 +38,7 @@ const navigationItems: NavItem[] = [
   { name: 'Learn', href: '/quizzes', icon: QuestionMarkCircleIcon },
   { name: 'Points', href: '/points', icon: TrophyIcon },
   { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+  { name: 'Coach Connect', href: '/coach-connect', icon: UserGroupIcon },
 ];
 
 const adminBaseLinks: NavItem[] = [
