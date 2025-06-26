@@ -1,4 +1,3 @@
-// scooter7/workforce-dev-hub/workforce-dev-hub-664dcb65bf6188fb247406ce2e6c515de2d28cc4/next.config.mjs
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -6,28 +5,22 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.supabase.co', // Allow images from Supabase storage (e.g., user avatars)
+        hostname: '**.supabase.co', // For Supabase storage images
       },
       {
         protocol: 'https',
-        hostname: 'd3v0px0pttie1i.cloudfront.net',
+        hostname: 'd3v0px0pttie1i.cloudfront.net', // Existing Cloudfront domain
       },
-      // If you plan to use external images for topic icons or anything else, add their hostnames here.
-      // Example:
-      // {
-      //   protocol: 'https',
-      //   hostname: 'cdn.example.com',
-      // },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com', // For Google user profile images
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com', // For YouTube video thumbnails
+      },
     ],
   },
-  // If you plan to heavily use Next.js Server Actions, you might enable this.
-  // For now, we'll primarily use Route Handlers for API endpoints.
-  // experimental: {
-  //   serverActions: true,
-  // },
-
-  // You generally don't need to configure anything specific for Vercel deployment here,
-  // as Vercel auto-detects Next.js projects and optimizes them.
 };
 
 export default nextConfig;
