@@ -62,6 +62,11 @@ export default function QuizList({ initialQuizzes }: QuizListProps) {
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Created: {new Date(quiz.created_at).toLocaleDateString()}</p>
               </div>
               <div className="flex items-center space-x-2 flex-shrink-0">
+                {/* START OF CHANGE - ADD EDIT BUTTON */}
+                <Link href={`/admin/quizzes/${quiz.id}/edit`} passHref>
+                    <button className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500">Edit</button>
+                </Link>
+                {/* END OF CHANGE */}
                 <Link href={`/admin/quizzes/${quiz.id}/manage`} passHref>
                     <button className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500">Manage</button>
                 </Link>
