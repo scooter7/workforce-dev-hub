@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -34,7 +33,6 @@ export default function CoachConnectPage() {
         </div>
 
         <div className="mt-8 w-full max-w-xs">
-          {/* The email address has been updated. */}
           <a
             href="mailto:contact@liferamp360.com"
             className="inline-block w-full text-center text-white font-semibold py-3 px-6 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105"
