@@ -1,39 +1,43 @@
-// src/app/(dashboard)/layout.tsx
-
 'use client';
 
 import { useState } from 'react';
-import Sidebar from '@/components/layout/Sidebar';
 import Navbar from '@/components/layout/Navbar';
+import Sidebar from '@/components/layout/Sidebar';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { redirect } from 'next/navigation';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  }
+
+  if (!user) {
+    redirect('/login');
+  }
 
   const toggleMobileMenu = () => {
-    setMobileMenuOpen(!isMobileMenuOpen);
+    setMobileMenuOpen(!mobileMenuOpen);
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* The Sidebar is now correctly passed its props */}
-      <Sidebar
-        isMobileMenuOpen={isMobileMenuOpen}
+    <div className="flex h-screen bg-neutral-bg">
+      {/* Pass all required props to the Sidebar component */}
+      <Sidebar 
+        user={user} 
+        isMobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
       />
-      <div className="flex-1 flex flex-col h-screen">
+      
+      <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar toggleMobileMenu={toggleMobileMenu} />
-        {/* Overlay for mobile menu */}
-        {isMobileMenuOpen && (
-          <div
-            className="fixed inset-0 bg-black opacity-50 z-20 md:hidden"
-            onClick={toggleMobileMenu}
-          ></div>
-        )}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-neutral-bg p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>
