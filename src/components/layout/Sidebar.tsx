@@ -1,132 +1,145 @@
+// src/components/layout/Sidebar.tsx
 'use client';
 
-import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/components/providers/AuthProvider';
+import type { Dispatch, SetStateAction } from 'react';
 import {
   HomeIcon,
-  BookOpenIcon,
-  AcademicCapIcon,
-  TrophyIcon,
+  ClipboardDocumentListIcon,
   UserCircleIcon,
-  CogIcon,
-  ShieldCheckIcon,
-  LightBulbIcon,
-  CheckCircleIcon,
-  XMarkIcon,
+  TrophyIcon,
+  WrenchScrewdriverIcon,
+  DocumentPlusIcon,
+  ArrowUpTrayIcon,
+  ArrowRightOnRectangleIcon,
+  UserGroupIcon,
+  AcademicCapIcon, // A better icon for "Learn"
 } from '@heroicons/react/24/outline';
-import { User } from '@supabase/supabase-js';
-import { workforceTopics } from '@/lib/constants';
+import { supabase } from '@/lib/supabase/client';
 
-const mainNavLinks = [
-  { href: '/', icon: HomeIcon, text: 'Home' },
-  { href: '/quizzes', icon: BookOpenIcon, text: 'Quizzes' },
-  { href: `/chat/${workforceTopics[0].id}`, icon: LightBulbIcon, text: 'Learn' },
-  { href: '/goals', icon: CheckCircleIcon, text: 'Goals' },
-  { href: '/points', icon: TrophyIcon, text: 'Points' },
-  { href: '/profile', icon: UserCircleIcon, text: 'Profile' },
-];
-
-const adminNavLinks = [
-  { href: '/admin/analytics', icon: CogIcon, text: 'Analytics' },
-  { href: '/admin/quizzes', icon: ShieldCheckIcon, text: 'Manage Quizzes' },
-  { href: '/admin/ingest', icon: AcademicCapIcon, text: 'Manage Content' },
-];
-
-// Define the props interface to include mobile menu state handlers
-interface SidebarProps {
-  user: User | null;
-  isMobileMenuOpen: boolean;
-  setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+interface NavItem {
+  name: string;
+  href: string;
+  icon: React.ElementType;
+  exact?: boolean;
 }
 
-// Main Sidebar Component
-export default function Sidebar({ user, isMobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
-  const isAdmin = user?.app_metadata?.is_admin || false;
+interface SidebarProps {
+  isMobileMenuOpen: boolean;
+  setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
+}
 
-  const handleLinkClick = () => {
-    setMobileMenuOpen(false); // Close mobile menu on navigation
+// Updated navigation items array
+const navigationItems: NavItem[] = [
+  { name: 'Explore', href: '/', icon: HomeIcon, exact: true },
+  { name: 'Goals', href: '/goals', icon: ClipboardDocumentListIcon },
+  { name: 'Learn', href: '/quizzes', icon: AcademicCapIcon }, // Renamed and new icon
+  { name: 'Points', href: '/points', icon: TrophyIcon },
+  { name: 'Coach Connect', href: '/coach-connect', icon: UserGroupIcon }, // Added
+  { name: 'Profile', href: '/profile', icon: UserCircleIcon },
+];
+
+const adminBaseLinks: NavItem[] = [
+  { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
+  { name: 'Analytics', href: '/admin/analytics', icon: HomeIcon },
+  { name: 'Manage Quizzes', href: '/admin/quizzes', icon: ClipboardDocumentListIcon },
+];
+
+const quizAdminSpecificLinks: NavItem[] = [
+  { name: 'Create New Quiz', href: '/admin/quizzes/new', icon: DocumentPlusIcon },
+  { name: 'Bulk Upload Questions', href: '/admin/quizzes/bulk-upload', icon: ArrowUpTrayIcon },
+];
+
+export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
+  const iconSharedClass = "h-6 w-6";
+  const commonLinkClasses = "transition-colors duration-150 group flex items-center";
+  const activeLinkStyle = "bg-sky-700 text-white shadow-inner";
+  const inactiveLinkStyle = "text-blue-100 hover:bg-brand-primary-medium hover:text-white";
+
+  const isLinkActive = (href: string, exact: boolean = false) => {
+    if (exact) return pathname === href;
+    return pathname.startsWith(href);
   };
 
-  const sidebarContent = (
-    <>
-      <div className="flex items-center justify-between h-20 px-4 border-b border-white/10">
-        <Link href="/" passHref onClick={handleLinkClick}>
-          <div className="flex items-center space-x-2">
-            <Image 
-              src="https://d3v0px0pttie1i.cloudfront.net/uploads/user/logo/25835639/39054a25.png"
-              alt="Logo"
-              width={40}
-              height={40}
-            />
-            <span className="text-xl font-bold">Dev Hub</span>
-          </div>
-        </Link>
-        <button
-          onClick={() => setMobileMenuOpen(false)}
-          className="md:hidden p-1 text-gray-300 hover:text-white"
-          aria-label="Close menu"
-        >
-          <XMarkIcon className="h-6 w-6" />
-        </button>
-      </div>
-      <nav className="flex-1 px-2 py-4 space-y-2">
-        {mainNavLinks.map((link) => (
-          <SidebarLink key={link.text} link={link} onClick={handleLinkClick} />
-        ))}
-        
-        {isAdmin && (
-          <div className="pt-4 mt-4 space-y-2 border-t border-white/10">
-            <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Admin</h3>
-            {adminNavLinks.map(link => (
-              <SidebarLink key={link.text} link={link} onClick={handleLinkClick} />
-            ))}
-          </div>
-        )}
-      </nav>
-    </>
-  );
+  const handleLinkClick = () => {
+    setMobileMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login?message=You have been logged out.');
+  };
+
+  const renderLink = (item: NavItem) => {
+    const isActive = isLinkActive(item.href, item.exact);
+    return (
+      <Link
+        key={item.name}
+        href={item.href}
+        onClick={handleLinkClick}
+        className={`${commonLinkClasses} px-3 py-2.5 rounded-md text-sm font-medium ${isActive ? activeLinkStyle : inactiveLinkStyle}`}
+      >
+        <item.icon className={`${iconSharedClass} mr-3 ${isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'}`} aria-hidden="true" />
+        {item.name}
+      </Link>
+    );
+  };
 
   return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-sidebar-bg text-white">
-        {sidebarContent}
-      </aside>
-
-      {/* Mobile Sidebar */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40 flex">
-          {/* Sidebar Panel */}
-          <aside className="relative flex flex-col w-64 bg-sidebar-bg text-white">
-            {sidebarContent}
-          </aside>
-          {/* Overlay */}
-          <div onClick={() => setMobileMenuOpen(false)} className="flex-1 bg-black/50" aria-hidden="true"></div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// Helper component for sidebar links
-function SidebarLink({ link, onClick }: { link: typeof mainNavLinks[0], onClick: () => void }) {
-  const pathname = usePathname();
-  const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
-
-  return (
-    <Link
-      href={link.href}
-      onClick={onClick}
-      className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-        isActive
-          ? 'bg-brand-primary-dark text-white'
-          : 'text-gray-300 hover:bg-brand-primary-dark/50 hover:text-white'
+    <div
+      className={`bg-gradient-to-b from-brand-primary-dark to-brand-primary text-white w-64 space-y-2 py-4 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 flex flex-col print:hidden ${
+        isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
-      <link.icon className="h-6 w-6 mr-3" />
-      {link.text}
-    </Link>
+      <div className="h-16 flex items-center justify-center border-b border-brand-primary-medium flex-shrink-0 px-4">
+        <Link href="/" className="inline-block hover:opacity-80 transition-opacity" title="LifeRamp Home">
+          <Image
+            src="/favicon.ico"
+            alt="LifeRamp Logo"
+            width={128}
+            height={128}
+            priority
+          />
+        </Link>
+      </div>
+
+      <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
+        {isAdmin && pathname.startsWith('/admin') ? (
+          <>
+            <div className="px-3 py-1 text-xs font-semibold text-blue-200 uppercase tracking-wider">Admin Tools</div>
+            {adminBaseLinks.map(renderLink)}
+            {quizAdminSpecificLinks.map(renderLink)}
+          </>
+        ) : (
+          <>
+            {navigationItems.map(renderLink)}
+          </>
+        )}
+      </nav>
+
+      {user && (
+        <div className="p-4 border-t border-brand-primary-medium mt-auto flex-shrink-0">
+          <p className="text-xs text-blue-200">Logged in as:</p>
+          <p className="text-sm font-medium truncate" title={user.email || ''}>
+            {profile?.full_name || user.email}
+          </p>
+          <button
+            onClick={handleLogout}
+            className="mt-2 w-full text-left text-xs text-blue-200 hover:text-white flex items-center"
+          >
+            <ArrowRightOnRectangleIcon className="h-4 w-4 mr-1.5" />
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
