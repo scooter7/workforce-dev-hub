@@ -17,10 +17,10 @@ interface GoalItemProps {
 
 const getTypeIcon = (type: GoalType) => {
   switch (type) {
-    case 'academic': return <span title="Academic" className="text-lg">🎓</span>;
-    case 'professional': return <span title="Professional" className="text-lg">💼</span>;
-    case 'personal': return <span title="Personal" className="text-lg">🧘</span>;
-    case 'other': return <span title="Other" className="text-lg">📋</span>;
+    case 'academic': return <span title="Academic" className="text-lg">雌</span>;
+    case 'professional': return <span title="Professional" className="text-lg">直</span>;
+    case 'personal': return <span title="Personal" className="text-lg">ｧ�/span>;
+    case 'other': return <span title="Other" className="text-lg">搭</span>;
     default: return null;
   }
 };
