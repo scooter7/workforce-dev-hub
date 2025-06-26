@@ -1,55 +1,42 @@
-// scooter7/workforce-dev-hub/workforce-dev-hub-664dcb65bf6188fb247406ce2e6c515de2d28cc4/src/app/(dashboard)/coach-connect/page.tsx
 import Image from 'next/image';
-import Link from 'next/link';
-import { Metadata } from 'next';
-
-export const metadata: Metadata = {
-  title: 'Coach Connect',
-  description: 'Learn about LifeRamp Coaching and schedule a session with a coach.',
-};
 
 export default function CoachConnectPage() {
   return (
-    <div
-      className="w-full min-h-full p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center"
-      style={{
-        backgroundImage: `url(https://liferamp360.com/wp-content/uploads/2023/03/Group-343.svg)`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
-    >
-      <div className="max-w-2xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 text-center flex flex-col items-center">
-        <h1 className="text-3xl font-bold text-neutral-text mb-6">Learn about LifeRamp Coaching</h1>
+    <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
+      <h1 className="text-4xl font-heading text-brand-primary mb-6 text-center">
+        Connect with a LifeRamp Coach
+      </h1>
 
-        <div className="mb-4">
+      <div className="flex flex-col items-center text-center">
+        <div className="flex-shrink-0 mb-6">
+          {/* Using the LifeRamp logo for a more general page */}
           <Image
-            src="https://d3v0px0pttie1i.cloudfront.net/uploads/user/avatar/16908916/0cf8de51.jpeg"
-            alt="Amy Andrews"
-            width={128}
-            height={128}
-            className="rounded-full ring-4 ring-white shadow-md"
-            priority
+            src="https://d3v0px0pttie1i.cloudfront.net/uploads/user/logo/25835639/39054a25.png"
+            alt="LifeRamp Logo"
+            width={120}
+            height={120}
+            className="rounded-full border-4 border-brand-secondary-light"
           />
         </div>
-        
-        <h2 className="text-2xl font-semibold text-neutral-text">Amy Andrews</h2>
-        
-        <p className="mt-2 text-gray-600 max-w-lg">
-          Amy enjoys helping others find their passions, further develop their skills, and locate ways to leverage those passions and skills to drive their goals.
-        </p>
-        
-        <div className="mt-8 w-full max-w-xs">
-          <Link
-            href="https://calendly.com/amy-andrews-liferamp"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block w-full text-center text-white font-semibold py-3 px-6 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105"
-            style={{
-              background: 'linear-gradient(to right, #2DD4BF, #3B82F6)',
-            }}
-          >
-            Schedule
-          </Link>
+
+        <div className="text-left flex-grow max-w-2xl">
+          <p className="text-neutral-text-light text-lg leading-relaxed mb-4">
+            LifeRamp’s trained and certified coaches specialize in career development, leadership growth, and personal well-being—guiding individuals through customized coaching experiences that drive real results.
+          </p>
+          <p className="text-neutral-text-light text-lg leading-relaxed mb-4">
+            Whether you're navigating a transition, building confidence, or striving for professional clarity, our coaches provide the tools and support to help you succeed.
+          </p>
+          <p className="text-neutral-text-light text-lg leading-relaxed">
+            Our Coaching Director will personally connect you with the right coach to meet your unique goals. Contact us to find out more.
+          </p>
+          <div className="mt-8 text-center">
+            <a
+              href="mailto:concierge@liferamp.io" // Using a general contact email
+              className="inline-block bg-brand-secondary hover:bg-brand-secondary-medium text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105"
+            >
+              Contact Us to Find Your Coach
+            </a>
+          </div>
         </div>
       </div>
     </div>

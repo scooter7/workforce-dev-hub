@@ -24,6 +24,7 @@ const config: Config = {
         'brand-accent': {
           DEFAULT: '#F59E0B',
         },
+        'sidebar-bg': '#190548', // <-- Integrated our custom color
         success: '#10B981',
         warning: '#FBBF24',
         error: '#EF4444',
@@ -36,9 +37,7 @@ const config: Config = {
         'neutral-border-hover': '#D1D5DB',
       },
       fontFamily: {
-        // Use your custom HeroNew for body text
         sans: ['HeroNew', ...defaultTheme.fontFamily.sans],
-        // New heading family for <h1> (NewSpirit SemiBold)
         heading: ['NewSpirit', ...defaultTheme.fontFamily.sans],
       },
       backgroundImage: {

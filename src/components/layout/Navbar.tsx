@@ -43,7 +43,7 @@ export default function Navbar({
                 href="/"
                 className="text-2xl font-bold text-brand-primary hover:text-brand-primary-dark"
               >
-                Power Skills
+                LifeRamp AI Concierge
               </Link>
             </div>
           </div>
