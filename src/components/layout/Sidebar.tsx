@@ -1,4 +1,3 @@
-// src/components/layout/Sidebar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -16,7 +15,7 @@ import {
   ArrowUpTrayIcon,
   ArrowRightOnRectangleIcon,
   UserGroupIcon,
-  AcademicCapIcon, // A better icon for "Learn"
+  AcademicCapIcon,
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase/client';
 
@@ -32,13 +31,12 @@ interface SidebarProps {
   setMobileMenuOpen: Dispatch<SetStateAction<boolean>>;
 }
 
-// Updated navigation items array
 const navigationItems: NavItem[] = [
   { name: 'Explore', href: '/', icon: HomeIcon, exact: true },
   { name: 'Goals', href: '/goals', icon: ClipboardDocumentListIcon },
-  { name: 'Learn', href: '/quizzes', icon: AcademicCapIcon }, // Renamed and new icon
+  { name: 'Learn', href: '/quizzes', icon: AcademicCapIcon },
   { name: 'Points', href: '/points', icon: TrophyIcon },
-  { name: 'Coach Connect', href: '/coach-connect', icon: UserGroupIcon }, // Added
+  { name: 'Coach Connect', href: '/coach-connect', icon: UserGroupIcon },
   { name: 'Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
@@ -95,7 +93,7 @@ export default function Sidebar({ isMobileMenuOpen, setMobileMenuOpen }: Sidebar
 
   return (
     <div
-      className={`bg-gradient-to-b from-brand-primary-dark to-brand-primary text-white w-64 space-y-2 py-4 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 flex flex-col print:hidden ${
+      className={`bg-sidebar-bg text-white w-64 space-y-2 py-4 px-2 absolute inset-y-0 left-0 transform md:relative md:translate-x-0 transition-transform duration-200 ease-in-out z-30 flex flex-col print:hidden ${
         isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
