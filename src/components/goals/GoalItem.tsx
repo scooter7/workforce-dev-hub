@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import { UserGoal, GoalStatus, GoalType } from '@/app/(dashboard)/goals/page';
 import Button from '@/components/ui/Button';
-import { CalendarDaysIcon, TrashIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import {
+  CalendarDaysIcon,
+  TrashIcon,
+  PencilSquareIcon,
+  AcademicCapIcon,
+  BriefcaseIcon,
+  UserIcon,
+  TagIcon,
+} from '@heroicons/react/24/outline';
 // Removed StopCircleIcon, PlayCircleIcon, CheckCircleIcon as getStatusIcon is removed
 
 interface GoalItemProps {
@@ -16,12 +24,18 @@ interface GoalItemProps {
 // getStatusIcon function removed as it was unused
 
 const getTypeIcon = (type: GoalType) => {
+  const iconClass = "h-8 w-8 text-gray-500";
   switch (type) {
-    case 'academic': return <span title="Academic" className="text-4xl">雌</span>;
-    case 'professional': return <span title="Professional" className="text-4xl">直</span>;
-    case 'personal': return <span title="Personal" className="text-4xl">ｧ</span>;
-    case 'other': return <span title="Other" className="text-4xl">搭</span>;
-    default: return null;
+    case 'academic':
+      return <AcademicCapIcon className={iconClass} title="Academic" />;
+    case 'professional':
+      return <BriefcaseIcon className={iconClass} title="Professional" />;
+    case 'personal':
+      return <UserIcon className={iconClass} title="Personal" />;
+    case 'other':
+      return <TagIcon className={iconClass} title="Other" />;
+    default:
+      return null;
   }
 };
 
