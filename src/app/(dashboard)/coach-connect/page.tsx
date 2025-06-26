@@ -19,16 +19,7 @@ export default function CoachConnectPage() {
       <div className="max-w-3xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 text-center flex flex-col items-center">
         <h1 className="text-3xl font-bold text-neutral-text mb-6">Learn about LifeRamp Coaching</h1>
 
-        <div className="mb-4">
-          <Image
-            src="https://d3v0px0pttie1i.cloudfront.net/uploads/user/logo/25835639/39054a25.png"
-            alt="LifeRamp Logo"
-            width={128}
-            height={128}
-            className="rounded-full ring-4 ring-white shadow-md"
-            priority
-          />
-        </div>
+        {/* The logo/image container has been removed. */}
 
         <div className="mt-2 text-gray-600 max-w-2xl text-left space-y-4">
             <p>
@@ -43,8 +34,9 @@ export default function CoachConnectPage() {
         </div>
 
         <div className="mt-8 w-full max-w-xs">
+          {/* The email address has been updated. */}
           <a
-            href="mailto:concierge@liferamp.io"
+            href="mailto:contact@liferamp360.com"
             className="inline-block w-full text-center text-white font-semibold py-3 px-6 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105"
             style={{
               background: 'linear-gradient(to right, #2DD4BF, #3B82F6)',
