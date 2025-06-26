@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -21,7 +20,6 @@ export default function CoachConnectPage() {
         <h1 className="text-3xl font-bold text-neutral-text mb-6">Learn about LifeRamp Coaching</h1>
 
         <div className="mb-4">
-          {/* Using the LifeRamp logo for a more general page */}
           <Image
             src="https://d3v0px0pttie1i.cloudfront.net/uploads/user/logo/25835639/39054a25.png"
             alt="LifeRamp Logo"
@@ -32,7 +30,6 @@ export default function CoachConnectPage() {
           />
         </div>
 
-        {/* The new text about the coaching program */}
         <div className="mt-2 text-gray-600 max-w-2xl text-left space-y-4">
             <p>
                 LifeRamp’s trained and certified coaches specialize in career development, leadership growth, and personal well-being—guiding individuals through customized coaching experiences that drive real results.
@@ -46,7 +43,6 @@ export default function CoachConnectPage() {
         </div>
 
         <div className="mt-8 w-full max-w-xs">
-          {/* A general contact link instead of a specific Calendly */}
           <a
             href="mailto:concierge@liferamp.io"
             className="inline-block w-full text-center text-white font-semibold py-3 px-6 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105"
