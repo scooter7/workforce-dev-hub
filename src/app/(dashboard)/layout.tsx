@@ -28,9 +28,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-neutral-bg">
-      {/* Pass all required props to the Sidebar component */}
+      {/* The 'user' prop is removed as Sidebar gets it from the AuthProvider directly */}
       <Sidebar 
-        user={user} 
         isMobileMenuOpen={mobileMenuOpen}
         setMobileMenuOpen={setMobileMenuOpen}
       />
