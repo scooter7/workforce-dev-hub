@@ -9,6 +9,8 @@ import {
   LightBulbIcon,
   RocketLaunchIcon,
   UserGroupIcon,
+  ChevronDownIcon, // Added for accordion
+  ChevronRightIcon, // Added for accordion
 } from '@heroicons/react/24/outline';
 
 // --- GRADIENTS ARRAY (remains the same) ---
@@ -70,6 +72,9 @@ export default function DashboardPage() {
   const [filteredTopics, setFilteredTopics] = useState<Topic[]>([]);
   const [selectedCategoryTitle, setSelectedCategoryTitle] = useState<string>('');
   
+  // State to manage which topic accordion is open
+  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null);
+  
   let subtopicCounter = 0;
 
   useEffect(() => {
@@ -90,6 +95,7 @@ export default function DashboardPage() {
 
     setFilteredTopics(topicsForCategory);
     setSelectedCategoryTitle(selectedCategory.title);
+    setExpandedTopicId(null); // Reset accordion on new category selection
     setStage('explore');
   };
 
@@ -98,6 +104,12 @@ export default function DashboardPage() {
     setFilteredTopics([]);
     setSelectedCategoryTitle('');
   };
+
+  const handleTopicToggle = (topicId: string) => {
+    // If the clicked topic is already open, close it. Otherwise, open it.
+    setExpandedTopicId(currentId => (currentId === topicId ? null : topicId));
+  };
+
 
   if (stage === 'intro') {
     return (
@@ -203,23 +215,40 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="space-y-10">
-            {filteredTopics.map((topic) => (
-              <section key={topic.id}>
-                <h2
-                  className="text-2xl font-semibold text-neutral-text mb-4 border-b-2 pb-2"
-                  style={{ borderColor: topic.color || '#cbd5e1' }}
-                >
-                  {topic.title}
-                </h2>
-                <div className="flex flex-col items-center gap-6 md:flex-row md:flex-wrap md:items-stretch md:justify-start">
-                  {topic.subtopics.map((subtopic) => {
-                    const cardIndex = subtopicCounter++;
-                    return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
-                  })}
-                </div>
-              </section>
-            ))}
+          <div className="space-y-4"> {/* Reduced spacing for accordion look */}
+            {filteredTopics.map((topic) => {
+                const isExpanded = expandedTopicId === topic.id;
+                return (
+                    <div key={topic.id} className="border rounded-lg overflow-hidden">
+                        {/* Accordion Header */}
+                        <button
+                            onClick={() => handleTopicToggle(topic.id)}
+                            className="w-full flex justify-between items-center p-4 bg-white hover:bg-neutral-bg-hover transition-colors"
+                            style={{ borderBottom: isExpanded ? '1px solid #E5E7EB' : 'none' }}
+                        >
+                            <h2
+                                className="text-xl font-semibold text-neutral-text"
+                                style={{ color: topic.color || '#374151' }}
+                            >
+                                {topic.title}
+                            </h2>
+                            {isExpanded ? <ChevronDownIcon className="h-6 w-6 text-gray-500"/> : <ChevronRightIcon className="h-6 w-6 text-gray-500"/>}
+                        </button>
+
+                        {/* Accordion Content (Subtopics) */}
+                        {isExpanded && (
+                            <div className="p-6 bg-neutral-bg">
+                                <div className="flex flex-col items-center gap-6 md:flex-row md:flex-wrap md:items-stretch md:justify-start">
+                                    {topic.subtopics.map((subtopic) => {
+                                        const cardIndex = subtopicCounter++;
+                                        return <SubtopicCard key={subtopic.id} topicId={topic.id} subtopic={subtopic} index={cardIndex} />;
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )
+            })}
           </div>
         </div>
       )}
