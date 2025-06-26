@@ -97,17 +97,21 @@ export default function GoalItem({ goal, onUpdateGoal, onDeleteGoal, onEditGoal 
     finally { setIsLoading(false); }
   };
 
-  const cardBorderColor = () => {
+  const cardShadowClass = (status: GoalStatus) => {
     switch (currentStatus) {
-      case 'not_started': return 'border-gray-300';
-      case 'in_progress': return 'border-blue-500';
-      case 'completed': return 'border-green-500';
-      default: return 'border-gray-300';
+      case 'not_started':
+        return 'shadow-lg shadow-gray-400/50';
+      case 'in_progress':
+        return 'shadow-lg shadow-blue-500/50';
+      case 'completed':
+        return 'shadow-lg shadow-green-500/50';
+      default:
+        return 'shadow-lg';
     }
   };
 
   return (
-    <div className={`bg-white shadow-lg rounded-xl p-5 border-l-4 ${cardBorderColor()} flex flex-col justify-between transition-all hover:shadow-xl min-h-[200px]`}>
+    <div className={`bg-white rounded-xl p-5 ${cardShadowClass(currentStatus)} flex flex-col justify-between transition-all hover:shadow-2xl min-h-[200px]`}>
       <div>
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-lg font-semibold text-neutral-text break-words mr-2">{goal.title}</h3>
