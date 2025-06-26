@@ -98,7 +98,7 @@ export default function GoalItem({ goal, onUpdateGoal, onDeleteGoal, onEditGoal 
   };
 
   const cardShadowClass = (status: GoalStatus) => {
-    switch (currentStatus) {
+    switch (status) {
       case 'not_started':
         return 'shadow-lg shadow-gray-400/50';
       case 'in_progress':
