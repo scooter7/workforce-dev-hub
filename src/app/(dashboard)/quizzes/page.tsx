@@ -7,7 +7,7 @@ import { groupQuizzesByTopic } from '@/lib/utils';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Power Skills Quizzes',
+  title: 'Power Skills Builders',
   description: 'Test your knowledge and earn points!',
 };
 
@@ -66,9 +66,9 @@ export default async function QuizzesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-10">
-        <h1 className="text-3xl font-bold text-neutral-text">Power Skills Quizzes</h1>
+        <h1 className="text-3xl font-bold text-neutral-text">Power Skills Builders</h1>
         <p className="mt-2 text-lg text-gray-600">
-          Test your knowledge and earn points! Select a topic to see available quizzes.
+          Test your knowledge and earn points!
         </p>
       </div>
 
@@ -81,8 +81,6 @@ export default async function QuizzesPage() {
             return null;
           }
           
-          // The 'topicIndex' constant that was here has been removed.
-
           return (
             <section key={topic.id}>
               <h2
