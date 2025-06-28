@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -21,6 +21,7 @@ import 'reactflow/dist/style.css';
 import { Topic as TopicType } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
 import ELK, { ElkNode, ElkExtendedEdge, LayoutOptions } from 'elkjs/lib/elk.bundled.js';
+import { useAuth } from '@/components/providers/AuthProvider'; // Import the useAuth hook
 
 import ModernTopicNode from './ModernTopicNode';
 import ModernSubtopicNode from './ModernSubtopicNode';
@@ -29,9 +30,9 @@ const elk = new ELK();
 
 const elkLayoutOptions: LayoutOptions = {
   'elk.algorithm': 'layered',
-  'elk.direction': 'DOWN', // Changed to DOWN for vertical layout
-  'elk.layered.spacing.nodeNodeBetweenLayers': '120', // Adjusted spacing for vertical
-  'elk.spacing.nodeNode': '80', // Adjusted spacing for vertical
+  'elk.direction': 'DOWN',
+  'elk.layered.spacing.nodeNodeBetweenLayers': '120',
+  'elk.spacing.nodeNode': '80',
   'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
   'elk.layered.cycleBreaking.strategy': 'DEPTH_FIRST',
   'elk.edgeRouting': 'SPLINES',
@@ -62,7 +63,6 @@ const getLayoutedElements = async (
   const elkEdges: ElkExtendedEdge[] = [];
   const visibleNodeIds = new Set<string>();
 
-  // All topics with subtopics are now considered expanded by default.
   const expandedTopics = new Set(topicsData.filter(t => t.subtopics?.length > 0).map(t => t.id));
 
   topicsData.forEach((topic) => {
@@ -162,12 +162,20 @@ const getLayoutedElements = async (
 
 function MindMapContent({ topics }: MindMapProps) {
   const router = useRouter();
+  const { user } = useAuth(); // Check for authenticated user
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isLaidOut, setIsLaidOut] = useState(false);
   const { fitView } = useReactFlow();
 
   const updateLayout = useCallback(() => {
+    if (!user) { // If no user, clear nodes and edges
+        setNodes([]);
+        setEdges([]);
+        setIsLaidOut(true);
+        return;
+    }
+
     setIsLaidOut(false);
     getLayoutedElements(topics, elkLayoutOptions)
       .then(({ layoutedNodes, layoutedEdges }) => {
@@ -179,7 +187,7 @@ function MindMapContent({ topics }: MindMapProps) {
         console.error("Failed to get layouted elements:", error);
         setIsLaidOut(true);
       });
-  }, [topics]);
+  }, [topics, user]); // Add user to dependency array
 
   useEffect(() => {
     updateLayout();
@@ -211,6 +219,11 @@ function MindMapContent({ topics }: MindMapProps) {
     },
     [router]
   );
+
+  // If there's no user, show a message
+  if (!user) {
+    return <div className="flex justify-center items-center h-full min-h-[500px] text-gray-500">Please log in to view the mind map.</div>;
+  }
 
   if (!isLaidOut && topics.length > 0) {
     return <div className="flex justify-center items-center h-full min-h-[500px] text-gray-500">Generating map layout...</div>;
