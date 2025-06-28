@@ -148,7 +148,7 @@ export default function ChatInterface({ topic, subtopic }: { topic: Topic, subto
           <Link href="/quizzes" className="flex-1">
             <Button variant="outline" size="sm" className="w-full">
               <QuestionMarkCircleIcon className="h-5 w-5 mr-1.5" />
-              Build Knowledge
+              Learn
             </Button>
           </Link>
         </div>
