@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -21,7 +21,7 @@ import 'reactflow/dist/style.css';
 import { Topic as TopicType } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
 import ELK, { ElkNode, ElkExtendedEdge, LayoutOptions } from 'elkjs/lib/elk.bundled.js';
-import { useAuth } from '@/components/providers/AuthProvider'; // Import the useAuth hook
+import { useAuth } from '@/components/providers/AuthProvider';
 
 import ModernTopicNode from './ModernTopicNode';
 import ModernSubtopicNode from './ModernSubtopicNode';
