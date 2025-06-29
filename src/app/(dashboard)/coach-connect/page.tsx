@@ -1,11 +1,22 @@
+// src/app/(dashboard)/coach-connect/page.tsx
 import { Metadata } from 'next';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
+import CoachConnectForm from '@/components/coach/CoachConnectForm';
 
 export const metadata: Metadata = {
   title: 'Coach Connect',
   description: 'Learn about LifeRamp Coaching and get connected with a coach.',
 };
 
-export default function CoachConnectPage() {
+export default async function CoachConnectPage() {
+  const supabase = createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return redirect('/login?message=Please log in to connect with a coach.');
+  }
+
   return (
     <div
       className="w-full min-h-full p-4 sm:p-6 lg:p-8 flex flex-col items-center justify-center"
@@ -16,33 +27,9 @@ export default function CoachConnectPage() {
       }}
     >
       <div className="max-w-3xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 text-center flex flex-col items-center">
-        <h1 className="text-3xl font-bold text-neutral-text mb-6">Learn about LifeRamp Coaching</h1>
-
-        {/* The logo/image container has been removed. */}
-
-        <div className="mt-2 text-gray-600 max-w-2xl text-left space-y-4">
-            <p>
-                LifeRamp’s trained and certified coaches specialize in career development, leadership growth, and personal well-being—guiding individuals through customized coaching experiences that drive real results.
-            </p>
-            <p>
-                Whether you're navigating a transition, building confidence, or striving for professional clarity, our coaches provide the tools and support to help you succeed.
-            </p>
-            <p>
-                Our Coaching Director will personally connect you with the right coach to meet your unique goals. Contact us to find out more.
-            </p>
-        </div>
-
-        <div className="mt-8 w-full max-w-xs">
-          <a
-            href="mailto:contact@liferamp360.com"
-            className="inline-block w-full text-center text-white font-semibold py-3 px-6 rounded-full text-lg shadow-lg transition-transform transform hover:scale-105"
-            style={{
-              background: 'linear-gradient(to right, #2DD4BF, #3B82F6)',
-            }}
-          >
-            Contact Us
-          </a>
-        </div>
+        <h1 className="text-3xl font-bold text-neutral-text mb-2">Connect with a LifeRamp Coach</h1>
+        <p className="text-gray-600 mb-8 max-w-xl">Answer a few questions to help us understand your needs, and we'll help find the perfect coach for you.</p>
+        <CoachConnectForm />
       </div>
     </div>
   );
