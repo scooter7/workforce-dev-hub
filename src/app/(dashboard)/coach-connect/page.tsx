@@ -28,7 +28,7 @@ export default async function CoachConnectPage() {
     >
       <div className="max-w-3xl w-full bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 text-center flex flex-col items-center">
         <h1 className="text-3xl font-bold text-neutral-text mb-2">Connect with a LifeRamp Coach</h1>
-        <p className="text-gray-600 mb-8 max-w-xl">Answer a few questions to help us understand your needs, and we'll help find the perfect coach for you.</p>
+        <p className="text-gray-600 mb-8 max-w-xl">We appreciate you engaging with our AI platform and want you to know that we also have a team of real-life life coaches who are professionally certified and excellent! If you're interested in learning about our human coaches, please answer a few questions to help us understand your needs, and we'll help find the perfect coach for you.</p>
         <CoachConnectForm />
       </div>
     </div>
