@@ -1,13 +1,15 @@
+// src/app/api/admin/analytics/route.ts
 import { NextResponse } from 'next/server'
-import supabaseAdmin from '@/lib/supabaseAdminClient'
+// Correctly import the named export
+import { supabaseAdminClient } from '@/lib/supabaseAdminClient'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const domain = searchParams.get('domain') || ''
 
-    // 1) Topics & Subtopics
-    const { data: chunks, error: chunksErr } = await supabaseAdmin
+    // Use the renamed client variable
+    const { data: chunks, error: chunksErr } = await supabaseAdminClient
       .from('knowledge_base_chunks')
       .select('topic_id, subtopic_id')
     if (chunksErr) throw chunksErr
@@ -19,14 +21,13 @@ export async function GET(request: Request) {
       if (r.subtopic_id) subtopicSet.add(r.subtopic_id)
     })
 
-    // 2) List all Auth users (service-role key required)
+    // Use the renamed client variable
     const {
       data: usersData,
       error: usersErr
-    } = await supabaseAdmin.auth.admin.listUsers({ /* optional paginationConfig */ })
+    } = await supabaseAdminClient.auth.admin.listUsers({ /* optional paginationConfig */ })
     if (usersErr) throw usersErr
 
-    // Build a set of user IDs matching the domain (or all if no domain)
     const allUsers = usersData.users
     const allowedUserIds = domain
       ? new Set(
@@ -36,8 +37,8 @@ export async function GET(request: Request) {
         )
       : new Set(allUsers.map((u) => u.id))
 
-    // 3) Quizzes Taken
-    const { data: attempts, error: attemptsErr } = await supabaseAdmin
+    // Use the renamed client variable
+    const { data: attempts, error: attemptsErr } = await supabaseAdminClient
       .from('quiz_attempts')
       .select('user_id')
     if (attemptsErr) throw attemptsErr
@@ -46,8 +47,8 @@ export async function GET(request: Request) {
       allowedUserIds.has(a.user_id)
     ).length
 
-    // 4) Goals Created / Completed
-    const { data: goals, error: goalsErr } = await supabaseAdmin
+    // Use the renamed client variable
+    const { data: goals, error: goalsErr } = await supabaseAdminClient
       .from('user_goals')
       .select('user_id, status')
     if (goalsErr) throw goalsErr
