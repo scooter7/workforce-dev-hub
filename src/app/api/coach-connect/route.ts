@@ -1,7 +1,8 @@
 // src/app/api/coach-connect/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { supabaseAdminClient } from '@/lib/supabaseAdminClient'; // Import the admin client
+// The admin client is not needed for this operation, so its import is removed.
+// import { supabaseAdminClient } from '@/lib/supabaseAdminClient';
 import { z } from 'zod';
 
 const submissionSchema = z.object({
@@ -14,7 +15,7 @@ const submissionSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  // Use the cookie-based client to securely get the user
+  // Use the cookie-based client which operates in the user's context
   const supabase = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -29,8 +30,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid submission data.', details: validation.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  // Use the admin client for the database insertion
-  const { data: submission, error: insertError } = await supabaseAdminClient
+  // CORRECTED: Use the user-context client ('supabase') for the insert.
+  // This client correctly applies the RLS policy allowing users to insert their own data.
+  const { data: submission, error: insertError } = await supabase
     .from('coach_connect_submissions')
     .insert({
       user_id: user.id, // Securely obtained user ID
@@ -40,7 +42,6 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (insertError) {
-    // Improved error logging
     console.error("Error inserting coach connect submission:", JSON.stringify(insertError, null, 2));
     return NextResponse.json({ error: 'Failed to save submission.', details: insertError.message }, { status: 500 });
   }
