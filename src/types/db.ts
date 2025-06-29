@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      coach_connect_submissions: {
+        Row: {
+          id: string
+          user_id: string
+          had_coach_before: boolean | null
+          support_needed: string | null
+          life_stage: string | null
+          coach_gender_preference: string | null
+          coach_language_preference: string | null
+          coaching_style_preference: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          had_coach_before?: boolean | null
+          support_needed?: string | null
+          life_stage?: string | null
+          coach_gender_preference?: string | null
+          coach_language_preference?: string | null
+          coaching_style_preference?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          had_coach_before?: boolean | null
+          support_needed?: string | null
+          life_stage?: string | null
+          coach_gender_preference?: string | null
+          coach_language_preference?: string | null
+          coaching_style_preference?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_connect_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       knowledge_base_chunks: {
         Row: {
           chunk_text: string
