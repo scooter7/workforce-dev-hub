@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npm run supabase:types && next build",
+    "prebuild": "npm run supabase:types",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "supabase:types": "npx supabase gen types typescript --project-id oyhujbrdkpakxqpgwlda > src/types/db.ts"
