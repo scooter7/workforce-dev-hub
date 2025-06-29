@@ -1,6 +1,7 @@
 // src/app/api/coach-connect/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { supabaseAdminClient } from '@/lib/supabaseAdminClient'; // Import the admin client
 import { z } from 'zod';
 
 const submissionSchema = z.object({
@@ -13,6 +14,7 @@ const submissionSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Use the cookie-based client to securely get the user
   const supabase = createSupabaseServerClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -27,17 +29,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid submission data.', details: validation.error.flatten().fieldErrors }, { status: 400 });
   }
 
-  const { data: submission, error: insertError } = await supabase
+  // Use the admin client for the database insertion
+  const { data: submission, error: insertError } = await supabaseAdminClient
     .from('coach_connect_submissions')
     .insert({
-      user_id: user.id,
+      user_id: user.id, // Securely obtained user ID
       ...validation.data,
     })
     .select()
     .single();
 
   if (insertError) {
-    console.error("Error inserting coach connect submission:", insertError);
+    // Improved error logging
+    console.error("Error inserting coach connect submission:", JSON.stringify(insertError, null, 2));
     return NextResponse.json({ error: 'Failed to save submission.', details: insertError.message }, { status: 500 });
   }
 
