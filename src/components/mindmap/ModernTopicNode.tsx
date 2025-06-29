@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { motion } from 'framer-motion';
-import { Topic } from '@/types/db';
+import { Topic } from '@/types/quiz'; // Corrected import path
 
 interface ModernTopicNodeProps {
   data: {

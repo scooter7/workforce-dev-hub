@@ -1,6 +1,15 @@
 // src/types/quiz.ts
 
 /**
+ * Represents a learning topic.
+ */
+export interface Topic {
+  id: string;
+  title: string;
+  description?: string | null;
+}
+
+/**
  * Defines the possible positions for media (image/video) relative to the question text.
  */
 export type MediaPosition = 'above_text' | 'below_text' | 'left_of_text' | 'right_of_text';
@@ -27,7 +36,7 @@ export interface QuizQuestion {
   points: number; // Points for correctly answering this question
   order_num: number; // Sequence of the question within the quiz
   options: QuestionOption[]; // Array of answer options, especially for multiple-choice
-  
+
   // Fields for media
   image_url?: string | null;
   video_url?: string | null;
