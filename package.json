@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "supabase:types": "supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/db.ts"
+    "supabase:types": "npx supabase gen types typescript --project-id oyhujbrdkpakxqpgwlda > src/types/db.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
