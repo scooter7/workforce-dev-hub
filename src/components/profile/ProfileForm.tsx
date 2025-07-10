@@ -47,20 +47,32 @@ export default function ProfileForm({ user, initialProfileData, currentUserProfi
       updated_at: new Date().toISOString(),
     };
 
-    const { data: _data, error: updateError } = await supabase
-      .from('profiles')
-      .update(profileUpdate)
-      .eq('id', user.id)
-      .select()
-      .single();
-
-    setIsLoading(false);
-
-    if (updateError) {
-      console.error('Error updating profile:', updateError);
-      setError(updateError.message || 'Failed to update profile. Please try again.');
-    } else {
+    try {
+      let response, data;
+      if (isAdmin) {
+        // Use admin API route
+        response = await fetch(`/api/admin/users/${user.id}/profile`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(profileUpdate),
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update profile');
+      } else {
+        // Normal user self-update
+        const { data: _data, error: updateError } = await supabase
+          .from('profiles')
+          .update(profileUpdate)
+          .eq('id', user.id)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+      }
       setMessage('Profile updated successfully!');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
