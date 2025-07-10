@@ -52,10 +52,15 @@ export default async function AdminUsersPage() {
   const mergedUsers = allUserIds.map((id) => {
     const authUser = authUsersById[id];
     const profile = profilesById[id];
+    // Fallback: use email username if full_name is blank
+    let displayName = profile?.full_name?.trim();
+    if (!displayName && authUser?.email) {
+      displayName = authUser.email.split('@')[0];
+    }
     return {
       id,
       email: authUser?.email || '',
-      full_name: profile?.full_name || '',
+      full_name: displayName || '',
       company: profile?.company || '',
       role: profile?.role || 'user',
       updated_at: profile?.updated_at || '',
@@ -80,7 +85,7 @@ export default async function AdminUsersPage() {
           <tbody>
             {mergedUsers.map((u) => (
               <tr key={u.id} className="border-t">
-                <td className="px-4 py-2">{u.full_name || <span className="text-gray-400 italic">(not set)</span>}</td>
+                <td className="px-4 py-2">{u.full_name ? u.full_name : <span className="text-gray-400 italic">(not set)</span>}</td>
                 <td className="px-4 py-2">{u.email || <span className="text-gray-400 italic">(not registered)</span>}</td>
                 <td className="px-4 py-2">{u.company || '-'}</td>
                 <td className="px-4 py-2">{u.role || 'user'}</td>
