@@ -5,14 +5,12 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
 export async function POST(req: NextRequest) {
-  // Only allow admin to run this
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user || user.id !== ADMIN_USER_ID) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  // 1. Get all Auth users
   const { data: usersData, error: usersError } = await supabaseAdminClient.auth.admin.listUsers({ perPage: 1000 });
   if (usersError) {
     return NextResponse.json({ error: usersError.message }, { status: 500 });
@@ -20,7 +18,6 @@ export async function POST(req: NextRequest) {
   const allAuthUsers = usersData.users;
   const authUsersById = Object.fromEntries(allAuthUsers.map(u => [u.id, u]));
 
-  // 2. Get all profiles
   const { data: profiles, error: profilesError } = await supabaseAdminClient
     .from('profiles')
     .select('id, full_name, company, role');
@@ -28,7 +25,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: profilesError.message }, { status: 500 });
   }
 
-  // 3. Prepare updates for blank fields
   const updates = [];
   for (const profile of profiles) {
     let needsUpdate = false;
@@ -61,7 +57,9 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 4. Perform updates in batches (if needed)
+  // DEBUG: Log what will be updated
+  console.log('Bulk profile updates:', updates);
+
   let updated = 0;
   let updateError = null;
   if (updates.length > 0) {
@@ -80,5 +78,6 @@ export async function POST(req: NextRequest) {
     totalProfiles: profiles.length,
     attemptedUpdates: updates.length,
     error: updateError,
+    debug: updates, // Return the updates for debugging
   });
 }
