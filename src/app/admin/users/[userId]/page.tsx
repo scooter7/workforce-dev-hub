@@ -17,12 +17,29 @@ export default async function EditUserPage({ params }: { params: { userId: strin
     notFound();
   }
 
-  // Fetch the profile to edit
-  const { data: profile, error } = await supabase
+  // Try to fetch the profile to edit
+  let { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', params.userId)
     .single();
+
+  // If not found, create a blank profile row for this user
+  if ((!profile || error) && params.userId) {
+    const { data: newProfile, error: insertError } = await supabase
+      .from('profiles')
+      .insert({
+        id: params.userId,
+        full_name: '',
+        company: '',
+        role: 'user',
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    profile = newProfile;
+    error = insertError;
+  }
 
   if (error || !profile) {
     return <div>User not found.</div>;
