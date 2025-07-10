@@ -87,29 +87,21 @@ export default async function AdminUsersPage() {
           </thead>
           <tbody>
             {mergedUsers.map((u) => (
-              <>
-                {/* DEBUG: Print merged user object */}
-                <tr>
-                  <td colSpan={6}>
-                    <pre className="text-xs text-gray-400">{JSON.stringify(u, null, 2)}</pre>
-                  </td>
-                </tr>
-                <tr key={u.id} className="border-t">
-                  <td className="px-4 py-2">{u.full_name ? u.full_name : <span className="text-gray-400 italic">(not set)</span>}</td>
-                  <td className="px-4 py-2">{u.email || <span className="text-gray-400 italic">(not registered)</span>}</td>
-                  <td className="px-4 py-2">{u.company || '-'}</td>
-                  <td className="px-4 py-2">{u.role || 'user'}</td>
-                  <td className="px-4 py-2">{u.updated_at ? new Date(u.updated_at).toLocaleDateString() : '-'}</td>
-                  <td className="px-4 py-2">
-                    <a
-                      href={`/admin/users/${u.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </a>
-                  </td>
-                </tr>
-              </>
+              <tr key={u.id} className="border-t">
+                <td className="px-4 py-2">{u.full_name ? u.full_name : <span className="text-gray-400 italic">(not set)</span>}</td>
+                <td className="px-4 py-2">{u.email || <span className="text-gray-400 italic">(not registered)</span>}</td>
+                <td className="px-4 py-2">{u.company || '-'}</td>
+                <td className="px-4 py-2">{u.role || 'user'}</td>
+                <td className="px-4 py-2">{u.updated_at ? new Date(u.updated_at).toLocaleDateString() : '-'}</td>
+                <td className="px-4 py-2">
+                  <a
+                    href={`/admin/users/${u.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Edit
+                  </a>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
