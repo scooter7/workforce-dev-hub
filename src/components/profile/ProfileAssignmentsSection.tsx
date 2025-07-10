@@ -9,6 +9,7 @@ interface Coach {
   company?: string;
   role?: string;
   updated_at?: string;
+  email?: string;
 }
 
 interface Client {
@@ -17,6 +18,14 @@ interface Client {
   company?: string;
   role?: string;
   updated_at?: string;
+  email?: string;
+}
+
+function getDisplayName(obj: { full_name?: string; email?: string; id?: string }) {
+  if (obj.full_name && obj.full_name.trim() !== '') return obj.full_name;
+  if (obj.email && obj.email.trim() !== '') return obj.email;
+  if (obj.id && obj.id.length > 6) return obj.id.slice(0, 6) + '...';
+  return '(no name)';
 }
 
 export default function ProfileAssignmentsSection() {
@@ -73,7 +82,7 @@ export default function ProfileAssignmentsSection() {
           <ul className="space-y-2">
             {clients.map((c) => (
               <li key={c.user_id} className="p-3 bg-gray-50 rounded border">
-                <span className="font-medium">{c.full_name || '(no name)'}</span>
+                <span className="font-medium">{getDisplayName(c)}</span>
                 {c.company && <span className="ml-2 text-xs text-gray-500">({c.company})</span>}
                 {c.role && <span className="ml-2 text-xs text-gray-400">[{c.role}]</span>}
               </li>
@@ -94,7 +103,7 @@ export default function ProfileAssignmentsSection() {
         <ul className="space-y-2">
           {coaches.map((coach) => (
             <li key={coach.coach_id} className="p-3 bg-gray-50 rounded border">
-              <span className="font-medium">{coach.full_name || '(no name)'}</span>
+              <span className="font-medium">{getDisplayName(coach)}</span>
               {coach.company && <span className="ml-2 text-xs text-gray-500">({coach.company})</span>}
               {coach.role && <span className="ml-2 text-xs text-gray-400">[{coach.role}]</span>}
             </li>
