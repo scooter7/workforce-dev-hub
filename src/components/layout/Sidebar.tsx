@@ -16,7 +16,8 @@ import {
   ArrowRightOnRectangleIcon,
   UserGroupIcon,
   AcademicCapIcon,
-  UsersIcon, // Add UsersIcon for user management
+  UsersIcon,
+  ChatBubbleLeftRightIcon, // <-- Added for Messages
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase/client';
 
@@ -38,6 +39,7 @@ const navigationItems: NavItem[] = [
   { name: 'Learn', href: '/quizzes', icon: AcademicCapIcon },
   { name: 'Points', href: '/points', icon: TrophyIcon },
   { name: 'Coach Connect', href: '/coach-connect', icon: UserGroupIcon },
+  { name: 'Messages', href: '/messages', icon: ChatBubbleLeftRightIcon }, // <-- Added here
   { name: 'Profile', href: '/profile', icon: UserCircleIcon },
 ];
 
@@ -45,7 +47,7 @@ const adminBaseLinks: NavItem[] = [
   { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: HomeIcon },
   { name: 'Manage Quizzes', href: '/admin/quizzes', icon: ClipboardDocumentListIcon },
-  { name: 'User Management', href: '/admin/users', icon: UsersIcon }, // Add this line
+  { name: 'User Management', href: '/admin/users', icon: UsersIcon },
 ];
 
 const quizAdminSpecificLinks: NavItem[] = [
