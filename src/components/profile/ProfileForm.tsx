@@ -10,13 +10,14 @@ import Input from '@/components/ui/Input';
 interface ProfileFormProps {
   user: User;
   initialProfileData: UserProfile;
+  currentUserProfile?: { role?: string | null }; // Add this prop for admin check
 }
 
-export default function ProfileForm({ user, initialProfileData }: ProfileFormProps) {
+export default function ProfileForm({ user, initialProfileData, currentUserProfile }: ProfileFormProps) {
   const [fullName, setFullName] = useState(initialProfileData.full_name || '');
   const [company, setCompany] = useState(initialProfileData.company || '');
   const [role, setRole] = useState(initialProfileData.role || '');
-
+  const [isCoach, setIsCoach] = useState(initialProfileData.role === 'coach');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +26,10 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
     setFullName(initialProfileData.full_name || '');
     setCompany(initialProfileData.company || '');
     setRole(initialProfileData.role || '');
+    setIsCoach(initialProfileData.role === 'coach');
   }, [initialProfileData]);
+
+  const isAdmin = currentUserProfile?.role === 'admin';
 
   const handleProfileUpdate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -33,18 +37,20 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
     setMessage(null);
     setError(null);
 
+    // If admin, allow updating the role field
+    const updatedRole = isAdmin ? (isCoach ? 'coach' : 'user') : role;
+
     const profileUpdate = {
       full_name: fullName,
       company: company,
-      role: role,
+      role: updatedRole,
       updated_at: new Date().toISOString(),
     };
 
-    // Using a direct update which is more explicit and works better with RLS.
     const { data: _data, error: updateError } = await supabase
       .from('profiles')
       .update(profileUpdate)
-      .eq('id', user.id) // Explicitly target the user's row
+      .eq('id', user.id)
       .select()
       .single();
 
@@ -55,8 +61,6 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
       setError(updateError.message || 'Failed to update profile. Please try again.');
     } else {
       setMessage('Profile updated successfully!');
-      // _data contains the updated profile if you needed to use it, e.g., to update local state more precisely
-      // console.log('Updated profile data:', _data);
     }
   };
 
@@ -105,10 +109,27 @@ export default function ProfileForm({ user, initialProfileData }: ProfileFormPro
           value={role}
           onChange={(e) => setRole(e.target.value)}
           placeholder="Your current role or student status"
-          disabled={isLoading}
+          disabled={isLoading || isAdmin}
           className="mt-1"
         />
       </div>
+
+      {/* Only show the Is Coach checkbox if the current user is an admin */}
+      {isAdmin && (
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="isCoach"
+            checked={isCoach}
+            onChange={(e) => setIsCoach(e.target.checked)}
+            disabled={isLoading}
+            className="h-4 w-4"
+          />
+          <label htmlFor="isCoach" className="text-sm font-medium text-gray-700">
+            Is Coach
+          </label>
+        </div>
+      )}
 
       {message && (
         <p className="text-sm text-green-600 bg-green-100 p-3 rounded-md text-center">
