@@ -27,7 +27,7 @@ export default async function AdminUsersPage() {
   if (usersError) {
     return <div>Error loading users: {usersError.message}</div>;
   }
-  const allUsers = usersData.users;
+  const allAuthUsers = usersData.users;
 
   // Fetch all profiles
   const { data: profiles, error: profilesError } = await supabase
@@ -37,8 +37,31 @@ export default async function AdminUsersPage() {
     return <div>Error loading profiles: {profilesError.message}</div>;
   }
 
-  // Map profiles by user id for quick lookup
+  // Map by user id for quick lookup
   const profilesById = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
+  const authUsersById = Object.fromEntries((allAuthUsers || []).map((u) => [u.id, u]));
+
+  // Union of all user IDs from both sources
+  const allUserIds = Array.from(
+    new Set([
+      ...Object.keys(authUsersById),
+      ...Object.keys(profilesById),
+    ])
+  );
+
+  // Merge info for display
+  const mergedUsers = allUserIds.map((id) => {
+    const authUser = authUsersById[id];
+    const profile = profilesById[id];
+    return {
+      id,
+      email: authUser?.email || '',
+      full_name: profile?.full_name || '',
+      company: profile?.company || '',
+      role: profile?.role || 'user',
+      updated_at: profile?.updated_at || '',
+    };
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,26 +79,23 @@ export default async function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {allUsers.map((u) => {
-              const profile = profilesById[u.id];
-              return (
-                <tr key={u.id} className="border-t">
-                  <td className="px-4 py-2">{profile?.full_name || '(No name)'}</td>
-                  <td className="px-4 py-2">{u.email}</td>
-                  <td className="px-4 py-2">{profile?.company || '-'}</td>
-                  <td className="px-4 py-2">{profile?.role || 'user'}</td>
-                  <td className="px-4 py-2">{profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : '-'}</td>
-                  <td className="px-4 py-2">
-                    <a
-                      href={`/admin/users/${u.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </a>
-                  </td>
-                </tr>
-              );
-            })}
+            {mergedUsers.map((u) => (
+              <tr key={u.id} className="border-t">
+                <td className="px-4 py-2">{u.full_name || '(No name)'}</td>
+                <td className="px-4 py-2">{u.email || <span className="text-gray-400 italic">(not registered)</span>}</td>
+                <td className="px-4 py-2">{u.company || '-'}</td>
+                <td className="px-4 py-2">{u.role || 'user'}</td>
+                <td className="px-4 py-2">{u.updated_at ? new Date(u.updated_at).toLocaleDateString() : '-'}</td>
+                <td className="px-4 py-2">
+                  <a
+                    href={`/admin/users/${u.id}`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    Edit
+                  </a>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
