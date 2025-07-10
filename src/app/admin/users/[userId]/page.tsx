@@ -1,13 +1,16 @@
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import ProfileForm from '@/components/profile/ProfileForm';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { supabaseAdminClient } from '@/lib/supabaseAdminClient';
 
 export default async function EditUserPage({ params }: { params: { userId: string } }) {
-  const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Use the admin client for profile operations
+  const supabase = supabaseAdminClient;
+  const serverSupabase = createSupabaseServerClient();
 
-  // Fetch the admin's profile to check permissions
-  const { data: adminProfile } = await supabase
+  // Check admin permissions using the server client (user context)
+  const { data: { user } } = await serverSupabase.auth.getUser();
+  const { data: adminProfile } = await serverSupabase
     .from('profiles')
     .select('*')
     .eq('id', user?.id)
@@ -45,10 +48,18 @@ export default async function EditUserPage({ params }: { params: { userId: strin
     return <div>User not found.</div>;
   }
 
+  // Try to get the email from Auth (using admin client)
+  let email = '';
+  const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (usersData?.users) {
+    const found = usersData.users.find(u => u.id === params.userId);
+    if (found) email = found.email || '';
+  }
+
   // Always pass a valid user object (even if the user never logged in)
   const userObj = {
     id: profile.id,
-    email: '', // You could fetch from Auth if you want
+    email,
     user_metadata: {},
     aud: '',
     app_metadata: {},
