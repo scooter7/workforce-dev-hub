@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabaseAdminClient
     .from('profiles')
-    .select('id, full_name, email')
+    .select('id, full_name')
     .in('id', ids);
 
   if (error) return NextResponse.json([], { status: 500 });

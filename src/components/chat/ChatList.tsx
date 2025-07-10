@@ -14,15 +14,11 @@ interface Chat {
 interface UserProfile {
   id: string;
   full_name?: string | null;
-  company?: string | null;
-  role?: string | null;
-  email?: string | null;
 }
 
 function getDisplayName(profile: UserProfile | undefined, fallbackId: string) {
-  if (!profile) return fallbackId;
-  if (profile.full_name && profile.full_name.trim() !== '') return profile.full_name;
-  if (profile.email && profile.email.trim() !== '') return profile.email;
+  if (profile && profile.full_name && profile.full_name.trim() !== '') return profile.full_name;
+  if (profile) return '(no name)';
   return fallbackId;
 }
 
