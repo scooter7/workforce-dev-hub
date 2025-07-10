@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import ProfileForm from '@/components/profile/ProfileForm';
+import { supabaseAdminClient } from '@/lib/supabaseAdminClient';
 
 export const metadata = {
   title: 'User Management',
@@ -21,14 +22,23 @@ export default async function AdminUsersPage() {
     notFound();
   }
 
-  // Fetch all users and their profiles
-  const { data: profiles, error } = await supabase
+  // Fetch all users from Supabase Auth (admin API)
+  const { data: usersData, error: usersError } = await supabaseAdminClient.auth.admin.listUsers({ perPage: 1000 });
+  if (usersError) {
+    return <div>Error loading users: {usersError.message}</div>;
+  }
+  const allUsers = usersData.users;
+
+  // Fetch all profiles
+  const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
     .select('id, full_name, company, role, updated_at');
-
-  if (error) {
-    return <div>Error loading users: {error.message}</div>;
+  if (profilesError) {
+    return <div>Error loading profiles: {profilesError.message}</div>;
   }
+
+  // Map profiles by user id for quick lookup
+  const profilesById = Object.fromEntries((profiles || []).map((p) => [p.id, p]));
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -38,6 +48,7 @@ export default async function AdminUsersPage() {
           <thead>
             <tr>
               <th className="px-4 py-2 text-left">Name</th>
+              <th className="px-4 py-2 text-left">Email</th>
               <th className="px-4 py-2 text-left">Company</th>
               <th className="px-4 py-2 text-left">Role</th>
               <th className="px-4 py-2 text-left">Last Updated</th>
@@ -45,22 +56,26 @@ export default async function AdminUsersPage() {
             </tr>
           </thead>
           <tbody>
-            {profiles?.map((profile) => (
-              <tr key={profile.id} className="border-t">
-                <td className="px-4 py-2">{profile.full_name || '(No name)'}</td>
-                <td className="px-4 py-2">{profile.company || '-'}</td>
-                <td className="px-4 py-2">{profile.role || 'user'}</td>
-                <td className="px-4 py-2">{profile.updated_at ? new Date(profile.updated_at).toLocaleDateString() : '-'}</td>
-                <td className="px-4 py-2">
-                  <a
-                    href={`/admin/users/${profile.id}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Edit
-                  </a>
-                </td>
-              </tr>
-            ))}
+            {allUsers.map((u) => {
+              const profile = profilesById[u.id];
+              return (
+                <tr key={u.id} className="border-t">
+                  <td className="px-4 py-2">{profile?.full_name || '(No name)'}</td>
+                  <td className="px-4 py-2">{u.email}</td>
+                  <td className="px-4 py-2">{profile?.company || '-'}</td>
+                  <td className="px-4 py-2">{profile?.role || 'user'}</td>
+                  <td className="px-4 py-2">{profile?.updated_at ? new Date(profile.updated_at).toLocaleDateString() : '-'}</td>
+                  <td className="px-4 py-2">
+                    <a
+                      href={`/admin/users/${u.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </a>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
