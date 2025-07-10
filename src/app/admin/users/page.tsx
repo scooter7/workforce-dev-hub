@@ -1,6 +1,7 @@
 export const revalidate = 0;
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { supabaseAdminClient } from '@/lib/supabaseAdminClient';
 import { notFound } from 'next/navigation';
 
 export const metadata = {
@@ -8,6 +9,7 @@ export const metadata = {
 };
 
 export default async function AdminUsersPage() {
+  // Use the server client to check if the current user is admin
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -22,8 +24,8 @@ export default async function AdminUsersPage() {
     notFound();
   }
 
-  // Fetch all profiles
-  const { data: profiles, error: profilesError } = await supabase
+  // Use the admin client to fetch all profiles (bypasses RLS)
+  const { data: profiles, error: profilesError } = await supabaseAdminClient
     .from('profiles')
     .select('id, full_name, company, role, updated_at');
   if (profilesError) {
