@@ -1,6 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
-import ProfileForm from '@/components/profile/ProfileForm';
 import { supabaseAdminClient } from '@/lib/supabaseAdminClient';
 
 export const metadata = {
@@ -11,7 +10,7 @@ export default async function AdminUsersPage() {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Fetch the admin's profile to check permissions
+  // Check admin
   const { data: adminProfile } = await supabase
     .from('profiles')
     .select('*')
@@ -22,7 +21,7 @@ export default async function AdminUsersPage() {
     notFound();
   }
 
-  // Fetch all users from Supabase Auth (admin API)
+  // Fetch all Auth users
   const { data: usersData, error: usersError } = await supabaseAdminClient.auth.admin.listUsers({ perPage: 1000 });
   if (usersError) {
     return <div>Error loading users: {usersError.message}</div>;
@@ -81,7 +80,7 @@ export default async function AdminUsersPage() {
           <tbody>
             {mergedUsers.map((u) => (
               <tr key={u.id} className="border-t">
-                <td className="px-4 py-2">{u.full_name || '(No name)'}</td>
+                <td className="px-4 py-2">{u.full_name || <span className="text-gray-400 italic">(not set)</span>}</td>
                 <td className="px-4 py-2">{u.email || <span className="text-gray-400 italic">(not registered)</span>}</td>
                 <td className="px-4 py-2">{u.company || '-'}</td>
                 <td className="px-4 py-2">{u.role || 'user'}</td>

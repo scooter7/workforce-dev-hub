@@ -45,11 +45,25 @@ export default async function EditUserPage({ params }: { params: { userId: strin
     return <div>User not found.</div>;
   }
 
+  // Always pass a valid user object (even if the user never logged in)
+  const userObj = {
+    id: profile.id,
+    email: '', // You could fetch from Auth if you want
+    user_metadata: {},
+    aud: '',
+    app_metadata: {},
+    created_at: '',
+    confirmed_at: '',
+    last_sign_in_at: '',
+    role: '',
+    updated_at: '',
+  };
+
   // Pass the admin's profile as currentUserProfile for admin privileges
   return (
     <div className="container mx-auto px-4 py-8 max-w-lg">
       <h1 className="text-2xl font-bold mb-4">Edit User Profile</h1>
-      <ProfileForm user={{ id: profile.id, email: '', user_metadata: {}, aud: '', app_metadata: {}, created_at: '', confirmed_at: '', last_sign_in_at: '', role: '', updated_at: '' }} initialProfileData={profile} currentUserProfile={adminProfile} />
+      <ProfileForm user={userObj} initialProfileData={profile} currentUserProfile={adminProfile} />
     </div>
   );
 }
