@@ -57,12 +57,13 @@ export default async function AdminUsersPage() {
     if (!displayName && authUser?.email) {
       displayName = authUser.email.split('@')[0];
     }
+    // Always use profile values for company, role, updated_at if profile exists
     return {
       id,
       email: authUser?.email || '',
       full_name: displayName || '',
-      company: profile?.company || '',
-      role: profile?.role || 'user',
+      company: profile ? (profile.company || '-') : '-',
+      role: profile ? (profile.role || 'user') : 'user',
       updated_at: profile?.updated_at || '',
     };
   });
