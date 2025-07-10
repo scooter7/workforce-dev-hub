@@ -4,6 +4,10 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 const ADMIN_USER_ID = process.env.ADMIN_USER_ID;
 
+function isBlank(val: string | null | undefined) {
+  return val === null || val === undefined || val.trim() === '' || val.trim().toUpperCase() === 'EMPTY';
+}
+
 export async function POST(req: NextRequest) {
   const supabase = createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,16 +36,16 @@ export async function POST(req: NextRequest) {
     let newRole = profile.role;
     let newCompany = profile.company;
 
-    if (!profile.full_name || profile.full_name.trim() === '') {
+    if (isBlank(profile.full_name)) {
       const email = authUsersById[profile.id]?.email || '';
       newFullName = email ? email.split('@')[0] : '';
       needsUpdate = true;
     }
-    if (!profile.role || profile.role.trim() === '') {
+    if (isBlank(profile.role)) {
       newRole = 'user';
       needsUpdate = true;
     }
-    if (profile.company === null) {
+    if (isBlank(profile.company)) {
       newCompany = '';
       needsUpdate = true;
     }
@@ -78,6 +82,6 @@ export async function POST(req: NextRequest) {
     totalProfiles: profiles.length,
     attemptedUpdates: updates.length,
     error: updateError,
-    debug: updates, // Return the updates for debugging
+    debug: updates,
   });
 }
