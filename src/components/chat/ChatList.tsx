@@ -19,6 +19,13 @@ interface UserProfile {
   email?: string | null;
 }
 
+function getDisplayName(profile: UserProfile | undefined, fallbackId: string) {
+  if (!profile) return fallbackId;
+  if (profile.full_name && profile.full_name.trim() !== '') return profile.full_name;
+  if (profile.email && profile.email.trim() !== '') return profile.email;
+  return fallbackId;
+}
+
 export default function ChatList({ onSelectChat }: { onSelectChat: (chat: Chat) => void }) {
   const { user, profile } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -26,6 +33,7 @@ export default function ChatList({ onSelectChat }: { onSelectChat: (chat: Chat) 
   const [assignedCoach, setAssignedCoach] = useState<UserProfile | null>(null);
   const [assignedClients, setAssignedClients] = useState<UserProfile[]>([]);
   const [creatingChatId, setCreatingChatId] = useState<string | null>(null);
+  const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
 
   // Fetch chats
   useEffect(() => {
@@ -57,6 +65,28 @@ export default function ChatList({ onSelectChat }: { onSelectChat: (chat: Chat) 
         setAssignedClients(data.clients || []);
       });
   }, [user, profile]);
+
+  // Fetch user profiles for all users in chats
+  useEffect(() => {
+    // Collect all unique user IDs from chats, assignedCoach, assignedClients
+    const ids = new Set<string>();
+    chats.forEach(chat => {
+      ids.add(chat.coach_id);
+      ids.add(chat.client_id);
+    });
+    if (assignedCoach) ids.add(assignedCoach.id);
+    assignedClients.forEach(c => ids.add(c.id));
+    // Don't fetch if no IDs
+    if (ids.size === 0) return;
+    // Fetch profiles in bulk
+    fetch('/api/profiles?ids=' + Array.from(ids).join(','))
+      .then(r => r.json())
+      .then((profiles: UserProfile[]) => {
+        const map: Record<string, UserProfile> = {};
+        profiles.forEach(p => { map[p.id] = p; });
+        setUserProfiles(map);
+      });
+  }, [chats, assignedCoach, assignedClients]);
 
   // Helper: find chat with a given user
   const findChatWith = (otherUserId: string) => {
@@ -94,13 +124,19 @@ export default function ChatList({ onSelectChat }: { onSelectChat: (chat: Chat) 
     <div>
       <h2 className="text-lg font-bold mb-2">Chats</h2>
       <ul>
-        {chats.map(chat => (
-          <li key={chat.id} className="mb-2">
-            <Button onClick={() => onSelectChat(chat)}>
-              {user.id === chat.coach_id ? `Client: ${chat.client_id}` : `Coach: ${chat.coach_id}`}
-            </Button>
-          </li>
-        ))}
+        {chats.map(chat => {
+          // Show the "other" user's name
+          let otherUserId = user.id === chat.coach_id ? chat.client_id : chat.coach_id;
+          let labelPrefix = user.id === chat.coach_id ? 'Client: ' : 'Coach: ';
+          const otherProfile = userProfiles[otherUserId];
+          return (
+            <li key={chat.id} className="mb-2">
+              <Button onClick={() => onSelectChat(chat)}>
+                {labelPrefix}{getDisplayName(otherProfile, otherUserId)}
+              </Button>
+            </li>
+          );
+        })}
       </ul>
 
       {/* If client, show "Start Chat with My Coach" if not already in a chat */}
@@ -124,7 +160,7 @@ export default function ChatList({ onSelectChat }: { onSelectChat: (chat: Chat) 
               .filter(client => !findChatWith(client.id))
               .map(client => (
                 <li key={client.id} className="mb-2 flex items-center gap-2">
-                  <span>{client.full_name || client.email || client.id}</span>
+                  <span>{getDisplayName(userProfiles[client.id] || client, client.id)}</span>
                   <Button
                     size="sm"
                     onClick={() => handleStartChat(user.id, client.id)}
