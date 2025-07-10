@@ -8,6 +8,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
   // Only allow certain fields to be updated
   const { full_name, company, role } = body;
 
+  console.log(`[ADMIN PROFILE PATCH] userId=${userId} full_name=${full_name} company=${company} role=${role}`);
+
   const { data, error } = await supabaseAdminClient
     .from('profiles')
     .upsert({
@@ -21,8 +23,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { userId: st
     .single();
 
   if (error) {
+    console.error('[ADMIN PROFILE PATCH ERROR]', error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  console.log('[ADMIN PROFILE PATCH SUCCESS]', data);
 
   return NextResponse.json(data, { status: 200 });
 }
