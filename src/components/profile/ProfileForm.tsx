@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 import { UserProfile } from '@/app/(dashboard)/profile/page';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { useRouter } from 'next/navigation';
 
 interface ProfileFormProps {
   user: User;
@@ -21,6 +22,7 @@ export default function ProfileForm({ user, initialProfileData, currentUserProfi
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setFullName(initialProfileData.full_name || '');
@@ -58,6 +60,11 @@ export default function ProfileForm({ user, initialProfileData, currentUserProfi
         });
         data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to update profile');
+        setMessage('Profile updated successfully!');
+        // Force refresh the user list page so changes are visible immediately
+        router.push('/admin/users');
+        router.refresh();
+        return;
       } else {
         // Normal user self-update
         const { data: _data, error: updateError } = await supabase
