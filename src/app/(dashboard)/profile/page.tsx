@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import ProfileForm from '@/components/profile/ProfileForm'; // We'll create this client component
 import { User } from '@supabase/supabase-js';
 import Link from 'next/link';
+import ProfileAssignmentsSection from '@/components/profile/ProfileAssignmentsSection';
 
 export const metadata = {
   title: 'My Profile',
@@ -75,6 +76,9 @@ export default async function ProfilePage() {
 
         {/* ProfileForm will be a client component to handle updates */}
         <ProfileForm user={user} initialProfileData={userProfileData as UserProfile} />
+
+        {/* --- Assignments Section --- */}
+        <ProfileAssignmentsSection />
 
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h2 className="text-xl font-semibold text-neutral-text mb-4">Manage Goals</h2>
