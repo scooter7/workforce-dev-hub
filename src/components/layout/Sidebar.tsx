@@ -16,6 +16,7 @@ import {
   ArrowRightOnRectangleIcon,
   UserGroupIcon,
   AcademicCapIcon,
+  UsersIcon, // Add UsersIcon for user management
 } from '@heroicons/react/24/outline';
 import { supabase } from '@/lib/supabase/client';
 
@@ -44,6 +45,7 @@ const adminBaseLinks: NavItem[] = [
   { name: 'Ingest Documents', href: '/admin/ingest', icon: WrenchScrewdriverIcon },
   { name: 'Analytics', href: '/admin/analytics', icon: HomeIcon },
   { name: 'Manage Quizzes', href: '/admin/quizzes', icon: ClipboardDocumentListIcon },
+  { name: 'User Management', href: '/admin/users', icon: UsersIcon }, // Add this line
 ];
 
 const quizAdminSpecificLinks: NavItem[] = [
